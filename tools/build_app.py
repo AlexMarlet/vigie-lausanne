@@ -5,9 +5,13 @@ Construit le site dans dist/ (et, avec --artifact, l'aperçu autonome publié da
     python3 tools/build_app.py          # site  -> dist/
     python3 tools/build_app.py --artifact   # aperçu -> build/vigie-artifact.html
 
+Connexion à Supabase : vigie.config.json (valeurs publiques), ou les variables SUPABASE_URL / SUPABASE_KEY
+qui le remplacent. VIGIE_OFFLINE=1 construit une version locale, sans base.
+
 Variables d'environnement, toutes facultatives :
     SUPABASE_URL       https://<id-du-projet>.supabase.co
     SUPABASE_KEY       clé « publishable » (sb_publishable_…). Le build refuse une clé secrète.
+    VIGIE_OFFLINE      1 = ignorer Supabase (signalements gardés sur l'appareil, démo active)
     SITE_URL           adresse publique du site (aperçu des liens partagés)
     VIGIE_CONTACT      responsable affiché dans la page Confidentialité (ex. « Prénom Nom, e-mail »)
     GITHUB_REPOSITORY  owner/repo, fourni par GitHub Actions : liens « Code source » et contact
@@ -82,6 +86,24 @@ def check_key(key: str) -> None:
             fail("SUPABASE_KEY est la clé service_role. Utilise la clé publishable (ou anon).")
 
 
+def public_config() -> tuple[str, str]:
+    """URL et clé publishable : variables d'environnement, sinon vigie.config.json."""
+    if os.environ.get("VIGIE_OFFLINE", "").strip() in ("1", "true", "yes"):
+        return "", ""
+    url = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+    key = os.environ.get("SUPABASE_KEY", "").strip()
+    cfg = ROOT / "vigie.config.json"
+    if not url and not key and cfg.exists():
+        c = json.loads(cfg.read_text(encoding="utf-8"))
+        url = str(c.get("supabaseUrl", "")).strip().rstrip("/")
+        key = str(c.get("supabaseKey", "")).strip()
+    if bool(url) != bool(key):
+        fail("renseigne l'URL et la clé Supabase ensemble (ou aucune des deux).")
+    if key:
+        check_key(key)
+    return url, key
+
+
 def load_data(repo_url: str | None) -> tuple[dict, list]:
     base = json.loads(subprocess.check_output(
         ["node", "-e", "process.stdout.write(JSON.stringify(require('./core/stops-base.js')))"], cwd=ROOT))
@@ -127,16 +149,11 @@ def main() -> None:
     ap.add_argument("--artifact", action="store_true", help="aperçu autonome (CDN, sans service worker)")
     a = ap.parse_args()
 
-    url = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
-    key = os.environ.get("SUPABASE_KEY", "").strip()
+    url, key = public_config()
     site = os.environ.get("SITE_URL", "").strip().rstrip("/")
     contact = os.environ.get("VIGIE_CONTACT", "").strip()
     repo = os.environ.get("GITHUB_REPOSITORY", "").strip()
     repo_url = f"https://github.com/{repo}" if repo else None
-    if bool(url) != bool(key):
-        fail("renseigne SUPABASE_URL et SUPABASE_KEY ensemble (ou aucune des deux).")
-    if key:
-        check_key(key)
     config = {"supabaseUrl": url, "supabaseKey": key} if url else {}
 
     bundle, stops = load_data(repo_url)

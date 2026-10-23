@@ -46,7 +46,7 @@ Une même personne ne compte qu'une fois par arrêt. Réglages : `CFG` en haut d
 | `web/` | L'app : gabarit HTML, service worker, manifest, icônes, page Confidentialité |
 | `core/` | Moteur partagé : parseur de messages et calcul de confiance, avec ses tests |
 | `supabase/` | Schéma de la base (`schema.sql`), effacement automatique (`purge.sql`), tests |
-| `tools/` | Construction du site (`build_app.py`), données des arrêts et du fond de carte |
+| `tools/` | Construction du site (`build_app.py`), vérification de la base (`check_supabase.py`), données des arrêts et du fond de carte |
 | `collector/` | Lecture d'un groupe Telegram (étape suivante du projet, non branchée) |
 
 ## Développer en local
@@ -60,7 +60,7 @@ npm run serve          # http://localhost:8080
 npm test               # tests du moteur et du parseur
 ```
 
-Sans configuration Supabase, l'app fonctionne en local (signalements gardés sur l'appareil) avec des données de démonstration.
+`npm run build` utilise la base définie dans `vigie.config.json`. Avec `VIGIE_OFFLINE=1`, l'app fonctionne en local (signalements gardés sur l'appareil) avec des données de démonstration.
 Sur le site en ligne, la démo reste accessible avec `?demo` à la fin de l'adresse.
 
 ## Mise en ligne
@@ -73,15 +73,17 @@ Sur le site en ligne, la démo reste accessible avec `?demo` à la fin de l'adre
 
 La clé publishable est faite pour être publique. La clé **secrète** ne va jamais dans l'app ni dans ce dépôt.
 
-### 2. Hébergement (GitHub Pages)
-1. Settings → Pages → Source : **GitHub Actions**.
-2. Settings → Secrets and variables → Actions → onglet **Variables** :
-   - `SUPABASE_URL` = `https://<id-du-projet>.supabase.co`
-   - `SUPABASE_KEY` = la clé publishable
-   - `VIGIE_CONTACT` (facultatif) = le responsable affiché dans la page Confidentialité
-3. Actions → Déploiement → Run workflow (ou pousser sur `main`).
+### 2. Connexion de l'app à la base
+Renseigner l'URL et la clé publishable dans `vigie.config.json`. Ces deux valeurs sont publiques par conception : elles finissent de toute façon dans le code du site, et la sécurité repose sur les règles d'accès du schéma.
+Des variables GitHub `SUPABASE_URL` / `SUPABASE_KEY` (Settings → Secrets and variables → Actions → Variables) remplacent ce fichier si elles existent. `VIGIE_CONTACT` (facultatif) affiche le responsable dans la page Confidentialité.
 
-Le build refuse de publier une clé secrète par erreur.
+Le build refuse de publier une clé secrète par erreur. `VIGIE_OFFLINE=1 npm run build` construit une version locale, sans base.
+
+### 3. Hébergement (GitHub Pages)
+1. Settings → Pages → Source : **GitHub Actions**.
+2. Pousser sur `main` (ou Actions → Déploiement → Run workflow).
+
+À chaque déploiement, `tools/check_supabase.py` vérifie en lecture seule que la table et la fonction `signaler()` existent, et affiche un avertissement sinon.
 
 ## Tests
 
