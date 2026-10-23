@@ -1,0 +1,45 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: npm ci
+      - name: Moteur (parseur + indice de confiance)
+        run: node core/test-core.js
+      - name: Construction du site
+        run: python3 tools/build_app.py
+      - name: Liste d'arrêts du collecteur à jour
+        run: git diff --exit-code collector/stops.json
+      - name: Parseur Python du collecteur
+        run: python3 collector/test_parser.py
+      - name: Schéma Supabase sur PostgreSQL 17
+        run: |
+          pip install "psycopg[binary]"
+          python3 supabase/test_schema.py
+        env:
+          PG_DSN: host=localhost port=5432 user=postgres password=postgres dbname=postgres

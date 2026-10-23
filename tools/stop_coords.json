@@ -1,0 +1,272 @@
+{
+ "colors": {
+  "M1": "#2B6CB0",
+  "M2": "#7A4FC0"
+ },
+ "stops": {
+  "ouchy": {
+   "lat": 46.507194,
+   "lon": 6.626556,
+   "src": "https://en.wikipedia.org/wiki/Ouchy–Olympique_station"
+  },
+  "jordils": {
+   "lat": 46.509889,
+   "lon": 6.627361,
+   "src": "https://en.wikipedia.org/wiki/Jordils_station"
+  },
+  "delices": {
+   "lat": 46.51225,
+   "lon": 6.628083,
+   "src": "https://en.wikipedia.org/wiki/Délices_station"
+  },
+  "grancy": {
+   "lat": 46.514889,
+   "lon": 6.628861,
+   "src": "https://en.wikipedia.org/wiki/Grancy_station"
+  },
+  "gare": {
+   "lat": 46.51725,
+   "lon": 6.630139,
+   "src": "https://en.wikipedia.org/wiki/Lausanne-Gare_station"
+  },
+  "flon": {
+   "lat": 46.5208,
+   "lon": 6.63034,
+   "src": "https://en.wikipedia.org/wiki/Lausanne-Flon_station"
+  },
+  "riponne": {
+   "lat": 46.522889,
+   "lon": 6.632611,
+   "src": "https://en.wikipedia.org/wiki/Riponne–Maurice_Béjart_station"
+  },
+  "bessieres": {
+   "lat": 46.520806,
+   "lon": 6.636972,
+   "src": "https://en.wikipedia.org/wiki/Bessières_station"
+  },
+  "ours": {
+   "lat": 46.521306,
+   "lon": 6.640528,
+   "src": "https://en.wikipedia.org/wiki/Ours_station"
+  },
+  "chuv": {
+   "lat": 46.52639,
+   "lon": 6.64139,
+   "src": "https://en.wikipedia.org/wiki/CHUV_station"
+  },
+  "sallaz": {
+   "lat": 46.53278,
+   "lon": 6.64611,
+   "src": "https://en.wikipedia.org/wiki/Sallaz_station"
+  },
+  "fourmi": {
+   "lat": 46.538778,
+   "lon": 6.651028,
+   "src": "https://en.wikipedia.org/wiki/Fourmi_station"
+  },
+  "vennes": {
+   "lat": 46.541222,
+   "lon": 6.657583,
+   "src": "https://en.wikipedia.org/wiki/Vennes_station"
+  },
+  "croisettes": {
+   "lat": 46.54289,
+   "lon": 6.66146,
+   "src": "https://en.wikipedia.org/wiki/Croisettes_station"
+  },
+  "vigie": {
+   "lat": 46.521534,
+   "lon": 6.623925,
+   "src": "https://transport.opendata.ch (arrêt officiel) 8592133"
+  },
+  "montelly": {
+   "lat": 46.521825,
+   "lon": 6.613559,
+   "src": "https://transport.opendata.ch (arrêt officiel) 8501207"
+  },
+  "provence": {
+   "lat": 46.523265,
+   "lon": 6.608654,
+   "src": "https://transport.opendata.ch (arrêt officiel) 8501208"
+  },
+  "malley": {
+   "lat": 46.524136,
+   "lon": 6.602563,
+   "src": "https://transport.opendata.ch (arrêt officiel) 8501209"
+  },
+  "bourdonnette": {
+   "lat": 46.523265,
+   "lon": 6.589807,
+   "src": "https://transport.opendata.ch (arrêt officiel) 8501210"
+  },
+  "chamberonne": {
+   "lat": 46.524217,
+   "lon": 6.584705,
+   "src": "https://transport.opendata.ch (arrêt officiel) 8501211"
+  },
+  "mouline": {
+   "lat": 46.524989,
+   "lon": 6.578893,
+   "src": "https://transport.opendata.ch (arrêt officiel) 8501212"
+  },
+  "sorge": {
+   "lat": 46.522449,
+   "lon": 6.573575,
+   "src": "https://transport.opendata.ch (arrêt officiel) 8501213"
+  },
+  "epfl": {
+   "lat": 46.522196,
+   "lon": 6.566137,
+   "src": "https://transport.opendata.ch (arrêt officiel) 8501214"
+  },
+  "bassenges": {
+   "lat": 46.524588,
+   "lon": 6.564592,
+   "src": "https://transport.opendata.ch (arrêt officiel) 8501215"
+  },
+  "cerisaie": {
+   "lat": 46.527752,
+   "lon": 6.56655,
+   "src": "https://transport.opendata.ch (arrêt officiel) 8501216"
+  },
+  "crochy": {
+   "lat": 46.532715,
+   "lon": 6.569973,
+   "src": "https://transport.opendata.ch (arrêt officiel) 8501217"
+  },
+  "epenex": {
+   "lat": 46.537714,
+   "lon": 6.573584,
+   "src": "https://transport.opendata.ch (arrêt officiel) 8501218"
+  },
+  "renens": {
+   "lat": 46.537621,
+   "lon": 6.578516,
+   "src": "https://transport.opendata.ch (arrêt officiel) 8530749"
+  },
+  "chauderon": {
+   "lat": 46.523593,
+   "lon": 6.624824,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8592010"
+  },
+  "pully": {
+   "lat": 46.51032,
+   "lon": 6.658834,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8588445"
+  },
+  "lutry": {
+   "lat": 46.5007,
+   "lon": 6.694084,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8592155"
+  },
+  "belair": {
+   "lat": 46.522282,
+   "lon": 6.629073,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8591988"
+  },
+  "stfrancois": {
+   "lat": 46.519389,
+   "lon": 6.633672,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8579254"
+  },
+  "georgette": {
+   "lat": 46.517825,
+   "lon": 6.638119,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8592051"
+  },
+  "tunnel": {
+   "lat": 46.525447,
+   "lon": 6.634499,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8504176"
+  },
+  "maladiere": {
+   "lat": 46.51743,
+   "lon": 6.605411,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8592068"
+  },
+  "prelaz": {
+   "lat": 46.526331,
+   "lon": 6.61249,
+   "src": "Lausanne, Prélaz (rapport agent)"
+  },
+  "bellevaux": {
+   "lat": 46.538993,
+   "lon": 6.633726,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8587357"
+  },
+  "blecherette": {
+   "lat": 46.542243,
+   "lon": 6.621132,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8591994"
+  },
+  "beaulieu": {
+   "lat": 46.528123,
+   "lon": 6.623602,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8591984"
+  },
+  "chailly": {
+   "lat": 46.523172,
+   "lon": 6.655223,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8588432"
+  },
+  "ruffy": {
+   "lat": 46.531639,
+   "lon": 6.64844,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8592131"
+  },
+  "vidy": {
+   "lat": 46.515007,
+   "lon": 6.607657,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8595938"
+  },
+  "montoie": {
+   "lat": 46.518295,
+   "lon": 6.608573,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8592080"
+  },
+  "stade": {
+   "lat": 46.533833,
+   "lon": 6.626063,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8592116"
+  },
+  "14avril": {
+   "lat": 46.53929,
+   "lon": 6.580007,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8588839"
+  },
+  "crissier": {
+   "lat": 46.549898,
+   "lon": 6.579549,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8588842"
+  },
+  "croset": {
+   "lat": 46.534692,
+   "lon": 6.56637,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8591948"
+  },
+  "lemont": {
+   "lat": 46.563031,
+   "lon": 6.633205,
+   "src": "https://transport.opendata.ch/v1/stationboard?id=8504177"
+  }
+ },
+ "commune_labels": {
+  "5586": [
+   46.5165,
+   6.615
+  ]
+ },
+ "show_communes": [
+  "Lausanne",
+  "Renens",
+  "Prilly",
+  "Pully",
+  "Ecublens",
+  "Crissier",
+  "Epalinges",
+  "Le Mont-sur-Lausanne",
+  "Lutry",
+  "Bussigny"
+ ],
+ "note": "Positions : stations du métro (Wikipédia, arrêts officiels transport.opendata.ch) et arrêts de bus officiels (transport.opendata.ch)."
+}

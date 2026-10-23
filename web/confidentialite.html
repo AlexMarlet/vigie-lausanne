@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Confidentialité – Vigie Lausanne</title>
+<meta name="description" content="Quelles données Vigie enregistre, pourquoi et combien de temps.">
+<meta name="theme-color" content="#173E62">
+<!--@HEAD@-->
+<style>
+:root {
+  --bg: #F4F6F2; --ink: #14202A; --ink-2: #4E5D67; --hair: #D7DCD5; --accent: #173E62; --surface: #FFFFFF;
+  --f-display: "Archivo", "Arial Narrow", Arial, system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #11181D; --ink: #E4ECF0; --ink-2: #9BABB5; --hair: #2E3A42; --accent: #8DBFEA; --surface: #1A242B; color-scheme: dark; }
+}
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.55; }
+main { max-width: 640px; margin: 0 auto; padding: max(24px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px)); }
+a { color: var(--accent); font-weight: 700; }
+.back { display: inline-block; margin-bottom: 20px; }
+.wordmark { font-family: var(--f-display); font-weight: 850; font-stretch: 118%; letter-spacing: .08em; font-size: 18px; color: var(--ink-2); }
+h1 { font-family: var(--f-display); font-weight: 850; font-stretch: 108%; font-size: 30px; line-height: 1.1; margin: 4px 0 12px; text-wrap: balance; }
+h2 { font-family: var(--f-display); font-weight: 750; font-size: 19px; margin: 28px 0 6px; }
+p, li { color: var(--ink); }
+.lead { color: var(--ink-2); }
+ul { padding-left: 20px; }
+li + li { margin-top: 4px; }
+.card { background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; padding: 4px 16px; }
+footer { margin-top: 36px; color: var(--ink-2); font-size: 14px; border-top: 1px solid var(--hair); padding-top: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="./">← Retour à la carte</a>
+  <div class="wordmark">VIGIE</div>
+  <h1>Confidentialité</h1>
+  <p class="lead">Vigie est un projet personnel et non officiel, sans lien avec les transports publics de la région lausannoise (tl). L'app est conçue pour enregistrer le moins de données possible.</p>
+
+  <h2>Ce qui est enregistré quand tu signales</h2>
+  <div class="card">
+    <ul>
+      <li>le type de signalement (contrôle, perturbation, « plus là ») ;</li>
+      <li>l'arrêt et, si tu l'indiques, la ligne ;</li>
+      <li>l'heure du signalement ;</li>
+      <li>un identifiant aléatoire de ton appareil, créé par l'app sur ton téléphone.</li>
+    </ul>
+  </div>
+
+  <h2>Ce qui n'est jamais enregistré</h2>
+  <p>Ni nom, ni compte, ni adresse e-mail, ni numéro de téléphone, ni photo, ni texte libre. Le bouton « Arrêt le plus proche » utilise ta position uniquement dans ton navigateur pour trouver l'arrêt : elle n'est jamais envoyée.</p>
+
+  <h2>À quoi sert l'identifiant d'appareil</h2>
+  <p>Uniquement à limiter les abus (6 signalements au plus par tranche de 10 minutes). Il est gardé 1 heure dans un journal privé, jamais affiché ni partagé. Sur la carte, le public voit seulement une empreinte anonyme qui change à chaque arrêt et chaque jour, pour qu'une même personne ne compte qu'une fois.</p>
+
+  <h2>Combien de temps</h2>
+  <p>Un signalement reste visible 4 heures sur la carte, puis il est effacé de la base au bout de 48 heures.</p>
+
+  <h2>Sur ton téléphone</h2>
+  <p>L'app garde dans ton navigateur l'identifiant d'appareil et tes préférences (filtres). Tu peux tout effacer en supprimant les données du site dans les réglages du navigateur, ou en désinstallant l'app.</p>
+
+  <h2>Services utilisés</h2>
+  <ul>
+    <li><strong>Supabase</strong> : base de données des signalements (serveur en Europe).</li>
+    <li><strong>GitHub Pages</strong> : hébergement du site.</li>
+    <li><strong>memomaps.de</strong> : images du fond de carte. Comme pour toute page web, leurs serveurs voient l'adresse IP de ton appareil quand la carte se charge.</li>
+  </ul>
+  <p>Les polices et le code de l'app sont servis par le site lui-même, sans service tiers.</p>
+
+  <!--@CONTACT@-->
+
+  <footer>Dernière mise à jour : octobre 2026.</footer>
+</main>
+</body>
+</html>

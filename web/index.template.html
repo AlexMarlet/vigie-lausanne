@@ -1,0 +1,982 @@
+<title>Vigie Lausanne</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#173E62">
+<meta name="description" content="Signalements en direct des contrôles et perturbations sur le réseau du Grand Lausanne.">
+<!--@HEAD@-->
+<style>
+/*@LEAFLET_CSS@*/
+
+/* Mise en page : carte plein écran ; bandeau de marque et filtres en haut ; dock d'action en bas ;
+   une feuille coulissante pour signaler, lire un point, le fil Telegram et la légende. */
+:root {
+  --land: #E5E8E2; --land-edge: #C3CBC1; --lake: #B2CCDA; --lake-edge: #93B4C6;
+  --ink: #14202A; --ink-2: #4E5D67; --ink-3: #7A8790;
+  --surface: #FFFFFF; --surface-2: #F1F3EF; --hair: #D7DCD5;
+  --accent: #173E62; --accent-ink: #FFFFFF; --accent-soft: #DDE7F0;
+  --glass: rgba(255, 255, 255, .86);
+  --shadow: 0 8px 28px rgba(14, 28, 38, .18), 0 1px 3px rgba(14, 28, 38, .14);
+  --m1: /*@M1@*/; --m2: /*@M2@*/;
+  --c-low: #F2C14E; --c-mid: #EE7B30; --c-high: #D7263D;
+  --ok: #2B7656;
+  --f-display: "Archivo", "Arial Narrow", Arial, system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --land: #11181D; --land-edge: #2A363E; --lake: #0E2939; --lake-edge: #1C4157;
+    --ink: #E4ECF0; --ink-2: #9BABB5; --ink-3: #6F7F89;
+    --surface: #1A242B; --surface-2: #222E36; --hair: #2E3A42;
+    --accent: #8DBFEA; --accent-ink: #0A1A27; --accent-soft: #1E3346;
+    --glass: rgba(26, 36, 43, .88);
+    --shadow: 0 8px 28px rgba(0, 0, 0, .45), 0 1px 3px rgba(0, 0, 0, .4);
+    --ok: #6FC49B;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --land: #11181D; --land-edge: #2A363E; --lake: #0E2939; --lake-edge: #1C4157;
+  --ink: #E4ECF0; --ink-2: #9BABB5; --ink-3: #6F7F89;
+  --surface: #1A242B; --surface-2: #222E36; --hair: #2E3A42;
+  --accent: #8DBFEA; --accent-ink: #0A1A27; --accent-soft: #1E3346;
+  --glass: rgba(26, 36, 43, .88);
+  --shadow: 0 8px 28px rgba(0, 0, 0, .45), 0 1px 3px rgba(0, 0, 0, .4);
+  --ok: #6FC49B;
+  color-scheme: dark;
+}
+
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body { background: var(--land); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.4; overflow: hidden; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.app { position: relative; height: 100%; overflow: hidden; }
+.map { position: absolute; inset: 0; background: var(--land); z-index: 0; }
+.leaflet-container { background: var(--land); font-family: var(--f-body); }
+
+/* calque d'interface, avec la marge latérale */
+.ui { position: absolute; inset: 0; z-index: 1; pointer-events: none; padding-left: var(--gutter-l); padding-right: var(--gutter-r);
+      display: flex; flex-direction: column; padding-block: 10px 14px; }
+.ui > * { pointer-events: auto; }
+.ui > .spacer { pointer-events: none; }
+
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+          background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+          border: 1px solid var(--hair); border-radius: 16px; padding: 8px 8px 8px 14px; box-shadow: var(--shadow); }
+.brand { display: flex; flex-direction: column; min-width: 0; }
+.wordmark { font-family: var(--f-display); font-weight: 850; font-stretch: 118%; font-size: 21px; letter-spacing: .08em; line-height: 1; }
+.wordmark b { color: var(--c-high); font-weight: inherit; }
+.status { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-2); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.live { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); flex: none; }
+.live.off { background: var(--ink-3); box-shadow: none; }
+.pill-btn { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--hair); background: var(--surface); border-radius: 12px; padding: 9px 12px; font-family: var(--f-display); font-weight: 650; font-size: 14px; }
+.pill-btn svg { width: 18px; height: 18px; }
+.count { min-width: 20px; padding: 1px 6px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 12px; text-align: center; font-variant-numeric: tabular-nums; }
+
+.filters { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--hair); background: var(--glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        border-radius: 999px; padding: 7px 12px; font-size: 13.5px; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.chip[aria-pressed="false"] { color: var(--ink-2); }
+.chip.demo[aria-pressed="true"] { background: var(--c-low); color: #2B2100; }
+.shape { width: 11px; height: 11px; display: inline-block; background: currentColor; flex: none; }
+.shape.circle { border-radius: 50%; }
+.shape.diamond { transform: rotate(45deg) scale(.85); border-radius: 2px; }
+
+.spacer { flex: 1; }
+.toast { align-self: center; margin-bottom: 10px; background: var(--ink); color: var(--surface); border-radius: 12px; padding: 10px 14px; font-weight: 700; font-size: 14px; box-shadow: var(--shadow); max-width: 100%; }
+.dock { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.install { align-self: center; width: 100%; max-width: 460px; box-sizing: border-box; display: flex; align-items: center; gap: 10px;
+           margin-bottom: 10px; background: var(--surface); border: 1px solid var(--hair); border-radius: 16px; padding: 10px 6px 10px 10px; box-shadow: var(--shadow); }
+.install-logo { width: 40px; height: 40px; flex: none; }
+.install-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.install-text strong { font-family: var(--f-display); font-weight: 800; font-size: 15px; }
+.install-text span { color: var(--ink-2); font-size: 13px; }
+.install .go { border: 0; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-weight: 700; padding: 9px 12px; flex: none; }
+.install .later { border: 0; background: none; color: var(--ink-3); font-size: 22px; line-height: 1; width: 36px; height: 36px; flex: none; }
+.steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; }
+.links { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; padding-top: 4px; border-top: 1px solid var(--hair); }
+.links a, .links .link { color: var(--accent); font-weight: 700; padding: 8px 0; }
+.round { width: 48px; height: 48px; flex: none; border-radius: 50%; border: 1px solid var(--hair); background: var(--surface); box-shadow: var(--shadow); display: grid; place-items: center; }
+.round svg { width: 22px; height: 22px; }
+.fab { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 56px; padding: 0 26px; min-width: 0; flex: 0 1 220px;
+       border: 0; border-radius: 999px; background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow);
+       font-family: var(--f-display); font-weight: 800; font-stretch: 108%; font-size: 17px; letter-spacing: .02em; }
+.fab svg { width: 22px; height: 22px; flex: none; }
+
+/* feuille coulissante */
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 74%; display: flex; flex-direction: column;
+         background: var(--surface); border-radius: 22px 22px 0 0; box-shadow: 0 -10px 40px rgba(10, 20, 28, .22);
+         transform: translateY(0); transition: transform .26s cubic-bezier(.2, .8, .2, 1); z-index: 2; }
+.sheet.closing { transform: translateY(105%); }
+.grab { width: 40px; height: 4px; border-radius: 4px; background: var(--hair); margin: 8px auto 0; flex: none; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px var(--gutter-r) 4px var(--gutter-l); flex: none; }
+.sheet-head h2:focus { outline: none; }
+.sheet-head h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-stretch: 105%; font-size: 20px; text-wrap: balance; }
+.x { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--surface-2); font-size: 22px; line-height: 1; flex: none; }
+.sheet-body { overflow-y: auto; padding: 6px var(--gutter-r) 22px var(--gutter-l); overscroll-behavior: contain; }
+.stack { display: flex; flex-direction: column; gap: 16px; }
+.stack-s { display: flex; flex-direction: column; gap: 8px; }
+.label + * { margin-top: 0; }
+
+.label { font-family: var(--f-display); font-weight: 700; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); margin: 0 0 8px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.seg button { display: flex; align-items: center; gap: 10px; padding: 14px; border-radius: 14px; border: 2px solid var(--hair); background: var(--surface); text-align: left; font-weight: 700; }
+.seg button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.seg .shape { width: 14px; height: 14px; color: var(--c-mid); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.opt { border: 1.5px solid var(--hair); background: var(--surface); border-radius: 999px; padding: 7px 13px; font-weight: 700; font-size: 14px; }
+.opt[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.field { width: 100%; box-sizing: border-box; border: 1.5px solid var(--hair); background: var(--surface-2); color: var(--ink); border-radius: 12px; padding: 12px 14px; font: inherit; font-size: 16px; }
+.field:focus { border-color: var(--accent); outline: none; }
+.sugg { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
+.sugg button { display: flex; align-items: center; gap: 8px; justify-content: space-between; border: 0; background: transparent; padding: 10px 8px; border-radius: 10px; text-align: left; }
+.sugg button:hover, .sugg button:focus-visible { background: var(--surface-2); }
+.picked { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 2px solid var(--accent); background: var(--accent-soft); border-radius: 14px; padding: 10px 12px; }
+.picked strong { font-family: var(--f-display); font-size: 17px; font-weight: 750; }
+.link { border: 0; background: none; color: var(--accent); font-weight: 700; padding: 6px; text-decoration: underline; text-underline-offset: 3px; }
+.hint { color: var(--ink-2); font-size: 13.5px; margin: 6px 0 0; }
+.primary { width: 100%; height: 52px; border: 0; border-radius: 14px; background: var(--accent); color: var(--accent-ink); font-family: var(--f-display); font-weight: 800; font-size: 17px; letter-spacing: .02em; }
+.primary:disabled { opacity: .45; cursor: not-allowed; }
+.secondary { height: 48px; border-radius: 14px; border: 1.5px solid var(--hair); background: var(--surface); font-weight: 700; flex: 1; }
+.row { display: flex; gap: 10px; align-items: center; }
+.num { width: 86px; flex: none; text-align: center; font-variant-numeric: tabular-nums; }
+.privacy { display: flex; gap: 8px; align-items: flex-start; color: var(--ink-2); font-size: 13px; }
+.privacy svg { width: 16px; height: 16px; flex: none; margin-top: 2px; }
+
+.badge { display: inline-block; font-family: var(--f-display); font-weight: 800; font-size: 11.5px; line-height: 1; padding: 4px 6px; border-radius: 5px; background: var(--ink); color: var(--surface); font-variant-numeric: tabular-nums; }
+.badge.M1 { background: var(--m1); color: #fff; }
+.badge.M2 { background: var(--m2); color: #fff; }
+.badges { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+
+/* fiche d'un point */
+.k-head { display: flex; align-items: center; gap: 10px; color: var(--ink-2); font-weight: 700; font-size: 13.5px; }
+.k-stop { font-family: var(--f-display); font-weight: 850; font-stretch: 110%; font-size: 28px; line-height: 1.05; margin: 4px 0 6px; text-wrap: balance; }
+.conf { display: grid; grid-template-columns: auto 1fr; align-items: end; gap: 4px 14px; }
+.conf-level { font-family: var(--f-display); font-weight: 850; font-size: 30px; line-height: 1; text-transform: capitalize; }
+.conf-pct { color: var(--ink-2); font-size: 14px; padding-bottom: 3px; font-variant-numeric: tabular-nums; }
+.bar { grid-column: 1 / -1; position: relative; height: 10px; border-radius: 10px; background: linear-gradient(90deg, var(--c-low), var(--c-mid) 50%, var(--c-high)); margin-top: 8px; }
+.bar i { position: absolute; top: -4px; width: 4px; height: 18px; border-radius: 3px; background: var(--ink); transform: translateX(-2px); box-shadow: 0 0 0 2px var(--surface); }
+.bar-scale { grid-column: 1 / -1; display: flex; justify-content: space-between; font-size: 11.5px; color: var(--ink-3); }
+.facts { color: var(--ink-2); font-size: 14px; }
+.facts strong { color: var(--ink); }
+.cleared { display: flex; gap: 8px; align-items: center; background: var(--surface-2); border-radius: 12px; padding: 10px 12px; font-size: 14px; }
+.tl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tl li { display: grid; grid-template-columns: 74px 1fr 56px; align-items: center; gap: 10px; font-size: 13.5px; }
+.tl .t { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.tl .w { height: 6px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.tl .w i { display: block; height: 100%; border-radius: 6px; background: var(--c-mid); }
+.note { color: var(--ink-3); font-size: 12.5px; }
+
+/* fil Telegram */
+.feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.feed li { padding: 11px 0; border-top: 1px solid var(--hair); display: grid; gap: 6px; }
+.feed li:first-child { border-top: 0; }
+.msg { font-family: var(--f-mono); font-size: 13.5px; line-height: 1.45; overflow-wrap: anywhere; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-2); }
+.tag { display: inline-flex; align-items: center; gap: 5px; border-radius: 6px; padding: 3px 7px; background: var(--surface-2); font-weight: 700; color: var(--ink); }
+.tag.miss { color: var(--ink-3); font-weight: 400; font-style: italic; }
+.feed li.dim .msg { color: var(--ink-3); }
+.tester { background: var(--surface-2); border-radius: 14px; padding: 12px; }
+.tester .field { background: var(--surface); }
+.tester .meta { margin-top: 8px; min-height: 22px; }
+
+/* légende */
+.leg { display: grid; grid-template-columns: 56px 1fr; gap: 12px 14px; align-items: center; }
+.leg p { margin: 0; }
+.ramp { display: flex; align-items: flex-end; gap: 16px; padding: 6px 0; }
+.ramp figure { margin: 0; display: grid; justify-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-2); }
+.rules { margin: 0; padding-left: 18px; color: var(--ink-2); }
+.rules li + li { margin-top: 4px; }
+.rules strong { color: var(--ink); }
+
+/* carte : fond, lignes, arrêts, points */
+.lake { fill: var(--lake); fill-opacity: 1; stroke: var(--lake-edge); stroke-width: 1; }
+.commune { fill: none; stroke: var(--land-edge); stroke-width: 1.2; stroke-dasharray: 2 5; stroke-linecap: round; }
+.casing { stroke: var(--land); stroke-width: 10; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.line-M1 { stroke: var(--m1); stroke-width: 5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.line-M2 { stroke: var(--m2); stroke-width: 5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.stop-metro { fill: var(--surface); stroke: var(--ink); stroke-width: 2.2; }
+.stop-bus { fill: var(--surface); stroke: var(--ink-2); stroke-width: 1.6; }
+.stop-picked { fill: var(--accent); stroke: var(--surface); stroke-width: 3; }
+.leaflet-tooltip.lbl { background: transparent; border: 0; box-shadow: none; padding: 0 0 0 1px; margin-left: 4px;
+  font-family: var(--f-display); font-weight: 650; font-stretch: 92%; font-size: 11.5px; color: var(--ink); white-space: nowrap;
+  text-shadow: 0 0 2px var(--land), 0 0 3px var(--land), 0 0 5px var(--land); }
+.leaflet-tooltip.lbl::before { display: none; }
+.leaflet-tooltip.lbl-bus { color: var(--ink-2); font-weight: 600; }
+.commune-lbl { font-family: var(--f-display); font-weight: 700; font-stretch: 112%; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-3); white-space: nowrap; transform: translate(-50%, -50%); width: max-content; pointer-events: none;
+  text-shadow: 0 0 3px var(--land), 0 0 6px var(--land); }
+.zlt14 .lbl-metro:not(.lbl-major), .zlt15 .lbl-bus:not(.lbl-major), .zlt125 .lbl-major, .zge13 .commune-lbl { display: none; }
+.leaflet-tooltip.lbl-major { font-weight: 750; }
+
+.mk-wrap { background: none; border: 0; }
+.mk { position: relative; width: 100%; height: 100%; }
+.mk .core { position: absolute; inset: 0; display: grid; place-items: center; background: var(--col); border: 2.5px solid var(--surface);
+  border-radius: 50%; box-shadow: 0 2px 8px rgba(0, 0, 0, .3); font-family: var(--f-display); font-weight: 850; font-size: 13px; color: var(--txt); }
+.mk.p .core { border-radius: 5px; transform: rotate(45deg) scale(.8); }
+.mk.p .core span { transform: rotate(-45deg); }
+.mk .halo { position: absolute; inset: -7px; border-radius: 50%; border: 2.5px solid var(--col); opacity: 0; }
+.mk.fresh .halo { animation: pulse 1.9s ease-out infinite; }
+@keyframes pulse { 0% { transform: scale(.7); opacity: .9; } 100% { transform: scale(1.45); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .mk.fresh .halo { animation: none; opacity: .6; }
+  .sheet { transition: none; }
+}
+.leaflet-control-attribution { font-size: 10px; background: var(--glass) !important; color: var(--ink-2); }
+.leaflet-control-attribution a { color: var(--ink-2); }
+</style>
+
+<div class="app">
+  <div id="map" class="map" role="application" aria-label="Carte du Grand Lausanne avec les signalements"></div>
+
+  <div class="ui">
+    <header class="topbar">
+      <div class="brand">
+        <span class="wordmark">VIGIE<b>.</b></span>
+        <span class="status"><span id="liveDot" class="live off"></span><span id="status">Grand Lausanne</span></span>
+      </div>
+      <button id="btnFeed" class="pill-btn" type="button" aria-label="Ouvrir le fil des signalements">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4 3 11l6 2.5L18 7l-7 8 7 5z"/></svg>
+        <span>Fil</span><span id="feedCount" class="count">0</span>
+      </button>
+    </header>
+
+    <nav class="filters" aria-label="Filtres">
+      <button class="chip" type="button" data-filter="controle" aria-pressed="true"><i class="shape circle"></i>Contrôles</button>
+      <button class="chip" type="button" data-filter="perturbation" aria-pressed="true"><i class="shape diamond"></i>Perturbations</button>
+      <button class="chip demo" type="button" id="chipDemo" aria-pressed="true">Démo</button>
+    </nav>
+
+    <div class="spacer"></div>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <div id="install" class="install" hidden>
+      <svg class="install-logo" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#173E62"/><path d="M118 146h92l50 172 50-172h92l-96 238h-92z" fill="#fff"/><circle cx="402" cy="352" r="34" fill="#D7263D"/></svg>
+      <div class="install-text"><strong>Installer Vigie</strong><span>Sur ton écran d'accueil, comme une app.</span></div>
+      <button id="installGo" class="go" type="button">Installer</button>
+      <button id="installLater" class="later" type="button" aria-label="Plus tard">×</button>
+    </div>
+
+    <div class="dock">
+      <button id="btnLegend" class="round" type="button" aria-label="Légende et fonctionnement">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg>
+      </button>
+      <button id="btnReport" class="fab" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Signaler
+      </button>
+      <button id="btnCenter" class="round" type="button" aria-label="Recentrer sur le Grand Lausanne">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <section id="sheet" class="sheet" role="dialog" aria-labelledby="sheetTitle" hidden>
+    <div class="grab" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <h2 id="sheetTitle" tabindex="-1"></h2>
+      <button id="sheetClose" class="x" type="button" aria-label="Fermer">×</button>
+    </div>
+    <div id="sheetBody" class="sheet-body"></div>
+  </section>
+</div>
+
+<script src="__LEAFLET_JS__"></script>
+<script>
+/*@CORE@*/
+</script>
+<script>
+/*@DATA@*/
+</script>
+<script>
+(function () {
+  "use strict";
+  const C = window.VigieCore, D = window.VIGIE_DATA;
+
+  // ---------- configuration ----------
+  // Injectée au build (variables SUPABASE_URL et SUPABASE_KEY, voir README). Sans elle, l'app garde les
+  // signalements sur l'appareil. La clé est la clé « publishable », faite pour être publique.
+  const CONFIG = window.VIGIE_CONFIG || {};
+  const IN_CLAUDE = !!(window.claude && typeof window.claude.use === "function");   // aperçu publié dans Claude
+  const MODE = IN_CLAUDE ? "claude" : (CONFIG.supabaseUrl && CONFIG.supabaseKey ? "supabase" : "local");
+  const SHOW_DEMO = MODE !== "supabase" || /[?&]demo\b/.test(location.search);
+  const REDUCED_MOTION = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+  // ---------- petites aides ----------
+  const $ = (s) => document.querySelector(s);
+  const el = (tag, attrs, ...kids) => {
+    const n = document.createElement(tag);
+    if (attrs) for (const [k, v] of Object.entries(attrs)) {
+      if (v == null || v === false) continue;
+      if (k === "class") n.className = v;
+      else if (k === "text") n.textContent = v;
+      else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+      else n.setAttribute(k, v === true ? "" : v);
+    }
+    for (const k of kids.flat()) if (k != null && k !== false) n.append(k.nodeType ? k : document.createTextNode(String(k)));
+    return n;
+  };
+  const esc = (t) => String(t).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+  const store = (() => { try { const k = "vigie.t"; localStorage.setItem(k, "1"); localStorage.removeItem(k); return localStorage; } catch (e) { return null; } })();
+  const pref = {
+    get(k, d) { try { const v = store && store.getItem("vigie." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { if (store) store.setItem("vigie." + k, JSON.stringify(v)); } catch (e) { /* stockage indisponible */ } },
+  };
+  const DEVICE = pref.get("device", null) || (() => {
+    const id = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, "0")).join("");
+    pref.set("device", id); return id;
+  })();
+  const ago = (t, now) => {
+    const m = Math.max(0, Math.round((now - t) / 60000));
+    if (m < 1) return "à l'instant";
+    if (m < 60) return "il y a " + m + " min";
+    const h = Math.floor(m / 60), r = m % 60;
+    return "il y a " + h + " h" + (r ? " " + String(r).padStart(2, "0") : "");
+  };
+  const clock = (t) => new Date(t).toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit" });
+  const SUB_LABEL = { retard: "Retard", panne: "Panne", deviation: "Déviation", accident: "Accident", bonde: "Bondé", autre: "Autre" };
+  const KIND_LABEL = { controle: "Contrôleurs", perturbation: "Perturbation", fin: "Plus là", question: "Question" };
+  const LINE_RE = /^(M[1-3]|\d{1,2})$/;
+
+  // ---------- données ----------
+  let STOPS = D.stops, byId = new Map(STOPS.map((s) => [s.id, s])), gaz = C.buildGazetteer(STOPS);
+  const state = {
+    live: [], local: [], demo: [], demoFeed: [],
+    demoOn: SHOW_DEMO && pref.get("demo", true),
+    filters: pref.get("filters", { controle: true, perturbation: true }),
+    backend: "local", canWrite: null, db: null, sb: null,
+    sheet: null, clusters: [],
+  };
+
+  function badge(line) { return el("span", { class: "badge" + (/^M/.test(line) ? " " + line : ""), text: line }); }
+  function stopName(id) { const s = byId.get(id); return s ? s.name : id; }
+
+  function validLive(r) {
+    return r && (r.kind === "controle" || r.kind === "perturbation" || r.kind === "fin")
+      && typeof r.stopId === "string" && byId.has(r.stopId)
+      && typeof r.at === "number" && isFinite(r.at)
+      && (r.line == null || (typeof r.line === "string" && LINE_RE.test(r.line)))
+      && (r.sub == null || Object.prototype.hasOwnProperty.call(SUB_LABEL, r.sub))
+      && (r.of == null || r.of === "controle" || r.of === "perturbation");
+  }
+
+  // ---------- démo : messages Telegram fictifs ----------
+  // [minutes, message, arrêt attendu] — un message dont l'arrêt n'est pas dans la liste est omis
+  const DEMO_MSGS = [
+    [1, "🚨 Contrôleurs au Flon direction Ouchy", "flon"],
+    [3, "4 contrôleurs M2 Flon, quai direction Croisettes", "flon"],
+    [5, "Bus 21 contrôle Blécherette", "blecherette"],
+    [6, "Contrôle à Prélaz, dans le bus", "prelaz"],
+    [8, "toujours au flon les bleus", "flon"],
+    [11, "M1 en panne entre Malley et Bourdonnette", "malley"],
+    [14, "y a des contrôleurs à la gare ?", null],
+    [17, "Schtroumpfs à Chaudron !!", "chauderon"],
+    [22, "bus déviés, travaux à St-François", "stfrancois"],
+    [24, "contrôle en civil à Pully gare", "pully"],
+    [27, "Contrôle en civil EPFL quai direction Renens", "epfl"],
+    [29, "ils sont partis de l'EPFL", "epfl"],
+    [33, "contrôleurs Sallaz", "sallaz"],
+    [35, "confirmé à la Sallaz, 3 agents", "sallaz"],
+    [41, "2 bleus à bourdonnette", "bourdonnette"],
+    [52, "bus bondé à Georgette, impossible de monter", "georgette"],
+    [64, "bonjour, c'est quoi le prix d'un billet zone 11-12 ?", null],
+    [80, "contrôleurs vennes", "vennes"],
+  ];
+  const DEMO_APP = [[2, "controle", "flon", "M2"], [9, "controle", "prelaz", null], [12, "perturbation", "malley", "M1", "panne"], [26, "controle", "riponne", "M2"]];
+  function buildDemo() {
+    const t0 = Date.now();
+    state.demoFeed = DEMO_MSGS.filter((m) => m[2] === null || byId.has(m[2]))
+      .map(([min, text], i) => ({ id: "dm" + i, at: t0 - min * 60000, text, p: C.parseMessage(text, gaz) }));
+    state.demo = state.demoFeed.filter((m) => m.p.usable).map((m) => ({
+      id: m.id, kind: m.p.kind, sub: m.p.sub, of: m.p.of, stopId: m.p.stopId, line: m.p.line, src: "telegram", at: m.at, demo: true,
+    })).concat(DEMO_APP.filter((a) => byId.has(a[2])).map(([min, kind, stopId, line, sub], i) => ({
+      id: "da" + i, kind, sub: sub || null, stopId, line, src: "app", by: "demo-" + i, at: t0 - min * 60000, demo: true,
+    })));
+  }
+
+  // ---------- carte ----------
+  const map = L.map("map", {
+    zoomControl: false, attributionControl: true, minZoom: 11, maxZoom: 18, zoomSnap: 0.5,
+    maxBounds: [[46.43, 6.40], [46.67, 6.88]], maxBoundsViscosity: 0.8,
+  });
+  map.attributionControl.setPrefix(false);
+  const R = L.svg({ padding: 0.5 });
+
+  if (IN_CLAUDE) {
+    // démo dans Claude : fond vectoriel embarqué (les tuiles externes sont bloquées ici)
+    for (const ring of D.basemap.lake) L.polygon(ring, { className: "lake", interactive: false, renderer: R }).addTo(map);
+    for (const c of D.basemap.communes) {
+      for (const ring of c.rings) L.polygon(ring, { className: "commune", interactive: false, renderer: R }).addTo(map);
+      if (c.showLabel === false) continue;
+      L.marker(c.labelAt || c.label, { interactive: false, keyboard: false,
+        icon: L.divIcon({ className: "", html: '<div class="commune-lbl">' + esc(c.name) + "</div>", iconSize: [0, 0] }) }).addTo(map);
+    }
+    map.attributionControl.addAttribution("Fond © swisstopo / OFS (swiss-maps) · positions des arrêts : voir légende");
+  } else {
+    // version en ligne : carte des transports publics (OpenStreetMap / ÖPNVKarte)
+    L.tileLayer("https://tileserver.memomaps.de/tilegen/{z}/{x}/{y}.png", {
+      maxZoom: 18, attribution: 'Carte <a href="https://memomaps.de/">memomaps.de</a> CC-BY-SA · données © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(map);
+  }
+
+  if (IN_CLAUDE) {
+    for (const [line, ids] of Object.entries(D.metro)) {
+      const pts = ids.map((id) => byId.get(id)).filter(Boolean).map((s) => [s.lat, s.lon]);
+      L.polyline(pts, { className: "casing", interactive: false, renderer: R }).addTo(map);
+      L.polyline(pts, { className: "line-" + line, interactive: false, renderer: R }).addTo(map);
+    }
+  }
+
+  const stopLayer = L.layerGroup().addTo(map);
+  const stopMarkers = new Map();
+  function drawStops() {
+    stopLayer.clearLayers(); stopMarkers.clear();
+    for (const s of STOPS) {
+      const metro = !!(s.lines && s.lines.some((l) => /^M/.test(l)));
+      const m = L.circleMarker([s.lat, s.lon], {
+        radius: metro ? 5 : 4, className: metro ? "stop-metro" : "stop-bus", renderer: R, bubblingMouseEvents: false,
+      }).addTo(stopLayer);
+      m.bindTooltip(s.short || s.name, { permanent: true, direction: "right", className: "lbl " + (metro ? "lbl-metro" : "lbl-bus") + (s.major ? " lbl-major" : ""), interactive: false });
+      m.on("click", () => onStopTap(s.id));
+      stopMarkers.set(s.id, m);
+    }
+  }
+  drawStops();
+
+  function zoomClasses() {
+    const z = map.getZoom(), c = map.getContainer().classList;
+    c.toggle("zlt125", z < 12.5); c.toggle("zlt14", z < 14); c.toggle("zlt15", z < 15); c.toggle("zge13", z >= 13);
+  }
+  map.on("zoomend", zoomClasses);
+
+  function fitAll(animate) {
+    const b = L.latLngBounds(STOPS.map((s) => [s.lat, s.lon]));
+    map.fitBounds(b, { paddingTopLeft: [12, 120], paddingBottomRight: [12, 96], animate: !!animate });
+  }
+  function homeView() {
+    map.fitBounds([[46.506, 6.598], [46.544, 6.662]], { paddingTopLeft: [4, 120], paddingBottomRight: [4, 96], maxZoom: 14, animate: false });
+  }
+  homeView();
+  zoomClasses();
+
+  // ---------- points de signalement ----------
+  const clusterLayer = L.layerGroup().addTo(map);
+  const clusterMarkers = new Map();
+  function iconFor(cl, now) {
+    const r = C.radiusFor(cl.confidence), d = r * 2;
+    const fresh = now - cl.lastAt < 4 * 60000 && !cl.clearedAfterLast;
+    const col = C.colorFor(cl.confidence);
+    const txt = cl.confidence < 0.42 ? "#2A1D00" : "#FFFFFF";
+    const label = cl.kind === "perturbation" ? "!" : (cl.count > 1 ? String(cl.count) : "");
+    return L.divIcon({
+      className: "mk-wrap", iconSize: [d, d], iconAnchor: [d / 2, d / 2],
+      html: '<div class="mk ' + (cl.kind === "perturbation" ? "p" : "c") + (fresh ? " fresh" : "") + '" style="--col:' + col + ';--txt:' + txt + '">' +
+            '<span class="halo"></span><span class="core"><span>' + label + "</span></span></div>",
+    });
+  }
+  function sig(cl, now) { return [cl.kind, C.radiusFor(cl.confidence), C.colorFor(cl.confidence), cl.count, now - cl.lastAt < 4 * 60000 && !cl.clearedAfterLast].join("|"); }
+
+  function allReports() { return state.live.concat(state.local, state.demoOn ? state.demo : []); }
+
+  function render() {
+    const now = Date.now();
+    state.clusters = C.computeClusters(allReports(), now).filter((c) => byId.has(c.stopId));
+    const visible = state.clusters.filter((c) => state.filters[c.kind]);
+    const keep = new Set();
+    for (const cl of visible) {
+      keep.add(cl.key);
+      const s = byId.get(cl.stopId);
+      const k = sig(cl, now);
+      let m = clusterMarkers.get(cl.key);
+      if (!m) {
+        m = L.marker([s.lat, s.lon], { icon: iconFor(cl, now), zIndexOffset: 1000 + Math.round(cl.confidence * 1000), keyboard: true, title: (cl.kind === "controle" ? "Contrôleurs" : "Perturbation") + " · " + s.name });
+        m.on("click", () => openCluster(cl.key));
+        m._sig = k; m.addTo(clusterLayer); clusterMarkers.set(cl.key, m);
+      } else if (m._sig !== k) {
+        m.setIcon(iconFor(cl, now)); m.setZIndexOffset(1000 + Math.round(cl.confidence * 1000)); m._sig = k;
+      }
+    }
+    for (const [key, m] of clusterMarkers) if (!keep.has(key)) { clusterLayer.removeLayer(m); clusterMarkers.delete(key); }
+
+    const nC = visible.filter((c) => c.kind === "controle").length, nP = visible.filter((c) => c.kind === "perturbation").length;
+    const parts = [];
+    if (state.filters.controle) parts.push(nC + " contrôle" + (nC > 1 ? "s" : ""));
+    if (state.filters.perturbation) parts.push(nP + " perturbation" + (nP > 1 ? "s" : ""));
+    const src = state.backend === "claude" ? "en direct" : state.backend === "supabase" ? "en direct" : "sur cet appareil";
+    const summary = !parts.length ? "Filtres désactivés" : (nC + nP === 0 ? "Aucun signalement en cours" : parts.join(" · "));
+    $("#status").textContent = summary + " · " + (state.demoOn ? "démo" : src);
+    $("#liveDot").classList.toggle("off", !(state.backend === "claude" || state.backend === "supabase"));
+    $("#feedCount").textContent = String(feedItems().length);
+    if (state.sheet && state.sheet.refresh) state.sheet.refresh();
+  }
+
+  // ---------- feuille coulissante ----------
+  const sheetEl = $("#sheet"), sheetBody = $("#sheetBody"), sheetTitle = $("#sheetTitle");
+  let lastFocus = null, closeTimer = null;
+  function openSheet(kind, title, build, refresh) {
+    clearTimeout(closeTimer);
+    lastFocus = lastFocus || document.activeElement;
+    state.sheet = { kind, refresh: refresh || null };
+    sheetTitle.textContent = title;
+    sheetBody.replaceChildren(build());
+    sheetEl.hidden = false; sheetEl.classList.remove("closing");
+    requestAnimationFrame(() => sheetTitle.focus({ preventScroll: true }));
+  }
+  function closeSheet() {
+    if (sheetEl.hidden) return;
+    state.sheet = null; picked.setPicked(null);
+    sheetEl.classList.add("closing");
+    closeTimer = setTimeout(() => { sheetEl.hidden = true; sheetBody.replaceChildren(); }, 260);
+    if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
+    lastFocus = null;
+  }
+  $("#sheetClose").addEventListener("click", closeSheet);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
+  map.on("click", () => { if (state.sheet && state.sheet.kind !== "report") closeSheet(); });
+
+  function focusStop(id) {
+    const s = byId.get(id); if (!s) return;
+    const z = Math.max(map.getZoom(), 14.5);
+    const sheetH = sheetEl.hidden ? 0 : sheetEl.offsetHeight;
+    const p = map.project([s.lat, s.lon], z).add([0, Math.max(0, (sheetH - 120) / 2)]);
+    if (REDUCED_MOTION) map.setView(map.unproject(p, z), z, { animate: false });
+    else map.flyTo(map.unproject(p, z), z, { duration: 0.45 });
+  }
+
+  // arrêt mis en évidence pendant le choix
+  const picked = {
+    id: null,
+    setPicked(id) {
+      if (this.id && stopMarkers.get(this.id)) stopMarkers.get(this.id).getElement()?.classList.remove("stop-picked");
+      this.id = id;
+      if (id && stopMarkers.get(id)) { const e = stopMarkers.get(id).getElement(); if (e) e.classList.add("stop-picked"); stopMarkers.get(id).bringToFront(); }
+    },
+  };
+
+  // ---------- recherche d'arrêt ----------
+  function searchStops(q) {
+    const nq = C.normalize(q);
+    if (!nq) return [];
+    const scored = [];
+    for (const s of STOPS) {
+      const names = [s.name, s.short].concat(s.alias || []).filter(Boolean).map(C.normalize);
+      let best = 9;
+      for (const n of names) {
+        if (n.startsWith(nq)) best = Math.min(best, 0);
+        else if (n.split(" ").some((w) => w.startsWith(nq))) best = Math.min(best, 1);
+        else if (n.includes(nq)) best = Math.min(best, 2);
+      }
+      if (best === 9 && nq.length >= 4) {
+        const p = C.parseMessage(q, gaz);
+        if (p.stopId === s.id) best = 3;
+      }
+      if (best < 9) scored.push([best, s]);
+    }
+    scored.sort((a, b) => a[0] - b[0] || a[1].name.localeCompare(b[1].name, "fr"));
+    return scored.slice(0, 6).map((x) => x[1]);
+  }
+
+  // ---------- formulaire de signalement ----------
+  const form = { kind: "controle", sub: null, stopId: null, line: null };
+  function onStopTap(id) {
+    if (state.sheet && state.sheet.kind === "report") { setFormStop(id); return; }
+    openReport({ stopId: id });
+  }
+  let setFormStop = () => {};
+
+  function openReport(pre) {
+    Object.assign(form, { kind: "controle", sub: null, stopId: null, line: null }, pre || {});
+    openSheet("report", "Signaler", () => {
+      const wrap = el("div", { class: "stack" });
+      const seg = el("div", { class: "seg", role: "group", "aria-label": "Type de signalement" });
+      const bK = el("button", { type: "button", "aria-pressed": "true" }, el("i", { class: "shape circle" }), "Contrôleurs");
+      const bP = el("button", { type: "button", "aria-pressed": "false" }, el("i", { class: "shape diamond" }), "Perturbation");
+      seg.append(bK, bP);
+      const subBox = el("div", { hidden: true }, el("p", { class: "label", text: "Quel problème ?" }));
+      const subChips = el("div", { class: "chips" });
+      for (const [k, v] of Object.entries(SUB_LABEL)) {
+        subChips.append(el("button", { type: "button", class: "opt", "aria-pressed": "false", "data-sub": k, onclick: (e) => {
+          form.sub = form.sub === k ? null : k;
+          subChips.querySelectorAll(".opt").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.sub === form.sub)));
+          sync();
+        } }, v));
+      }
+      subBox.append(subChips);
+      const setKind = (k) => {
+        form.kind = k; bK.setAttribute("aria-pressed", String(k === "controle")); bP.setAttribute("aria-pressed", String(k === "perturbation"));
+        subBox.hidden = k !== "perturbation"; sync();
+      };
+      bK.addEventListener("click", () => setKind("controle"));
+      bP.addEventListener("click", () => setKind("perturbation"));
+
+      // arrêt
+      const stopBox = el("div");
+      const lineBox = el("div");
+      const drawStop = () => {
+        stopBox.replaceChildren(el("p", { class: "label", text: "Arrêt" }));
+        if (form.stopId) {
+          const s = byId.get(form.stopId);
+          stopBox.append(el("div", { class: "picked" },
+            el("div", null, el("strong", { text: s.name }), " ", el("span", { class: "badges" }, (s.lines || []).map(badge))),
+            el("button", { type: "button", class: "link", onclick: () => { form.stopId = null; form.line = null; picked.setPicked(null); drawStop(); drawLines(); sync(); stopBox.querySelector("input")?.focus(); } }, "Changer")));
+        } else {
+          const input = el("input", { id: "stopSearch", class: "field", type: "search", autocomplete: "off", placeholder: "Nom de l'arrêt (ex. Chauderon)", "aria-label": "Rechercher un arrêt" });
+          const list = el("div", { class: "sugg", role: "listbox" });
+          const fill = () => {
+            const res = searchStops(input.value);
+            list.replaceChildren(...res.map((s) => el("button", { type: "button", role: "option", onclick: () => setFormStop(s.id) },
+              el("span", { text: s.name }), el("span", { class: "badges" }, (s.lines || []).map(badge)))));
+            if (input.value && !res.length) list.replaceChildren(el("p", { class: "hint", text: "Aucun arrêt trouvé. Essaie un autre nom ou touche l'arrêt sur la carte." }));
+          };
+          input.addEventListener("input", fill);
+          stopBox.append(input, list, el("p", { class: "hint", text: "Ou touche un arrêt directement sur la carte." }));
+          if (!IN_CLAUDE && "geolocation" in navigator) {
+            stopBox.append(el("button", { type: "button", class: "link", onclick: locate }, "Arrêt le plus proche de moi"));
+          }
+        }
+      };
+      const drawLines = () => {
+        lineBox.replaceChildren(el("p", { class: "label", text: "Ligne (facultatif)" }));
+        const row = el("div", { class: "chips" });
+        const s = form.stopId && byId.get(form.stopId);
+        const options = (s && s.lines && s.lines.length ? s.lines : ["M1", "M2"]);
+        for (const l of options) {
+          row.append(el("button", { type: "button", class: "opt", "aria-pressed": String(form.line === l), onclick: () => { form.line = form.line === l ? null : l; drawLines(); } }, l));
+        }
+        const num = el("input", { id: "lineNum", class: "field num", inputmode: "numeric", maxlength: "2", placeholder: "N° bus", "aria-label": "Numéro de ligne de bus",
+          value: form.line && !/^M/.test(form.line) ? form.line : "" });
+        num.addEventListener("input", () => {
+          num.value = num.value.replace(/\D/g, "").slice(0, 2);
+          form.line = num.value ? String(+num.value) : (form.line && /^M/.test(form.line) ? form.line : null);
+          row.querySelectorAll(".opt").forEach((b) => b.setAttribute("aria-pressed", String(b.textContent === form.line)));
+        });
+        row.append(num);
+        lineBox.append(row);
+      };
+      setFormStop = (id) => {
+        form.stopId = id;
+        const s = byId.get(id);
+        if (s && s.lines && s.lines.length === 1 && !form.line) form.line = s.lines[0];
+        picked.setPicked(id); drawStop(); drawLines(); sync(); focusStop(id);
+      };
+
+      const privacy = el("p", { class: "privacy" });
+      privacy.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+      privacy.append("Seuls le lieu, la ligne et l'heure sont partagés. Pas de photo, de pseudo ni de description des agents.");
+
+      const send = el("button", { type: "button", class: "primary", disabled: true }, "Envoyer le signalement");
+      const why = el("p", { class: "hint", hidden: true });
+      const sync = () => {
+        send.disabled = !form.stopId || state.canWrite === false;
+        why.hidden = state.canWrite !== false;
+        why.textContent = "Cette page est en lecture seule pour toi : demande l'accès « Contributeur » pour pouvoir signaler.";
+      };
+      send.addEventListener("click", async () => {
+        if (!form.stopId) return;
+        send.disabled = true;
+        const ok = await submit({ kind: form.kind, sub: form.kind === "perturbation" ? form.sub : null, stopId: form.stopId, line: form.line });
+        if (ok) { const id = form.stopId; closeSheet(); setTimeout(() => focusStop(id), 280); } else sync();
+      });
+
+      wrap.append(el("div", null, el("p", { class: "label", text: "Qu'as-tu vu ?" }), seg), subBox, stopBox, lineBox, privacy, el("div", null, send, why));
+      drawStop(); drawLines(); setKind(form.kind);
+      if (form.stopId) { picked.setPicked(form.stopId); setTimeout(() => focusStop(form.stopId), 60); }
+      return wrap;
+    });
+  }
+
+  function locate() {
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const { latitude: la, longitude: lo } = pos.coords;
+      let best = null, bd = Infinity;
+      for (const s of STOPS) { const d = (s.lat - la) ** 2 + ((s.lon - lo) * Math.cos(la * Math.PI / 180)) ** 2; if (d < bd) { bd = d; best = s; } }
+      if (best) setFormStop(best.id);
+    }, () => toast("Position indisponible : choisis l'arrêt dans la liste."), { enableHighAccuracy: true, timeout: 8000 });
+  }
+
+  // ---------- envoi ----------
+  async function submit(r) {
+    const doc = { kind: r.kind, sub: r.sub || null, of: r.of || null, stopId: r.stopId, line: r.line || null, src: "app", by: DEVICE, at: Date.now() };
+    if (state.backend === "claude" && state.db) {
+      try {
+        await state.db.collection("reports").add(doc);
+        toast(r.kind === "fin" ? "Merci, c'est noté." : "Signalement envoyé");
+        prune();
+        return true;
+      } catch (e) {
+        if (e && e.code === "invalid_argument") { state.canWrite = false; toast("Lecture seule : ton signalement n'a pas été partagé."); return false; }
+        if (e && e.code === "quota_exceeded") { toast("La base est pleine : supprime d'anciens signalements."); return false; }
+      }
+    } else if (state.backend === "supabase" && state.sb) {
+      const { error } = await state.sb.rpc("signaler", { p_kind: doc.kind, p_stop_id: doc.stopId, p_device: DEVICE, p_line: doc.line, p_sub: doc.sub, p_of_kind: doc.of });
+      if (!error) { toast(r.kind === "fin" ? "Merci, c'est noté." : "Signalement envoyé"); if (state.pull) state.pull(); return true; }
+      if (/Trop de signalements/.test(error.message || "")) { toast("Trop de signalements d'affilée : réessaie dans quelques minutes."); return false; }
+      toast("Envoi impossible pour l'instant : gardé sur cet appareil.");
+    }
+    state.local.push(Object.assign({ id: "loc" + Date.now() }, doc));
+    render();
+    if (state.backend === "local") toast("Ajouté sur cet appareil (pas de partage dans ce mode)");
+    return true;
+  }
+
+  let pruned = false;
+  async function prune() {
+    if (pruned || !state.db) return; pruned = true;
+    try {
+      const old = await state.db.collection("reports").where("at", "<", Date.now() - 24 * 3600e3).limit(25).get();
+      for (const d of old.docs) await state.db.doc("reports/" + d.id).delete();
+    } catch (e) { /* ménage best-effort */ }
+  }
+
+  // ---------- fiche d'un point ----------
+  function openCluster(key) {
+    const first = state.clusters.find((c) => c.key === key); if (!first) return;
+    picked.setPicked(null);
+    const build = () => {
+      const now = Date.now();
+      const cl = state.clusters.find((c) => c.key === key);
+      const box = el("div", { class: "stack" });
+      if (!cl) { box.append(el("p", { class: "facts", text: "Ce signalement a expiré : plus assez récent pour être affiché." })); return box; }
+      const s = byId.get(cl.stopId);
+      const isP = cl.kind === "perturbation";
+      const head = el("div", { class: "k-head" }, el("i", { class: "shape " + (isP ? "diamond" : "circle"), style: "color:" + C.colorFor(cl.confidence) }),
+        isP ? "Perturbation" + (cl.subs.length ? " · " + cl.subs.map((x) => SUB_LABEL[x] || x).join(", ") : "") : "Contrôleurs signalés");
+      const lines = cl.lines.length ? cl.lines : [];
+      const title = el("div", null, head, el("div", { class: "k-stop", text: s.name }), el("span", { class: "badges" }, lines.map(badge)));
+      const pct = Math.round(cl.confidence * 100);
+      const conf = el("div", { class: "conf", role: "img", "aria-label": "Confiance " + cl.level + ", " + pct + " %" },
+        el("span", { class: "conf-level", style: "color:" + C.colorFor(cl.confidence), text: cl.level }),
+        el("span", { class: "conf-pct", text: pct + " % de confiance" }),
+        el("div", { class: "bar" }, el("i", { style: "left:" + pct + "%" })),
+        el("div", { class: "bar-scale" }, el("span", { text: "faible" }), el("span", { text: "moyenne" }), el("span", { text: "forte" })));
+      const srcTxt = [];
+      if (cl.src.telegram) srcTxt.push(cl.src.telegram + " Telegram");
+      if (cl.src.app) srcTxt.push(cl.src.app + " app");
+      const facts = el("p", { class: "facts" }, el("strong", { text: cl.count + " signalement" + (cl.count > 1 ? "s" : "") }),
+        " · le dernier " + ago(cl.lastAt, now) + (srcTxt.length ? " · " + srcTxt.join(", ") : ""));
+      box.append(title, conf, facts);
+      if (cl.lastClear) box.append(el("div", { class: "cleared" }, "Départ signalé " + ago(cl.lastClear, now) + " : les signalements plus anciens comptent moins."));
+      const tl = el("ul", { class: "tl", "aria-label": "Détail des signalements" });
+      for (const r of cl.reports.slice(0, 6)) {
+        tl.append(el("li", null, el("span", { class: "t", text: ago(r.at, now).replace("il y a ", "") }),
+          el("span", null, (r.src === "telegram" ? "Telegram" : "App") + (r.line ? " · ligne " + r.line : "")),
+          el("span", { class: "w", title: "Poids actuel" }, el("i", { style: "width:" + Math.round(r.w * 100 / 0.6) + "%;background:" + C.colorFor(r.w / 0.6) }))));
+      }
+      box.append(el("div", null, el("p", { class: "label", text: "Poids de chaque signalement" }), tl));
+      const row = el("div", { class: "row" },
+        el("button", { type: "button", class: "secondary", onclick: async () => { if (await submit({ kind: cl.kind, sub: cl.subs[0] || null, stopId: cl.stopId, line: cl.lines[0] || null })) render(); } }, isP ? "Toujours en cours" : "Toujours là"),
+        el("button", { type: "button", class: "secondary", onclick: async () => { if (await submit({ kind: "fin", of: cl.kind, stopId: cl.stopId, line: null })) render(); } }, isP ? "C'est rétabli" : "Plus là"));
+      box.append(row, el("p", { class: "note", text: "La confiance baisse de moitié toutes les " + C.CFG[cl.kind].half + " min sans nouveau signalement." }));
+      return box;
+    };
+    openSheet("cluster", first.kind === "perturbation" ? "Perturbation" : "Contrôle", build, () => sheetBody.replaceChildren(build()));
+    focusStop(first.stopId);
+  }
+
+  // ---------- fil ----------
+  function feedItems() {
+    const items = [];
+    if (state.demoOn) for (const m of state.demoFeed) items.push({ at: m.at, text: m.text, p: m.p, src: "telegram", demo: true });
+    for (const r of state.live.concat(state.local)) items.push({ at: r.at, p: { kind: r.kind, sub: r.sub, of: r.of, stopId: r.stopId, line: r.line, usable: true }, src: r.src });
+    return items.filter((i) => Date.now() - i.at < 3 * 3600e3).sort((a, b) => b.at - a.at);
+  }
+  function parseTags(p) {
+    const tags = [];
+    if (p.kind === "question") tags.push(el("span", { class: "tag miss", text: "question : ignorée" }));
+    else {
+      tags.push(el("span", { class: "tag" }, el("i", { class: "shape " + (p.kind === "perturbation" ? "diamond" : "circle"), style: "color:var(--c-mid)" }),
+        p.kind === "fin" ? (p.of === "perturbation" ? "rétabli" : "plus là") : (KIND_LABEL[p.kind] + (p.sub ? " · " + SUB_LABEL[p.sub] : ""))));
+      if (p.stopId) tags.push(el("span", { class: "tag", text: stopName(p.stopId) + (p.fuzzy ? " (approché)" : "") }));
+      else tags.push(el("span", { class: "tag miss", text: "non localisé" }));
+      if (p.line) tags.push(badge(p.line));
+      if (p.dirStopId) tags.push(el("span", { class: "tag", text: "→ " + stopName(p.dirStopId) }));
+    }
+    return tags;
+  }
+  function openFeed() {
+    const build = () => {
+      const now = Date.now();
+      const box = el("div", { class: "stack" });
+      const out = el("div", { class: "meta", "aria-live": "polite" });
+      const input = el("input", { id: "tester", class: "field", type: "text", autocomplete: "off", placeholder: "Colle un message, ex. « contrôle M1 Malley »", "aria-label": "Tester l'interprétation d'un message" });
+      input.addEventListener("input", () => out.replaceChildren(...(input.value.trim() ? parseTags(C.parseMessage(input.value, gaz)) : [])));
+      if (state.demoOn || IN_CLAUDE) box.append(el("div", { class: "tester" }, el("p", { class: "label", text: "Tester un message" }), input, out));
+      const items = feedItems();
+      box.append(el("p", { class: "hint", text: state.demoOn
+        ? "Messages fictifs du groupe Telegram (démo), interprétés automatiquement. Les vrais messages arrivent via le collecteur."
+        : "Derniers signalements des 3 dernières heures." }));
+      if (!items.length) { box.append(el("p", { class: "facts", text: "Rien de signalé ces 3 dernières heures. Le premier signalement apparaîtra ici." })); return box; }
+      const ul = el("ul", { class: "feed" });
+      for (const it of items.slice(0, 60)) {
+        const li = el("li", { class: it.p.usable ? "" : "dim" });
+        if (it.text) li.append(el("div", { class: "msg", text: it.text }));
+        li.append(el("div", { class: "meta" }, el("span", { text: clock(it.at) + " · " + (it.src === "telegram" ? "Telegram" : "App") }), parseTags(it.p)));
+        ul.append(li);
+      }
+      box.append(ul);
+      return box;
+    };
+    openSheet("feed", "Fil des signalements", build, null);
+  }
+
+  // ---------- légende ----------
+  function openLegend() {
+    openSheet("legend", "Comment lire la carte", () => {
+      const box = el("div", { class: "stack" });
+      const sample = (c, kind, n) => {
+        const d = C.radiusFor(c) * 2;
+        const w = el("div", { style: "width:" + d + "px;height:" + d + "px;position:relative" });
+        w.innerHTML = '<div class="mk ' + kind + '" style="--col:' + C.colorFor(c) + ';--txt:' + (c < .42 ? "#2A1D00" : "#fff") + '"><span class="core"><span>' + (n || "") + "</span></span></div>";
+        return w;
+      };
+      box.append(el("div", { class: "leg" },
+        sample(0.6, "c", "3"), el("p", null, el("strong", { text: "Contrôleurs" }), " — le chiffre indique le nombre de signalements."),
+        sample(0.5, "p", "!"), el("p", null, el("strong", { text: "Perturbation" }), " — panne, retard, déviation, véhicule bondé.")));
+      box.append(el("div", null, el("p", { class: "label", text: "Taille et couleur = indice de confiance" }),
+        el("div", { class: "ramp" },
+          el("figure", null, sample(0.2, "c"), el("figcaption", { text: "faible" })),
+          el("figure", null, sample(0.5, "c"), el("figcaption", { text: "moyenne" })),
+          el("figure", null, sample(0.85, "c"), el("figcaption", { text: "forte" })))));
+      box.append(el("ul", { class: "rules" },
+        el("li", null, el("strong", { text: "1 message récent" }), " ≈ 45 % ; ", el("strong", { text: "3 messages en 6 min" }), " ≈ 80 %."),
+        el("li", null, "La confiance ", el("strong", { text: "baisse de moitié toutes les 20 min" }), " (45 min pour une perturbation) ; un point disparaît après 2 h."),
+        el("li", null, "« Plus là » réduit fortement les signalements antérieurs du même arrêt."),
+        el("li", null, "Une même personne ne compte qu'une fois par arrêt.")));
+      box.append(el("p", { class: "note", text: IN_CLAUDE
+        ? "Prototype : fond de carte simplifié, lignes M1 et M2 et " + STOPS.length + " arrêts principaux. " + (D.meta && D.meta.note ? D.meta.note + " " : "") + "La version en ligne affiche la carte complète des transports (OpenStreetMap) et tous les arrêts (GTFS officiel)."
+        : "Fond de carte : ÖPNVKarte (memomaps.de, CC BY-SA), données © contributeurs OpenStreetMap. Positions des arrêts : Wikipédia et transport.opendata.ch." }));
+      if (!IN_CLAUDE) {
+        const links = el("div", { class: "links" });
+        if (canInstall()) links.append(el("button", { type: "button", class: "link", onclick: install }, "Installer l'app"));
+        links.append(el("a", { href: "confidentialite.html" }, "Confidentialité"));
+        if (D.meta && D.meta.repo) links.append(el("a", { href: D.meta.repo, target: "_blank", rel: "noopener" }, "Code source"));
+        box.append(links);
+      }
+      return box;
+    });
+  }
+
+  // ---------- toast ----------
+  let toastTimer = null;
+  function toast(msg) {
+    const t = $("#toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2800);
+  }
+
+  // ---------- boutons ----------
+  $("#btnReport").addEventListener("click", () => openReport());
+  $("#btnFeed").addEventListener("click", openFeed);
+  $("#btnLegend").addEventListener("click", openLegend);
+  $("#btnCenter").addEventListener("click", () => fitAll(true));
+  document.querySelectorAll("[data-filter]").forEach((b) => {
+    b.setAttribute("aria-pressed", String(!!state.filters[b.dataset.filter]));
+    b.addEventListener("click", () => {
+      state.filters[b.dataset.filter] = !state.filters[b.dataset.filter];
+      b.setAttribute("aria-pressed", String(state.filters[b.dataset.filter]));
+      pref.set("filters", state.filters); render();
+    });
+  });
+  const chipDemo = $("#chipDemo");
+  chipDemo.hidden = !SHOW_DEMO;
+  const syncDemoChip = () => { chipDemo.setAttribute("aria-pressed", String(state.demoOn)); chipDemo.setAttribute("aria-label", state.demoOn ? "Démo activée : masquer les données fictives" : "Afficher la démo"); };
+  chipDemo.addEventListener("click", () => { state.demoOn = !state.demoOn; pref.set("demo", state.demoOn); syncDemoChip(); render(); });
+  syncDemoChip();
+
+  // ---------- installation (site uniquement) ----------
+  const STANDALONE = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+  const UA = navigator.userAgent || "";
+  const IS_IOS = /iPad|iPhone|iPod/.test(UA) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const IS_ANDROID = /Android/i.test(UA);
+  let deferredPrompt = null;
+  function canInstall() { return !IN_CLAUDE && !STANDALONE && !!(deferredPrompt || IS_IOS || IS_ANDROID); }
+  const installBar = $("#install");
+  function hideInstall() { installBar.hidden = true; }
+  function maybeShowInstall() {
+    if (!canInstall() || !(IS_IOS || IS_ANDROID)) return;          // bandeau sur téléphone seulement
+    if (Date.now() < pref.get("installLater", 0)) return;
+    installBar.hidden = false;
+  }
+  function openInstallHelp() {
+    openSheet("install", "Installer Vigie", () => {
+      const box = el("div", { class: "stack" });
+      box.append(IS_IOS
+        ? el("ol", { class: "steps" },
+            el("li", null, "Ouvre cette page dans ", el("strong", { text: "Safari" }), "."),
+            el("li", null, "Touche ", el("strong", { text: "Partager" }), " (le carré avec une flèche vers le haut)."),
+            el("li", null, "Choisis ", el("strong", { text: "Sur l'écran d'accueil" }), ", puis ", el("strong", { text: "Ajouter" }), "."))
+        : el("ol", { class: "steps" },
+            el("li", null, "Ouvre le menu du navigateur (", el("strong", { text: "⋮" }), ")."),
+            el("li", null, "Choisis ", el("strong", { text: "Installer l'application" }), " ou ", el("strong", { text: "Ajouter à l'écran d'accueil" }), "."),
+            el("li", null, "Confirme : Vigie apparaît avec tes autres apps.")));
+      box.append(el("p", { class: "hint", text: "Vigie s'ouvre ensuite en plein écran, sans barre d'adresse, comme une app classique." }));
+      return box;
+    });
+  }
+  async function install() {
+    hideInstall();
+    if (!deferredPrompt) { openInstallHelp(); return; }
+    const p = deferredPrompt; deferredPrompt = null;
+    try { await p.prompt(); } catch (e) { openInstallHelp(); }
+  }
+  if (!IN_CLAUDE) {
+    window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferredPrompt = e; maybeShowInstall(); });
+    window.addEventListener("appinstalled", () => { deferredPrompt = null; hideInstall(); toast("Vigie est installée"); });
+    $("#installGo").addEventListener("click", install);
+    $("#installLater").addEventListener("click", () => { pref.set("installLater", Date.now() + 14 * 864e5); hideInstall(); });
+    setTimeout(maybeShowInstall, 1500);
+    const secure = location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1";
+    if ("serviceWorker" in navigator && secure) {
+      window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => { /* hors ligne indisponible */ }); });
+    }
+  }
+
+  // ---------- démarrage ----------
+  buildDemo();
+  render();
+  setInterval(render, 30000);
+
+  if (MODE === "claude") {
+    (async () => {
+      const db = await window.claude.use("db");
+      if (!db) { render(); return; }
+      state.db = db; state.backend = "claude";
+      try { const user = await window.claude.use("user"); if (user) state.canWrite = await user.can("data.write"); } catch (e) { /* inconnu : on laisse essayer */ }
+      db.collection("reports").orderBy("at", "desc").limit(400).onSnapshot((snap) => {
+        state.live = snap.docs.map((d) => Object.assign({ id: d.id }, d.data())).filter(validLive);
+        render();
+      }, () => { state.backend = "local"; render(); toast("Synchronisation interrompue : tes signalements restent sur cet appareil."); });
+      render();
+    })();
+  } else if (MODE === "supabase") {
+    (async () => {
+      try {
+        await new Promise((ok, ko) => { const sc = document.createElement("script"); sc.src = "__SUPABASE_JS__"; sc.onload = ok; sc.onerror = ko; document.head.append(sc); });
+      } catch (e) { toast("Connexion impossible : vérifie ton réseau puis rouvre l'app."); return; }
+      const sb = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } });
+      const COLS = "id,kind,sub,of_kind,stop_id,line,src,voter,at";
+      const fromRow = (r) => ({ id: "sb" + r.id, kind: r.kind, sub: r.sub, of: r.of_kind, stopId: r.stop_id, line: r.line, src: r.src, by: r.voter || null, at: Date.parse(r.at) });
+      state.sb = sb;
+      state.pull = async () => {
+        const { data, error } = await sb.from("signalements").select(COLS)
+          .gte("at", new Date(Date.now() - 4 * 3600e3).toISOString()).order("at", { ascending: false }).limit(1000);
+        if (error || !Array.isArray(data)) return false;
+        state.live = data.map(fromRow).filter(validLive);
+        state.backend = "supabase";
+        render();
+        return true;
+      };
+      if (!(await state.pull())) toast("Serveur injoignable pour l'instant : nouvel essai automatique.");
+      sb.channel("signalements").on("postgres_changes", { event: "INSERT", schema: "public", table: "signalements" }, (p) => {
+        const r = fromRow(p.new || {});
+        if (validLive(r) && !state.live.some((x) => x.id === r.id)) { state.live.unshift(r); render(); }
+      }).subscribe();
+      // le temps réel peut se couper (veille du téléphone, 24 h max) : on resynchronise régulièrement
+      setInterval(() => { if (!document.hidden) state.pull(); }, 120000);
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) state.pull(); });
+    })();
+  }
+})();
+</script>

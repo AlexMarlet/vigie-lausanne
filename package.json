@@ -1,0 +1,18 @@
+{
+  "name": "vigie-lausanne",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Carte communautaire des contrôles et perturbations sur le réseau de transports du Grand Lausanne.",
+  "scripts": {
+    "build": "python3 tools/build_app.py",
+    "test": "node core/test-core.js && python3 collector/test_parser.py",
+    "serve": "python3 -m http.server 8080 --directory dist"
+  },
+  "devDependencies": {
+    "@fontsource-variable/archivo": "5.3.0",
+    "@fontsource/atkinson-hyperlegible": "5.3.0",
+    "@fontsource/ibm-plex-mono": "5.3.0",
+    "@supabase/supabase-js": "2.117.3",
+    "leaflet": "1.9.4"
+  }
+}

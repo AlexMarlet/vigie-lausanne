@@ -1,0 +1,195 @@
+[
+ {
+  "msg": "🚨 Contrôleurs au Flon direction Ouchy",
+  "exp": {
+   "kind": "controle",
+   "stopId": "flon",
+   "dirStopId": "ouchy",
+   "line": null
+  }
+ },
+ {
+  "msg": "4 contrôleurs M2 Riponne",
+  "exp": {
+   "kind": "controle",
+   "stopId": "riponne",
+   "line": "M2"
+  }
+ },
+ {
+  "msg": "Contrôle dans le 9 à Prélaz",
+  "exp": {
+   "kind": "controle",
+   "stopId": "prelaz",
+   "line": "9"
+  }
+ },
+ {
+  "msg": "ils sont partis de bel air",
+  "exp": {
+   "kind": "fin",
+   "stopId": "belair",
+   "of": "controle"
+  }
+ },
+ {
+  "msg": "Y a des contrôleurs à la gare ?",
+  "exp": {
+   "kind": "question",
+   "usable": false
+  }
+ },
+ {
+  "msg": "M1 en panne entre Malley et Bourdonnette",
+  "exp": {
+   "kind": "perturbation",
+   "sub": "panne",
+   "stopId": "malley",
+   "line": "M1"
+  }
+ },
+ {
+  "msg": "Schtroumpfs à Chaudron !!",
+  "exp": {
+   "kind": "controle",
+   "stopId": "chauderon",
+   "fuzzy": true
+  }
+ },
+ {
+  "msg": "le 18 dévié, travaux à St-François",
+  "exp": {
+   "kind": "perturbation",
+   "sub": "deviation",
+   "stopId": "stfrancois",
+   "line": "18"
+  }
+ },
+ {
+  "msg": "Contrôle en civil EPFL quai direction Renens 10h45",
+  "exp": {
+   "kind": "controle",
+   "stopId": "epfl",
+   "dirStopId": "renens",
+   "line": null
+  }
+ },
+ {
+  "msg": "RAS à Ouchy",
+  "exp": {
+   "kind": "fin",
+   "stopId": "ouchy"
+  }
+ },
+ {
+  "msg": "2 bleus ligne 25 bourdonnette",
+  "exp": {
+   "kind": "controle",
+   "stopId": "bourdonnette",
+   "line": "25"
+  }
+ },
+ {
+  "msg": "contrôleurs vennes",
+  "exp": {
+   "kind": "controle",
+   "stopId": "vennes"
+  }
+ },
+ {
+  "msg": "Retard 30 min sur le 1 à la Maladière",
+  "exp": {
+   "kind": "perturbation",
+   "sub": "retard",
+   "stopId": "maladiere",
+   "line": "1"
+  }
+ },
+ {
+  "msg": "Agents au 14 avril",
+  "exp": {
+   "kind": "controle",
+   "stopId": "14avril",
+   "line": null
+  }
+ },
+ {
+  "msg": "Ça circule à nouveau sur le M2",
+  "exp": {
+   "kind": "fin",
+   "of": "perturbation",
+   "stopId": null,
+   "usable": false
+  }
+ },
+ {
+  "msg": "control st f",
+  "exp": {
+   "kind": "controle",
+   "stopId": "stfrancois"
+  }
+ },
+ {
+  "msg": "3 contrôleurs gare de renens",
+  "exp": {
+   "kind": "controle",
+   "stopId": "renens",
+   "line": null
+  }
+ },
+ {
+  "msg": "Contrôle M1 UNIL Sorge → EPFL",
+  "exp": {
+   "kind": "controle",
+   "stopId": "sorge",
+   "dirStopId": "epfl",
+   "line": "M1"
+  }
+ },
+ {
+  "msg": "le 7 bondé à Georgette",
+  "exp": {
+   "kind": "perturbation",
+   "sub": "bonde",
+   "stopId": "georgette",
+   "line": "7"
+  }
+ },
+ {
+  "msg": "controleurs devant la riponne 8 minutes",
+  "exp": {
+   "kind": "controle",
+   "stopId": "riponne",
+   "line": null
+  }
+ },
+ {
+  "msg": "Bus 21 contrôle Blécherette",
+  "exp": {
+   "kind": "controle",
+   "stopId": "blecherette",
+   "line": "21"
+  }
+ },
+ {
+  "msg": "qqn sait si y a des contrôles à Chauderon ?",
+  "exp": {
+   "kind": "question",
+   "usable": false
+  }
+ },
+ {
+  "msg": "vigie contrôleurs en uniforme",
+  "exp": {
+   "kind": "controle",
+   "stopId": "vigie"
+  }
+ },
+ {
+  "msg": "fausse alerte au chuv",
+  "exp": {
+   "kind": "fin",
+   "stopId": "chuv"
+  }
+ }
+]

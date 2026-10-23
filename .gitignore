@@ -1,0 +1,15 @@
+# dépendances et sorties de build
+node_modules/
+dist/
+build/
+
+# secrets et environnements locaux
+.env
+.venv/
+*.session
+
+# divers
+__pycache__/
+*.pyc
+GTFS_*.zip
+.DS_Store
