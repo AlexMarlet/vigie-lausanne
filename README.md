@@ -83,7 +83,7 @@ Le build refuse de publier une clé secrète par erreur. `VIGIE_OFFLINE=1 npm ru
 1. Settings → Pages → Source : **GitHub Actions**.
 2. Pousser sur `main` (ou Actions → Déploiement → Run workflow).
 
-À chaque déploiement, `tools/check_supabase.py` vérifie en lecture seule que la table et la fonction `signaler()` existent, et affiche un avertissement sinon.
+À chaque déploiement, `tools/check_supabase.py` vérifie en lecture seule que la table et la fonction `signaler()` existent. Une fois le site publié, `tools/smoke_test.py` l'ouvre dans un Chrome mobile et contrôle la connexion à la base, le fonctionnement hors ligne, l'installabilité et l'absence d'erreur, sans rien écrire.
 
 ## Tests
 
