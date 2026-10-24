@@ -17,10 +17,12 @@ URL = (sys.argv[1] if len(sys.argv) > 1 else "https://alexmarlet.github.io/vigie
 ANDROID_UA = ("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) "
               "Chrome/141.0.0.0 Mobile Safari/537.36")
 results = []
+LABELS = []
 
 
 def check(cond, label):
     results.append(bool(cond))
+    LABELS.append(("✓ " if cond else "✗ ") + label)
     print(("✓ " if cond else "✗ ") + label, flush=True)
     if not cond:
         print(f"::error title=Site en ligne::{label}", flush=True)
@@ -39,9 +41,12 @@ async def main():
 
         # le site ne doit jamais écrire pendant ce test
         async def no_write(route):
-            if "/rest/v1/rpc/" in route.request.url or route.request.method in ("POST", "PATCH", "DELETE") and "supabase.co" in route.request.url:
-                return await route.abort()
-            await route.continue_()
+            try:
+                if "/rest/v1/rpc/" in route.request.url or route.request.method in ("POST", "PATCH", "DELETE") and "supabase.co" in route.request.url:
+                    return await route.abort()
+                await route.continue_()
+            except Exception:  # requête annulée par la page entre-temps
+                pass
         await page.route("**/*", no_write)
 
         resp = None
@@ -83,8 +88,18 @@ async def main():
         check(not real, "aucune erreur JavaScript" + (f" : {real[:3]}" if real else ""))
         await ctx.close()
 
-    print(f"\n{sum(results)}/{len(results)} vérifications OK", flush=True)
+    summary = f"{sum(results)}/{len(results)} vérifications OK"
+    print(f"\n{summary}", flush=True)
+    print(f"::notice title=Site en ligne::{summary} — " + " · ".join(LABELS), flush=True)
     sys.exit(0 if all(results) else 1)
 
 
-asyncio.run(main())
+try:
+    asyncio.run(main())
+except SystemExit:
+    raise
+except Exception as exc:  # erreur du test lui-même : la rendre visible dans GitHub
+    import traceback
+    where = " / ".join(line.strip() for line in traceback.format_exc().strip().splitlines()[-5:])
+    print(f"::error title=Test du site en ligne::{type(exc).__name__} : {str(exc)[:300]} | {where[:600]}", flush=True)
+    sys.exit(1)
