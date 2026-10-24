@@ -51,7 +51,16 @@ async def main():
 
         resp = None
         for _ in range(6):                         # le CDN de GitHub Pages peut mettre quelques secondes
-            resp = await page.goto(URL, wait_until="load")
+            try:
+                resp = await page.goto(URL, wait_until="load")
+            except Exception as exc:
+                if "ERR_NAME_NOT_RESOLVED" not in str(exc):
+                    raise
+                # nouveau domaine pas encore actif : avertir sans faire échouer le déploiement
+                print(f"::warning title=Domaine::{URL} ne répond pas encore (DNS pas configuré ou en cours de propagation). "
+                      "Test reporté au prochain déploiement.", flush=True)
+                await ctx.close()
+                sys.exit(0)
             if resp is not None and resp.ok:
                 break
             await page.wait_for_timeout(10000)
