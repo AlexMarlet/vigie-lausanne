@@ -407,9 +407,18 @@ button { font: inherit; color: inherit; cursor: pointer; }
     reseau: { label: "Lignes TP", tiles: "https://tileserver.memomaps.de/tilegen/{z}/{x}/{y}.png",
               attribution: 'Carte <a href="https://memomaps.de/">memomaps.de</a> CC-BY-SA · données © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' },
   };
-  // couches retirées du fond épuré : petites rues, sentiers, numéros de routes, aéroport, sens uniques
-  const FOND_HIDE = new Set(["highway-name-path", "highway-name-minor", "highway_name_other", "highway-shield-non-us",
-    "highway-shield-us-interstate", "road_shield_us", "airport", "road_oneway", "road_oneway_opposite", "highway_path"]);
+  // couches retirées du fond épuré : petites rues, sentiers, numéros de routes, aéroport, sens uniques, frontières
+  const FOND_HIDE = new Set(["highway-name-path", "highway-name-minor", "highway_name_other", "highway_name_motorway",
+    "highway-shield-non-us", "highway-shield-us-interstate", "road_shield_us", "airport", "road_oneway", "road_oneway_opposite",
+    "highway_path", "boundary_3", "boundary_2", "boundary_disputed", "boundary_state", "boundary_country_z0-4", "boundary_country_z5-"]);
+  // retouches de couleur : lac bleuté, autoroute moins massive en sombre, noms de villes plus discrets
+  const FOND_PAINT = {
+    water: { light: { "fill-color": "#c6d9e4" }, dark: { "fill-color": "#14212b" } },
+    highway_motorway_inner: { dark: { "line-color": "#262b30" } },
+    label_city: { light: { "text-color": "#4a5258" } },
+    label_town: { light: { "text-color": "#4a5258" } },
+    label_village: { light: { "text-color": "#4a5258" } },
+  };
   const FOND_PARAM = (location.search.match(/[?&]fond=([a-z]+)/) || [])[1];
   let fondName = FONDS[FOND_PARAM] ? FOND_PARAM : (FONDS[pref.get("fond", "")] ? pref.get("fond", "") : "simple");
   let baseLayer = null, glLoading = null, fondSeq = 0;
@@ -441,8 +450,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
       try {
         if (!hasWebGL()) throw new Error("webgl");
         await loadGL();
-        style = await (await fetch((isDark() && f.dark) || f.light)).json();
+        const variant = isDark() && f.dark ? "dark" : "light";
+        style = await (await fetch(f[variant])).json();
         style.layers = style.layers.filter((l) => !FOND_HIDE.has(l.id));
+        for (const l of style.layers) {
+          const tweak = FOND_PAINT[l.id] && FOND_PAINT[l.id][variant];
+          const prefix = l.type === "symbol" ? "text-" : l.type + "-";
+          if (tweak && Object.keys(tweak).every((k) => k.startsWith(prefix))) l.paint = Object.assign({}, l.paint, tweak);
+        }
       } catch (e) { name = "reseau"; f = FONDS.reseau; }   // vieux téléphone ou réseau : plan raster
     }
     if (seq !== fondSeq) return;                         // un autre choix a été fait entre-temps
