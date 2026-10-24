@@ -1,7 +1,7 @@
 """
 Test du site en ligne, en lecture seule (aucun signalement envoyé).
     pip install playwright==1.63.0 && python -m playwright install --with-deps chromium
-    python3 tools/smoke_test.py https://alexmarlet.github.io/vigie-lausanne/
+    python3 tools/smoke_test.py https://vigie-lausanne.ch/
 
 Vérifie d'abord le DNS d'un domaine personnalisé (adresses de GitHub Pages), puis ouvre l'app dans un
 Chrome mobile : chargement, connexion à Supabase (« en direct »), fond de carte, service worker,
@@ -184,7 +184,7 @@ async def main(url):
 
 
 if __name__ == "__main__":
-    target_url = (sys.argv[1] if len(sys.argv) > 1 else "https://alexmarlet.github.io/vigie-lausanne/").rstrip("/") + "/"
+    target_url = (sys.argv[1] if len(sys.argv) > 1 else "https://vigie-lausanne.ch/").rstrip("/") + "/"
     try:
         asyncio.run(main(target_url))
     except SystemExit:

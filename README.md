@@ -6,7 +6,7 @@
 Carte communautaire des **contrôles** et **perturbations** sur le réseau de transports du Grand Lausanne, un peu comme Waze.
 Chacun signale en deux gestes ce qu'il voit à un arrêt ; la carte affiche chaque signalement avec un **indice de confiance** : plus il y a de signalements récents au même endroit, plus le point est gros et rouge ; plus ils vieillissent, plus il pâlit.
 
-**App : https://alexmarlet.github.io/vigie-lausanne/**
+**App : https://vigie-lausanne.ch**
 
 Projet personnel et non officiel, sans lien avec les transports publics de la région lausannoise (tl).
 
