@@ -3,19 +3,26 @@ Test du site en ligne, en lecture seule (aucun signalement envoyé).
     pip install playwright==1.63.0 && python -m playwright install --with-deps chromium
     python3 tools/smoke_test.py https://alexmarlet.github.io/vigie-lausanne/
 
-Ouvre l'app dans un Chrome mobile et vérifie : chargement, connexion à Supabase (« en direct »),
-service worker, installabilité, page Confidentialité, absence d'erreur JavaScript.
-Lancé par GitHub Actions après chaque déploiement.
+Vérifie d'abord le DNS d'un domaine personnalisé (adresses de GitHub Pages), puis ouvre l'app dans un
+Chrome mobile : chargement, connexion à Supabase (« en direct »), fond de carte, service worker,
+installabilité, page Confidentialité, absence d'erreur JavaScript.
+Lancé par GitHub Actions après chaque déploiement ; les résultats s'affichent en annotations.
 """
 import asyncio
+import ipaddress
+import os
+import socket
 import sys
 import tempfile
+from urllib.parse import urlsplit
 
 from playwright.async_api import async_playwright
 
-URL = (sys.argv[1] if len(sys.argv) > 1 else "https://alexmarlet.github.io/vigie-lausanne/").rstrip("/") + "/"
 ANDROID_UA = ("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) "
               "Chrome/141.0.0.0 Mobile Safari/537.36")
+# adresses de GitHub Pages pour un domaine racine (docs.github.com, « Managing a custom domain »)
+GITHUB_A = {f"185.199.{n}.153" for n in (108, 109, 110, 111)}
+GITHUB_AAAA = {f"2606:50c0:{n}::153" for n in (8000, 8001, 8002, 8003)}
 results = []
 LABELS = []
 
@@ -28,7 +35,62 @@ def check(cond, label):
         print(f"::error title=Site en ligne::{label}", flush=True)
 
 
-async def main():
+def addresses(host, family):
+    try:
+        return {info[4][0] for info in socket.getaddrinfo(host, None, family, socket.SOCK_STREAM)}
+    except OSError:
+        return set()
+
+
+def dns_report(host):
+    """Domaine personnalisé : compare son DNS aux adresses de GitHub Pages et l'annonce dans GitHub.
+    Renvoie False si le domaine ne répond pas du tout."""
+    try:
+        ipaddress.ip_address(host)
+        return True
+    except ValueError:
+        pass
+    if host == "localhost" or host.endswith(".github.io"):
+        return True
+    apex = host.removeprefix("www.")
+    target = (os.environ.get("GITHUB_REPOSITORY_OWNER") or "alexmarlet").lower() + ".github.io"
+    good, problems, found_any = [], [], False
+    for kind, family, expected in (("A", socket.AF_INET, GITHUB_A), ("AAAA", socket.AF_INET6, GITHUB_AAAA)):
+        found = addresses(apex, family)
+        found_any |= bool(found)
+        extra, missing = sorted(found - expected), sorted(expected - found)
+        if extra:
+            problems.append(f"{kind} en trop sur {apex} : {', '.join(extra)} (à supprimer)")
+        if missing:
+            problems.append(f"{kind} manquant sur {apex} : {', '.join(missing)}")
+        if not extra and not missing:
+            good.append(f"{len(found)} {kind}")
+    try:
+        name, aliases, ips = socket.gethostbyname_ex("www." + apex)
+        names = {n.rstrip(".").lower() for n in (name, *aliases)}
+    except OSError:
+        names, ips = set(), []
+    if target in names:
+        good.append(f"www → {target}")
+    else:
+        seen = ", ".join(sorted(names - {"www." + apex}) or ips) or "aucune entrée"
+        problems.append(f"www.{apex} : {seen}, attendu un CNAME vers {target}")
+    if problems:
+        print(f"::warning title=DNS::{' · '.join(problems)}", flush=True)
+    else:
+        print(f"::notice title=DNS::{apex} pointe vers GitHub Pages ({', '.join(good)})", flush=True)
+    return found_any
+
+
+async def main(url):
+    host = urlsplit(url).hostname or ""
+    if not dns_report(host):
+        # nouveau domaine pas encore actif : avertir sans faire échouer le déploiement
+        print(f"::warning title=Domaine::{host} ne répond pas encore (DNS pas configuré ou en cours de propagation). "
+              "Test reporté au prochain déploiement.", flush=True)
+        sys.exit(0)
+    secure = url.startswith("https://") or host in ("localhost", "127.0.0.1")
+
     async with async_playwright() as p:
         # profil persistant : un contexte « navigation privée » n'est jamais installable
         ctx = await p.chromium.launch_persistent_context(
@@ -49,15 +111,29 @@ async def main():
                 pass
         await page.route("**/*", no_write)
 
+        if not secure:
+            # GitHub publie en http tant que « Enforce HTTPS » n'est pas coché : essayer la version https
+            https_url = "https://" + url.split("://", 1)[1]
+            try:                                   # simple requête, certificat vérifié
+                secure = (await ctx.request.get(https_url, timeout=20000)).ok
+            except Exception:
+                secure = False
+            if secure:
+                url = https_url
+                print("::warning title=HTTPS::Le certificat est prêt : coche « Enforce HTTPS » dans Settings → Pages "
+                      "pour que le http redirige vers le https.", flush=True)
+            else:
+                print("::warning title=HTTPS::GitHub n'a pas encore délivré le certificat HTTPS (jusqu'à 24 h après le DNS). "
+                      "Service worker et installation non testés.", flush=True)
+
         resp = None
         for _ in range(6):                         # le CDN de GitHub Pages peut mettre quelques secondes
             try:
-                resp = await page.goto(URL, wait_until="load")
+                resp = await page.goto(url, wait_until="load")
             except Exception as exc:
                 if "ERR_NAME_NOT_RESOLVED" not in str(exc):
                     raise
-                # nouveau domaine pas encore actif : avertir sans faire échouer le déploiement
-                print(f"::warning title=Domaine::{URL} ne répond pas encore (DNS pas configuré ou en cours de propagation). "
+                print(f"::warning title=Domaine::{url} ne répond pas encore dans le navigateur (DNS en cours de propagation). "
                       "Test reporté au prochain déploiement.", flush=True)
                 await ctx.close()
                 sys.exit(0)
@@ -83,14 +159,18 @@ async def main():
             await page.wait_for_timeout(500)
         check(fond == "ok", f"fond de carte affiché (état : {fond or 'inconnu'})")
 
-        sw = await page.evaluate("navigator.serviceWorker.ready.then(r => !!r.active).catch(() => false)")
-        check(sw, "service worker actif (ouverture hors ligne)")
-        cdp = await ctx.new_cdp_session(page)
-        inst = await cdp.send("Page.getInstallabilityErrors")
-        errs = [e.get("errorId") for e in inst.get("installabilityErrors", [])]
-        check(not errs, "installable sur Android" + (f" — {errs}" if errs else ""))
+        if secure:
+            sw = await page.evaluate("navigator.serviceWorker.ready.then(r => !!r.active).catch(() => false)")
+            check(sw, "service worker actif (ouverture hors ligne)")
+            cdp = await ctx.new_cdp_session(page)
+            inst = await cdp.send("Page.getInstallabilityErrors")
+            errs = [e.get("errorId") for e in inst.get("installabilityErrors", [])]
+            check(not errs, "installable sur Android" + (f" — {errs}" if errs else ""))
+        else:
+            LABELS.append("– service worker et installation non testés (pas de HTTPS)")
+            print(LABELS[-1], flush=True)
 
-        resp = await page.goto(URL + "confidentialite.html")
+        resp = await page.goto(url + "confidentialite.html")
         check(resp is not None and resp.ok, "page Confidentialité servie")
 
         real = [e for e in errors if "favicon" not in e]
@@ -103,12 +183,14 @@ async def main():
     sys.exit(0 if all(results) else 1)
 
 
-try:
-    asyncio.run(main())
-except SystemExit:
-    raise
-except Exception as exc:  # erreur du test lui-même : la rendre visible dans GitHub
-    import traceback
-    where = " / ".join(line.strip() for line in traceback.format_exc().strip().splitlines()[-5:])
-    print(f"::error title=Test du site en ligne::{type(exc).__name__} : {str(exc)[:300]} | {where[:600]}", flush=True)
-    sys.exit(1)
+if __name__ == "__main__":
+    target_url = (sys.argv[1] if len(sys.argv) > 1 else "https://alexmarlet.github.io/vigie-lausanne/").rstrip("/") + "/"
+    try:
+        asyncio.run(main(target_url))
+    except SystemExit:
+        raise
+    except Exception as exc:  # erreur du test lui-même : la rendre visible dans GitHub
+        import traceback
+        where = " / ".join(line.strip() for line in traceback.format_exc().strip().splitlines()[-5:])
+        print(f"::error title=Test du site en ligne::{type(exc).__name__} : {str(exc)[:300]} | {where[:600]}", flush=True)
+        sys.exit(1)
