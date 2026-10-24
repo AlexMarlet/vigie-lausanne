@@ -105,9 +105,10 @@ La CI (`.github/workflows/ci.yml`) les lance à chaque push, avec une base Postg
 
 - Seuls le type, l'arrêt, la ligne et l'heure sont publics. L'identifiant d'appareil sert uniquement à l'anti-spam, reste dans un schéma privé et disparaît après 1 heure. Détails : `web/confidentialite.html`.
 - En Suisse, signaler des contrôleurs n'est pas interdit en soi, contrairement à la France. L'app refuse volontairement photos, descriptions et texte libre pour protéger les agents.
-- Fond de carte : [ÖPNVKarte](https://öpnvkarte.de) (memomaps.de, CC BY-SA), données © contributeurs OpenStreetMap. memomaps demande d'héberger soi-même la carte en cas de fort trafic.
+- Fond de carte épuré par défaut : [OpenFreeMap](https://openfreemap.org) (styles Positron et Dark, gratuits, sans clé ni limite), © OpenMapTiles, données © contributeurs OpenStreetMap. Quelques couches sont masquées et recolorées dans `web/index.template.html` (`FOND_HIDE`, `FOND_PAINT`).
+- Plan des lignes en option (légende de l'app) : [ÖPNVKarte](https://öpnvkarte.de) (memomaps.de, CC BY-SA). memomaps demande d'héberger soi-même la carte en cas de fort trafic.
 - Positions des arrêts : Wikipédia et [transport.opendata.ch](https://transport.opendata.ch). Contours des communes et du lac : swisstopo / OFS, via [swiss-maps](https://github.com/interactivethings/swiss-maps).
-- Polices sous licence SIL Open Font License (`web/fonts/`). Leaflet (BSD-2-Clause) et supabase-js (MIT) sont installés par `npm ci`.
+- Polices sous licence SIL Open Font License (`web/fonts/`). Leaflet (BSD-2-Clause), MapLibre GL (BSD-3-Clause), maplibre-gl-leaflet (ISC) et supabase-js (MIT) sont installés par `npm ci`.
 
 ## Licence
 
