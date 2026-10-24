@@ -397,6 +397,66 @@ button { font: inherit; color: inherit; cursor: pointer; }
     })));
   }
 
+  // ---------- fond de carte (site en ligne) ----------
+  // « simple » : fond vectoriel épuré (OpenFreeMap, gratuit, sans clé ni limite), sombre avec le thème sombre.
+  // « reseau » : plan de toutes les lignes (ÖPNVKarte). « suisse » : fond clair swisstopo (comparaison, via ?fond=suisse).
+  // Choix : paramètre ?fond=, sinon préférence enregistrée, sinon « simple ».
+  const FONDS = {
+    simple: { label: "Épuré", light: "https://tiles.openfreemap.org/styles/positron", dark: "https://tiles.openfreemap.org/styles/dark" },
+    suisse: { label: "swisstopo", light: "https://vectortiles.geo.admin.ch/styles/ch.swisstopo.lightbasemap.vt/style.json" },
+    reseau: { label: "Lignes TP", tiles: "https://tileserver.memomaps.de/tilegen/{z}/{x}/{y}.png",
+              attribution: 'Carte <a href="https://memomaps.de/">memomaps.de</a> CC-BY-SA · données © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' },
+  };
+  // couches retirées du fond épuré : petites rues, sentiers, numéros de routes, aéroport, sens uniques
+  const FOND_HIDE = new Set(["highway-name-path", "highway-name-minor", "highway_name_other", "highway-shield-non-us",
+    "highway-shield-us-interstate", "road_shield_us", "airport", "road_oneway", "road_oneway_opposite", "highway_path"]);
+  const FOND_PARAM = (location.search.match(/[?&]fond=([a-z]+)/) || [])[1];
+  let fondName = FONDS[FOND_PARAM] ? FOND_PARAM : (FONDS[pref.get("fond", "")] ? pref.get("fond", "") : "simple");
+  let baseLayer = null, glLoading = null, fondSeq = 0;
+  function isDark() {
+    const t = document.documentElement.getAttribute("data-theme");
+    if (t === "dark" || t === "light") return t === "dark";
+    return !!(window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
+  }
+  function hasWebGL() {
+    try { const c = document.createElement("canvas"); return !!(c.getContext("webgl2") || c.getContext("webgl")); } catch (e) { return false; }
+  }
+  function loadScript(src) {
+    return new Promise((ok, ko) => { const sc = document.createElement("script"); sc.src = src; sc.onload = ok; sc.onerror = ko; document.head.append(sc); });
+  }
+  function loadGL() {
+    if (L.maplibreGL) return Promise.resolve();
+    if (!glLoading) {
+      const css = document.createElement("link"); css.rel = "stylesheet"; css.href = "__MAPLIBRE_CSS__"; document.head.append(css);
+      glLoading = loadScript("__MAPLIBRE_JS__").then(() => loadScript("__MAPLIBRE_LEAFLET_JS__"));
+    }
+    return glLoading;
+  }
+  async function setFond(name) {
+    const seq = ++fondSeq;
+    let f = FONDS[name] || FONDS.simple;
+    let style = null;
+    document.documentElement.dataset.fond = "chargement";
+    if (!f.tiles) {
+      try {
+        if (!hasWebGL()) throw new Error("webgl");
+        await loadGL();
+        style = await (await fetch((isDark() && f.dark) || f.light)).json();
+        style.layers = style.layers.filter((l) => !FOND_HIDE.has(l.id));
+      } catch (e) { name = "reseau"; f = FONDS.reseau; }   // vieux téléphone ou réseau : plan raster
+    }
+    if (seq !== fondSeq) return;                         // un autre choix a été fait entre-temps
+    fondName = name;
+    if (baseLayer) { map.removeLayer(baseLayer); baseLayer = null; }
+    if (f.tiles) {
+      baseLayer = L.tileLayer(f.tiles, { maxZoom: 18, attribution: f.attribution }).addTo(map);
+      baseLayer.once("load", () => { document.documentElement.dataset.fond = "ok"; });
+    } else {
+      baseLayer = L.maplibreGL({ style }).addTo(map);
+      baseLayer.getMaplibreMap().once("idle", () => { document.documentElement.dataset.fond = "ok"; });
+    }
+  }
+
   // ---------- carte ----------
   const map = L.map("map", {
     zoomControl: false, attributionControl: true, minZoom: 11, maxZoom: 18, zoomSnap: 0.5,
@@ -416,18 +476,18 @@ button { font: inherit; color: inherit; cursor: pointer; }
     }
     map.attributionControl.addAttribution("Fond © swisstopo / OFS (swiss-maps) · positions des arrêts : voir légende");
   } else {
-    // version en ligne : carte des transports publics (OpenStreetMap / ÖPNVKarte)
-    L.tileLayer("https://tileserver.memomaps.de/tilegen/{z}/{x}/{y}.png", {
-      maxZoom: 18, attribution: 'Carte <a href="https://memomaps.de/">memomaps.de</a> CC-BY-SA · données © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(map);
+    setFond(fondName);
+    if (window.matchMedia) {                              // le fond suit le thème clair / sombre du téléphone
+      const mq = matchMedia("(prefers-color-scheme: dark)");
+      if (mq.addEventListener) mq.addEventListener("change", () => { if (FONDS[fondName].dark) setFond(fondName); });
+    }
   }
 
-  if (IN_CLAUDE) {
-    for (const [line, ids] of Object.entries(D.metro)) {
-      const pts = ids.map((id) => byId.get(id)).filter(Boolean).map((s) => [s.lat, s.lon]);
-      L.polyline(pts, { className: "casing", interactive: false, renderer: R }).addTo(map);
-      L.polyline(pts, { className: "line-" + line, interactive: false, renderer: R }).addTo(map);
-    }
+  // lignes M1 et M2, par-dessus le fond
+  for (const [line, ids] of Object.entries(D.metro)) {
+    const pts = ids.map((id) => byId.get(id)).filter(Boolean).map((s) => [s.lat, s.lon]);
+    L.polyline(pts, { className: "casing", interactive: false, renderer: R }).addTo(map);
+    L.polyline(pts, { className: "line-" + line, interactive: false, renderer: R }).addTo(map);
   }
 
   const stopLayer = L.layerGroup().addTo(map);
@@ -847,8 +907,15 @@ button { font: inherit; color: inherit; cursor: pointer; }
         el("li", null, "Une même personne ne compte qu'une fois par arrêt.")));
       box.append(el("p", { class: "note", text: IN_CLAUDE
         ? "Prototype : fond de carte simplifié, lignes M1 et M2 et " + STOPS.length + " arrêts principaux. " + (D.meta && D.meta.note ? D.meta.note + " " : "") + "La version en ligne affiche la carte complète des transports (OpenStreetMap) et tous les arrêts (GTFS officiel)."
-        : "Fond de carte : ÖPNVKarte (memomaps.de, CC BY-SA), données © contributeurs OpenStreetMap. Positions des arrêts : Wikipédia et transport.opendata.ch." }));
+        : "Fond épuré : OpenFreeMap / OpenMapTiles ; plan des lignes : ÖPNVKarte (memomaps.de) ; données © contributeurs OpenStreetMap. Positions des arrêts : Wikipédia et transport.opendata.ch." }));
       if (!IN_CLAUDE) {
+        const fonds = el("div", { class: "chips", role: "group", "aria-label": "Fond de carte" });
+        for (const key of ["simple", "reseau"]) {
+          fonds.append(el("button", { type: "button", class: "opt", "aria-pressed": String(fondName === key),
+            onclick: () => { pref.set("fond", key); setFond(key); fonds.querySelectorAll(".opt").forEach((b, i) => b.setAttribute("aria-pressed", String(["simple", "reseau"][i] === key))); } },
+            FONDS[key].label));
+        }
+        box.append(el("div", null, el("p", { class: "label", text: "Fond de carte" }), fonds));
         const links = el("div", { class: "links" });
         if (canInstall()) links.append(el("button", { type: "button", class: "link", onclick: install }, "Installer l'app"));
         links.append(el("a", { href: "confidentialite.html" }, "Confidentialité"));

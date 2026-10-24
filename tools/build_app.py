@@ -36,6 +36,23 @@ read = lambda p: (ROOT / p).read_text(encoding="utf-8")
 
 LEAFLET_CDN = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"
 SUPABASE_CDN = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"
+MAPLIBRE_CDN = {  # aperçu Claude : jamais utilisés (fond embarqué), seulement pour remplir les marqueurs
+    "__MAPLIBRE_JS__": "https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js",
+    "__MAPLIBRE_CSS__": "https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css",
+    "__MAPLIBRE_LEAFLET_JS__": "https://cdn.jsdelivr.net/npm/@maplibre/maplibre-gl-leaflet@0.1.4/leaflet-maplibre-gl.js",
+}
+MAPLIBRE_LOCAL = {
+    "__MAPLIBRE_JS__": "vendor/maplibre-gl.js",
+    "__MAPLIBRE_CSS__": "vendor/maplibre-gl.css",
+    "__MAPLIBRE_LEAFLET_JS__": "vendor/leaflet-maplibre-gl.js",
+}
+VENDOR = {  # node_modules -> dist/vendor
+    "leaflet/dist/leaflet.js": "leaflet.js",
+    "@supabase/supabase-js/dist/umd/supabase.js": "supabase.js",
+    "maplibre-gl/dist/maplibre-gl.js": "maplibre-gl.js",
+    "maplibre-gl/dist/maplibre-gl.css": "maplibre-gl.css",
+    "@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js": "leaflet-maplibre-gl.js",
+}
 GOOGLE_FONTS = (
     '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
     '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
@@ -128,7 +145,8 @@ def load_data(repo_url: str | None) -> tuple[dict, list]:
     return {"data": data, "colors": coords["colors"]}, stops
 
 
-def render_app(template: str, head: str, data: dict, colors: dict, config: dict, leaflet: str, supabase: str) -> str:
+def render_app(template: str, head: str, data: dict, colors: dict, config: dict, leaflet: str, supabase: str,
+               maplibre: dict) -> str:
     out = template
     out = out.replace("<!--@HEAD@-->", head)
     out = out.replace("/*@LEAFLET_CSS@*/", read("web/vendor/leaflet-1.9.4.css"))
@@ -138,7 +156,9 @@ def render_app(template: str, head: str, data: dict, colors: dict, config: dict,
                       "window.VIGIE_DATA = " + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";")
     out = out.replace("/*@M1@*/", colors["M1"]).replace("/*@M2@*/", colors["M2"])
     out = out.replace("__LEAFLET_JS__", leaflet).replace("__SUPABASE_JS__", supabase)
-    for marker in ("<!--@", "/*@", "__LEAFLET_JS__", "__SUPABASE_JS__"):
+    for marker, value in maplibre.items():
+        out = out.replace(marker, value)
+    for marker in ("<!--@", "/*@", "__LEAFLET_JS__", "__SUPABASE_JS__", "__MAPLIBRE"):
         if marker in out:
             fail(f"marqueur non remplacé : {marker}")
     return out
@@ -161,14 +181,14 @@ def main() -> None:
     (ROOT / "collector/stops.json").write_text(json.dumps(stops, ensure_ascii=False, indent=0) + "\n", encoding="utf-8")
 
     if a.artifact:
-        page = render_app(template, GOOGLE_FONTS, bundle["data"], bundle["colors"], {}, LEAFLET_CDN, SUPABASE_CDN)
+        page = render_app(template, GOOGLE_FONTS, bundle["data"], bundle["colors"], {}, LEAFLET_CDN, SUPABASE_CDN, MAPLIBRE_CDN)
         out = ROOT / "build/vigie-artifact.html"
         out.parent.mkdir(exist_ok=True)
         out.write_text(page, encoding="utf-8")
         print(f"{out.relative_to(ROOT)} : {len(page) // 1024} Ko · {len(stops)} arrêts")
         return
 
-    for src in list(FONTS) + ["leaflet/dist/leaflet.js", "@supabase/supabase-js/dist/umd/supabase.js"]:
+    for src in list(FONTS) + list(VENDOR):
         if not (NM / src).exists():
             fail(f"node_modules/{src} introuvable : lance d'abord « npm ci ».")
 
@@ -178,8 +198,8 @@ def main() -> None:
     (dist / "vendor").mkdir()
     shutil.copytree(WEB / "icons", dist / "icons")
     shutil.copy(WEB / "manifest.webmanifest", dist / "manifest.webmanifest")
-    shutil.copy(NM / "leaflet/dist/leaflet.js", dist / "vendor/leaflet.js")
-    shutil.copy(NM / "@supabase/supabase-js/dist/umd/supabase.js", dist / "vendor/supabase.js")
+    for src, name in VENDOR.items():
+        shutil.copy(NM / src, dist / "vendor" / name)
     for src, name in FONTS.items():
         shutil.copy(NM / src, dist / "fonts" / name)
     for lic in (WEB / "fonts").glob("OFL-*.txt"):
@@ -204,7 +224,8 @@ def main() -> None:
                 '<meta name="apple-mobile-web-app-title" content="Vigie">\n'
                 '<meta name="apple-mobile-web-app-status-bar-style" content="default">' + og)
 
-    page = render_app(template, app_head, bundle["data"], bundle["colors"], config, "vendor/leaflet.js", "vendor/supabase.js")
+    page = render_app(template, app_head, bundle["data"], bundle["colors"], config, "vendor/leaflet.js", "vendor/supabase.js",
+                      MAPLIBRE_LOCAL)
     cut = page.index('<div class="app">')
     doc = ('<!doctype html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\n'
            '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'

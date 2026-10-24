@@ -61,8 +61,13 @@ async def main():
             await page.wait_for_timeout(500)
         check("en direct" in status, f"connectée à Supabase (« {status} »)")
         check(await page.evaluate("document.querySelector('#chipDemo').hidden"), "démo masquée")
-        tiles = await page.evaluate("document.querySelectorAll('.leaflet-tile-loaded').length")
-        check(tiles > 0, f"fond de carte chargé ({tiles} tuiles)")
+        fond = ""
+        for _ in range(40):                       # jusqu'à 20 s pour afficher le fond de carte
+            fond = await page.evaluate("document.documentElement.dataset.fond || ''")
+            if fond == "ok":
+                break
+            await page.wait_for_timeout(500)
+        check(fond == "ok", f"fond de carte affiché (état : {fond or 'inconnu'})")
 
         sw = await page.evaluate("navigator.serviceWorker.ready.then(r => !!r.active).catch(() => false)")
         check(sw, "service worker actif (ouverture hors ligne)")
