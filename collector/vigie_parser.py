@@ -69,7 +69,8 @@ class Gazetteer:
         self.max_len = 1
         for s in stops:
             self.by_id[s["id"]] = s
-            names = [s.get("name"), s.get("short")] + list(s.get("alias") or [])
+            # nom court partagé par plusieurs arrêts (« Gare », « Centre ») : jamais seul, seulement avec la commune
+            names = [s.get("name"), None if s.get("amb") else s.get("short")] + list(s.get("alias") or [])
             for n in filter(None, names):
                 t = tokens(n)
                 if not t:

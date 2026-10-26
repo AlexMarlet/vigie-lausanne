@@ -1,0 +1,25 @@
+{
+ "colors": {
+  "M1": "#2B6CB0",
+  "M2": "#7A4FC0"
+ },
+ "commune_labels": {
+  "5586": [
+   46.5165,
+   6.615
+  ]
+ },
+ "show_communes": [
+  "Lausanne",
+  "Renens",
+  "Prilly",
+  "Pully",
+  "Ecublens",
+  "Crissier",
+  "Epalinges",
+  "Le Mont-sur-Lausanne",
+  "Lutry",
+  "Bussigny"
+ ],
+ "note": "Carte de l'aperçu Claude (fond embarqué) : couleurs des lignes de métro, étiquettes des communes. Les arrêts viennent de tools/reseau.json."
+}

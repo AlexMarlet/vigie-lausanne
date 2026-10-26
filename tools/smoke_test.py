@@ -4,16 +4,21 @@ Test du site en ligne, en lecture seule (aucun signalement envoyé).
     python3 tools/smoke_test.py https://vigie-lausanne.ch/
 
 Vérifie d'abord le DNS d'un domaine personnalisé (adresses de GitHub Pages), puis ouvre l'app dans un
-Chrome mobile : chargement, connexion à Supabase (« en direct »), fond de carte, service worker,
-installabilité, page Confidentialité, absence d'erreur JavaScript.
+Chrome mobile : chargement, connexion à Supabase (« en direct »), réseau complet, choix du sens dans le
+formulaire (sans rien envoyer), fond de carte, service worker, installabilité, page Confidentialité,
+absence d'erreur JavaScript.
 Lancé par GitHub Actions après chaque déploiement ; les résultats s'affichent en annotations.
 """
 import asyncio
 import ipaddress
+import json
 import os
+import pathlib
 import socket
 import sys
 import tempfile
+import urllib.error
+import urllib.request
 from urllib.parse import urlsplit
 
 from playwright.async_api import async_playwright
@@ -82,6 +87,25 @@ def dns_report(host):
     return found_any
 
 
+def schema_is_current() -> bool | None:
+    """La base a-t-elle le sens et les tendances (supabase/schema.sql à jour) ? None si inconnu."""
+    try:
+        sys.path.insert(0, str(pathlib.Path(__file__).parent))
+        from build_app import public_config
+        base, key = public_config()
+        if not base:
+            return None
+        for path in ("/rest/v1/signalements?select=direction&limit=1", "/rest/v1/tendances?select=line&limit=1"):
+            req = urllib.request.Request(base + path, headers={"apikey": key})
+            try:
+                urllib.request.urlopen(req, timeout=15).close()
+            except urllib.error.HTTPError:
+                return False
+        return True
+    except Exception:  # noqa: BLE001 — réseau, configuration : on ne conclut rien
+        return None
+
+
 async def main(url):
     host = urlsplit(url).hostname or ""
     if not dns_report(host):
@@ -98,8 +122,21 @@ async def main(url):
             is_mobile=True, has_touch=True, locale="fr-CH")
         page = ctx.pages[0] if ctx.pages else await ctx.new_page()
         errors = []
+        # base pas encore mise à jour : l'app lit d'abord le sens et les tendances puis se replie (erreurs HTTP attendues)
+        old_schema = schema_is_current() is False
+        if old_schema:
+            print("::warning title=Supabase::la base n'a pas encore le sens ni l'apprentissage : dans Supabase, relance "
+                  "supabase/schema.sql puis supabase/purge.sql (l'app fonctionne en attendant)", flush=True)
+
+        def on_console(m):
+            if m.type != "error":
+                return
+            src = (m.location or {}).get("url", "")
+            if old_schema and "supabase.co/rest/v1/" in src:
+                return
+            errors.append(m.text + (f" ({src})" if src else ""))
         page.on("pageerror", lambda e: errors.append(str(e)))
-        page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+        page.on("console", on_console)
 
         # le site ne doit jamais écrire pendant ce test
         async def no_write(route):
@@ -158,6 +195,21 @@ async def main(url):
                 break
             await page.wait_for_timeout(500)
         check(fond == "ok", f"fond de carte affiché (état : {fond or 'inconnu'})")
+
+        n_stops = await page.evaluate("document.querySelectorAll('path.stop-bus, path.stop-metro').length")
+        check(n_stops >= 300, f"réseau tl complet ({n_stops} arrêts)")
+        # formulaire : Riponne, ligne M2 -> deux sens proposés (le formulaire est refermé sans envoi)
+        dirs = []
+        try:
+            await page.click("#btnReport")
+            await page.fill("#stopSearch", "Riponne")
+            await page.click(".sugg button", timeout=5000)
+            await page.click('button.opt[data-line="M2"]', timeout=5000)
+            dirs = await page.eval_on_selector_all("button.opt[data-dir]", "els => els.map(e => e.textContent.trim())")
+            await page.click("#sheetClose")
+        except Exception as exc:  # noqa: BLE001 — le test le signale ci-dessous
+            print(f"formulaire : {exc}", flush=True)
+        check(len(dirs) == 2, "sens proposés à Riponne sur le M2" + (f" ({', '.join(dirs)})" if dirs else ""))
 
         if secure:
             sw = await page.evaluate("navigator.serviceWorker.ready.then(r => !!r.active).catch(() => false)")

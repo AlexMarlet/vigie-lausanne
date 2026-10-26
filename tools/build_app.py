@@ -20,14 +20,16 @@ from __future__ import annotations
 
 import argparse
 import base64
+import collections
 import hashlib
 import html
 import json
 import os
 import pathlib
+import re
 import shutil
-import subprocess
 import sys
+import unicodedata
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
@@ -78,12 +80,15 @@ FONT_FACES = (
     '@font-face{font-family:"IBM Plex Mono";font-style:normal;font-display:swap;font-weight:500;'
     'src:url(fonts/ibm-plex-mono-latin-500-normal.woff2) format("woff2")}'
 )
-METRO = {
-    "M1": ["flon", "vigie", "montelly", "provence", "malley", "bourdonnette", "chamberonne", "mouline", "sorge",
-           "epfl", "bassenges", "cerisaie", "crochy", "epenex", "renens"],
-    "M2": ["ouchy", "jordils", "delices", "grancy", "gare", "flon", "riponne", "bessieres", "ours", "chuv",
-           "sallaz", "fourmi", "vennes", "croisettes"],
-}
+# noms d'arrêt trop courants pour désigner un arrêt sans la commune (« gare » = Lausanne-Gare via tools/arrets.json)
+GENERIC = {"gare", "centre", "village", "poste", "eglise", "croisee", "place", "temple", "college", "ecole", "bourg",
+           "chateau", "cimetiere", "stade", "piscine", "parc", "port", "plage", "mairie", "administration", "zone industrielle"}
+
+
+def norm(s: str) -> str:
+    s = unicodedata.normalize("NFD", str(s or "").lower())
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    return re.sub(r"[^a-z0-9]+", " ", s).strip()
 
 
 def fail(msg: str) -> None:
@@ -121,28 +126,68 @@ def public_config() -> tuple[str, str]:
     return url, key
 
 
+def load_network() -> tuple[list, list, dict]:
+    """Arrêts et lignes : tools/reseau.json (horaire officiel) + tools/arrets.json (identité et alias faits main).
+    Renvoie (arrêts, lignes, source). Les arrêts historiques viennent en premier : en cas de nom partagé, ce sont
+    eux que le parseur retient."""
+    net = json.loads(read("tools/reseau.json"))
+    over = {o["id"]: o for o in json.loads(read("tools/arrets.json"))["arrets"]}
+    unknown = sorted(set(over) - {s["id"] for s in net["stops"]})
+    if unknown:
+        print("tools/arrets.json : arrêts absents du réseau (ignorés) :", ", ".join(unknown))
+    shorts = collections.Counter(norm(s["short"]) for s in net["stops"])
+    stops = []
+    for s in net["stops"]:
+        o = over.get(s["id"], {})
+        name, short = o.get("name", s["name"]), o.get("short", s["short"] if s["name"] != s["short"] else None)
+        alias = list(o.get("alias", []))
+        for extra in s.get("official", []) + ([f"{s['short']} {s['town']}"] if s["town"] not in ("Lausanne", s["short"]) else []):
+            if norm(extra) not in {norm(a) for a in alias + [name, short or ""]}:
+                alias.append(extra)
+        st = {"id": s["id"], "name": name}
+        if short and short != name:
+            st["short"] = short
+        # nom court partagé par plusieurs arrêts ou trop courant : jamais seul pour reconnaître un arrêt
+        if norm(s["short"]) in GENERIC or shorts[norm(s["short"])] > 1:
+            st["amb"] = True
+        if o.get("major"):
+            st["major"] = True
+        if alias:
+            st["alias"] = alias
+        st.update({"lines": s["lines"], "lat": s["lat"], "lon": s["lon"]})
+        stops.append(st)
+    order = {sid: i for i, sid in enumerate(over)}
+    stops.sort(key=lambda st: (order.get(st["id"], len(order)), st["id"]))
+    names = {st["id"]: st["name"] for st in stops}
+    lines = []
+    for l in net["lines"]:
+        dirs = [{"id": d["id"], "to": d["to"], "label": d["label"] if d.get("loop") else names.get(d["to"], d["label"]),
+                 "stops": d["stops"]} for d in l["dirs"]]
+        lines.append({"id": l["id"], "type": l["type"], "color": l.get("color"), "dirs": dirs})
+    return stops, lines, net["source"]
+
+
 def load_data(repo_url: str | None) -> tuple[dict, list]:
-    base = json.loads(subprocess.check_output(
-        ["node", "-e", "process.stdout.write(JSON.stringify(require('./core/stops-base.js')))"], cwd=ROOT))
-    coords = json.loads(read("tools/stop_coords.json"))
+    stops, lines, source = load_network()
+    coords = json.loads(read("tools/carte.json"))
     basemap = json.loads(read("tools/basemap.json"))
-    stops, missing = [], []
-    for s in base:
-        c = coords["stops"].get(s["id"])
-        if c:
-            stops.append({**s, "lat": c["lat"], "lon": c["lon"]})
-        else:
-            missing.append(s["id"])
-    if missing:
-        print("arrêts sans coordonnées (ignorés) :", ", ".join(missing))
     labels = coords.get("commune_labels", {})
     for c in basemap["communes"]:
         if str(c["id"]) in labels:
             c["labelAt"] = labels[str(c["id"])]
         c["showLabel"] = c["name"] in coords.get("show_communes", [])
-    data = {"stops": stops, "basemap": basemap, "metro": METRO,
-            "meta": {"note": coords.get("note", ""), "repo": repo_url}}
+    metro = {l["id"]: l["dirs"][0]["stops"] for l in lines if l["type"] == "metro" and l["dirs"]}
+    data = {"stops": stops, "lines": lines, "basemap": basemap, "metro": metro,
+            "meta": {"repo": repo_url, "feed": source.get("feed", ""), "period": source.get("period", [])}}
     return {"data": data, "colors": coords["colors"]}, stops
+
+
+def write_collector_stops(stops: list) -> None:
+    """Liste d'arrêts du collecteur Telegram (même répertoire que l'app ; vérifiée par la CI)."""
+    keep = ("id", "name", "short", "amb", "alias", "lines")
+    rows = [{k: s[k] for k in keep if k in s} for s in stops]
+    (ROOT / "collector/stops.json").write_text(
+        "[\n" + ",\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n]\n", encoding="utf-8")
 
 
 def render_app(template: str, head: str, data: dict, colors: dict, config: dict, leaflet: str, supabase: str,
@@ -167,7 +212,13 @@ def render_app(template: str, head: str, data: dict, colors: dict, config: dict,
 def main() -> None:
     ap = argparse.ArgumentParser(description="Construit Vigie")
     ap.add_argument("--artifact", action="store_true", help="aperçu autonome (CDN, sans service worker)")
+    ap.add_argument("--donnees", action="store_true", help="seulement collector/stops.json (sans node_modules)")
     a = ap.parse_args()
+    if a.donnees:
+        stops, lines, _ = load_network()
+        write_collector_stops(stops)
+        print(f"collector/stops.json : {len(stops)} arrêts, {len(lines)} lignes")
+        return
 
     url, key = public_config()
     site = os.environ.get("SITE_URL", "").strip().rstrip("/")
@@ -178,7 +229,7 @@ def main() -> None:
 
     bundle, stops = load_data(repo_url)
     template = read("web/index.template.html")
-    (ROOT / "collector/stops.json").write_text(json.dumps(stops, ensure_ascii=False, indent=0) + "\n", encoding="utf-8")
+    write_collector_stops(stops)
 
     if a.artifact:
         page = render_app(template, GOOGLE_FONTS, bundle["data"], bundle["colors"], {}, LEAFLET_CDN, SUPABASE_CDN, MAPLIBRE_CDN)

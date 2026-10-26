@@ -191,5 +191,59 @@
    "kind": "fin",
    "stopId": "chuv"
   }
+ },
+ {
+  "msg": "contrôleurs à la gare de Pully",
+  "exp": {
+   "kind": "controle",
+   "stopId": "pully"
+  }
+ },
+ {
+  "msg": "controle au centre de Prilly",
+  "exp": {
+   "kind": "controle",
+   "stopId": "prilly-centre"
+  }
+ },
+ {
+  "msg": "Contrôle au village de Cugy",
+  "exp": {
+   "kind": "controle",
+   "stopId": "cugy-village"
+  }
+ },
+ {
+  "msg": "contrôle à cheseaux gare",
+  "exp": {
+   "kind": "controle",
+   "stopId": "cheseaux-gare"
+  }
+ },
+ {
+  "msg": "contrôle en civil au Galicien",
+  "exp": {
+   "kind": "controle",
+   "stopId": "galicien",
+   "fuzzy": false
+  }
+ },
+ {
+  "msg": "controle sur le 7 vers Val-Vert",
+  "exp": {
+   "kind": "controle",
+   "stopId": null,
+   "line": "7",
+   "dirStopId": "val-vert",
+   "usable": false
+  }
+ },
+ {
+  "msg": "il y a des contrôleurs dans le train",
+  "exp": {
+   "kind": "controle",
+   "stopId": null,
+   "usable": false
+  }
  }
 ]

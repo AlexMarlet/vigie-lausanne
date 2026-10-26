@@ -36,7 +36,9 @@ jobs:
       - name: Télécharger le GTFS officiel
         run: python3 tools/fetch_gtfs.py gtfs.zip
       - name: Extraire le réseau tl
-        run: python3 tools/build_network.py gtfs.zip
+        run: |
+          python3 tools/build_network.py gtfs.zip
+          python3 tools/build_app.py --donnees
       - name: Enregistrer et redéployer si le réseau a changé
         env:
           GH_TOKEN: ${{ github.token }}
@@ -47,7 +49,7 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tools/reseau.json
+          git add tools/reseau.json collector/stops.json
           git commit -m "Réseau tl : horaire officiel $(cat gtfs.zip.name 2>/dev/null || date +%F)"
           git pull --rebase origin main
           git push origin HEAD:main

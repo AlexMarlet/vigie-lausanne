@@ -47,6 +47,17 @@ if "Appareil non reconnu" in body:
 else:
     problems.append(f"fonction signaler() absente ou inattendue (HTTP {status}) : exécute supabase/schema.sql. Détail : {body[:200]}")
 
+# version du schéma : sens des signalements et tendances apprises (supabase/schema.sql d'octobre 2026)
+s1, _ = call("GET", "/rest/v1/signalements?select=direction&limit=1")
+s2, _ = call("GET", "/rest/v1/tendances?select=line&limit=1")
+s3, body = call("POST", "/rest/v1/rpc/signaler", {"p_kind": "controle", "p_stop_id": "flon", "p_device": "verification",
+                                                   "p_direction": "croisettes", "p_seq": 6})
+if s1 == 200 and s2 == 200 and "Appareil non reconnu" in body:
+    print("✓ sens des signalements et tendances apprises en place")
+elif not problems:
+    problems.append("base à mettre à jour pour le sens et l'apprentissage : dans Supabase, relance supabase/schema.sql "
+                    "puis supabase/purge.sql (l'app fonctionne en attendant, sans enregistrer le sens)")
+
 for p in problems:
     print(f"::warning title=Supabase::{p}")
 sys.exit(1 if problems else 0)

@@ -76,9 +76,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .pill-btn svg { width: 18px; height: 18px; }
 .count { min-width: 20px; padding: 1px 6px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 12px; text-align: center; font-variant-numeric: tabular-nums; }
 
-.filters { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-.chip { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--hair); background: var(--glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-        border-radius: 999px; padding: 7px 12px; font-size: 13.5px; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.filters { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--hair); background: var(--glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        border-radius: 999px; padding: 7px 10px; font-size: 13.5px; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
 .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
 .chip[aria-pressed="false"] { color: var(--ink-2); }
 .chip.demo[aria-pressed="true"] { background: var(--c-low); color: #2B2100; }
@@ -119,6 +119,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .x { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--surface-2); font-size: 22px; line-height: 1; flex: none; }
 .sheet-body { overflow-y: auto; padding: 6px var(--gutter-r) 22px var(--gutter-l); overscroll-behavior: contain; }
 .stack { display: flex; flex-direction: column; gap: 16px; }
+.stack > p.facts, .stack > p.note { margin: 0; }
 .stack-s { display: flex; flex-direction: column; gap: 8px; }
 .label + * { margin-top: 0; }
 
@@ -147,7 +148,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .privacy { display: flex; gap: 8px; align-items: flex-start; color: var(--ink-2); font-size: 13px; }
 .privacy svg { width: 16px; height: 16px; flex: none; margin-top: 2px; }
 
-.badge { display: inline-block; font-family: var(--f-display); font-weight: 800; font-size: 11.5px; line-height: 1; padding: 4px 6px; border-radius: 5px; background: var(--ink); color: var(--surface); font-variant-numeric: tabular-nums; }
+.badge { display: inline-block; min-width: 2.1em; box-sizing: border-box; text-align: center; font-family: var(--f-display); font-weight: 800; font-size: 11.5px; line-height: 1; padding: 4px 6px; border-radius: 5px; background: var(--ink); color: var(--surface); font-variant-numeric: tabular-nums; }
 .badge.M1 { background: var(--m1); color: #fff; }
 .badge.M2 { background: var(--m2); color: #fff; }
 .badges { display: inline-flex; gap: 4px; flex-wrap: wrap; }
@@ -192,6 +193,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .rules { margin: 0; padding-left: 18px; color: var(--ink-2); }
 .rules li + li { margin-top: 4px; }
 .rules strong { color: var(--ink); }
+.trend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.trend li { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.trend .n { margin-left: auto; color: var(--ink-3); font-size: 12.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.est { display: flex; flex-direction: column; gap: 4px; background: var(--surface-2); border-radius: 14px; padding: 12px 14px; }
+.est strong { font-family: var(--f-display); font-size: 30px; font-weight: 850; line-height: 1; }
 
 /* carte : fond, lignes, arrêts, points */
 .lake { fill: var(--lake); fill-opacity: 1; stroke: var(--lake-edge); stroke-width: 1; }
@@ -202,6 +208,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .stop-metro { fill: var(--surface); stroke: var(--ink); stroke-width: 2.2; }
 .stop-bus { fill: var(--surface); stroke: var(--ink-2); stroke-width: 1.6; }
 .stop-picked { fill: var(--accent); stroke: var(--surface); stroke-width: 3; }
+.zlt135 .stop-bus:not(.stop-major) { display: none; }
+
+/* position estimée : trajet probable et arrêts de la zone la plus probable */
+.trail-base { fill: none; stroke: var(--c-high); stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; }
+.trail { fill: none; stroke: var(--c-high); stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 0.5 9; }
+.gh-wrap { background: none; border: 0; }
+.gh { width: 100%; height: 100%; box-sizing: border-box; border-radius: 50%; border: 2.5px dashed var(--col);
+      background: color-mix(in srgb, var(--col) 18%, transparent); }
 .leaflet-tooltip.lbl { background: transparent; border: 0; box-shadow: none; padding: 0 0 0 1px; margin-left: 4px;
   font-family: var(--f-display); font-weight: 650; font-stretch: 92%; font-size: 11.5px; color: var(--ink); white-space: nowrap;
   text-shadow: 0 0 2px var(--land), 0 0 3px var(--land), 0 0 5px var(--land); }
@@ -248,6 +262,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
     <nav class="filters" aria-label="Filtres">
       <button class="chip" type="button" data-filter="controle" aria-pressed="true"><i class="shape circle"></i>Contrôles</button>
       <button class="chip" type="button" data-filter="perturbation" aria-pressed="true"><i class="shape diamond"></i>Perturbations</button>
+      <button class="chip" type="button" data-filter="estimation" aria-pressed="true"><i class="shape circle" style="background:none;border:2px dashed currentColor;box-sizing:border-box"></i>Estimations</button>
       <button class="chip demo" type="button" id="chipDemo" aria-pressed="true">Démo</button>
     </nav>
 
@@ -339,26 +354,33 @@ button { font: inherit; color: inherit; cursor: pointer; }
   const clock = (t) => new Date(t).toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit" });
   const SUB_LABEL = { retard: "Retard", panne: "Panne", deviation: "Déviation", accident: "Accident", bonde: "Bondé", autre: "Autre" };
   const KIND_LABEL = { controle: "Contrôleurs", perturbation: "Perturbation", fin: "Plus là", question: "Question" };
-  const LINE_RE = /^(M[1-3]|\d{1,2})$/;
+  const LINE_RE = /^[A-Za-z0-9-]{1,12}$/;
 
   // ---------- données ----------
-  let STOPS = D.stops, byId = new Map(STOPS.map((s) => [s.id, s])), gaz = C.buildGazetteer(STOPS);
+  // Arrêts et lignes : horaire officiel (tools/reseau.json) ; sens = terminus ; ordre des arrêts dans chaque sens.
+  const STOPS = D.stops, byId = new Map(STOPS.map((s) => [s.id, s])), gaz = C.buildGazetteer(STOPS);
+  const NET = C.buildNetwork(D.lines || []);
+  for (const s of STOPS) s._n = [s.name, s.short].concat(s.alias || []).filter(Boolean).map(C.normalize);
   const state = {
     live: [], local: [], demo: [], demoFeed: [],
     demoOn: SHOW_DEMO && pref.get("demo", true),
-    filters: pref.get("filters", { controle: true, perturbation: true }),
+    filters: Object.assign({ controle: true, perturbation: true, estimation: true }, pref.get("filters", {})),
     backend: "local", canWrite: null, db: null, sb: null,
     sheet: null, clusters: [],
+    rates: C.learnRates([]), ratesRows: [], proj: { stops: [], trails: [] },
   };
 
-  function badge(line) { return el("span", { class: "badge" + (/^M/.test(line) ? " " + line : ""), text: line }); }
+  function badge(line) { return el("span", { class: "badge" + (/^M\d$/.test(line) ? " " + line : ""), text: line }); }
   function stopName(id) { const s = byId.get(id); return s ? s.name : id; }
+  function dirLabel(line, dirId) { const d = line && dirId ? C.dirById(NET, line, dirId) : null; return d ? d.label : null; }
+  function lineDesc(line, dirId) { const l = dirLabel(line, dirId); return line ? "ligne " + line + (l ? " → " + l : "") : ""; }
 
   function validLive(r) {
     return r && (r.kind === "controle" || r.kind === "perturbation" || r.kind === "fin")
       && typeof r.stopId === "string" && byId.has(r.stopId)
       && typeof r.at === "number" && isFinite(r.at)
       && (r.line == null || (typeof r.line === "string" && LINE_RE.test(r.line)))
+      && (r.dir == null || (typeof r.dir === "string" && r.dir.length <= 80))
       && (r.sub == null || Object.prototype.hasOwnProperty.call(SUB_LABEL, r.sub))
       && (r.of == null || r.of === "controle" || r.of === "perturbation");
   }
@@ -385,15 +407,35 @@ button { font: inherit; color: inherit; cursor: pointer; }
     [64, "bonjour, c'est quoi le prix d'un billet zone 11-12 ?", null],
     [80, "contrôleurs vennes", "vennes"],
   ];
-  const DEMO_APP = [[2, "controle", "flon", "M2"], [9, "controle", "prelaz", null], [12, "perturbation", "malley", "M1", "panne"], [26, "controle", "riponne", "M2"]];
+  const DEMO_APP = [
+    { min: 2, kind: "controle", stopId: "flon", line: "M2", dir: "croisettes" },
+    { min: 7, kind: "controle", stopId: "prelaz", line: "9" },
+    { min: 12, kind: "perturbation", stopId: "malley", line: "M1", sub: "panne" },
+    { min: 10, kind: "controle", stopId: "riponne", line: "M2", dir: "ouchy" },
+  ];
+  // tendances fictives de la démo (sur le site, elles viennent de la base)
+  const DEMO_TRENDS = [
+    { line: "M2", direction: "croisettes", paires: 14, arrets: 25, minutes: 61 },
+    { line: "M2", direction: "ouchy", paires: 9, arrets: 16, minutes: 37 },
+    { line: "M1", direction: "renens", paires: 11, arrets: 13, minutes: 44 },
+    { line: "9", direction: "lutry", paires: 4, arrets: 5, minutes: 21 },
+  ];
+  function withDirection(r) {
+    // « … direction X » : ligne et sens déduits du réseau quand c'est sans ambiguïté
+    const s = byId.get(r.stopId);
+    const rd = r.dirStopId && s ? C.resolveDirection(NET, s.lines, r.stopId, r.dirStopId, r.line) : null;
+    return Object.assign(r, { line: r.line || (rd && rd.line) || null, dir: r.dir || (rd && rd.dir) || null });
+  }
   function buildDemo() {
     const t0 = Date.now();
     state.demoFeed = DEMO_MSGS.filter((m) => m[2] === null || byId.has(m[2]))
       .map(([min, text], i) => ({ id: "dm" + i, at: t0 - min * 60000, text, p: C.parseMessage(text, gaz) }));
-    state.demo = state.demoFeed.filter((m) => m.p.usable).map((m) => ({
-      id: m.id, kind: m.p.kind, sub: m.p.sub, of: m.p.of, stopId: m.p.stopId, line: m.p.line, src: "telegram", at: m.at, demo: true,
-    })).concat(DEMO_APP.filter((a) => byId.has(a[2])).map(([min, kind, stopId, line, sub], i) => ({
-      id: "da" + i, kind, sub: sub || null, stopId, line, src: "app", by: "demo-" + i, at: t0 - min * 60000, demo: true,
+    state.demo = state.demoFeed.filter((m) => m.p.usable).map((m) => withDirection({
+      id: m.id, kind: m.p.kind, sub: m.p.sub, of: m.p.of, stopId: m.p.stopId, line: m.p.line, dirStopId: m.p.dirStopId,
+      src: "telegram", at: m.at, demo: true,
+    })).concat(DEMO_APP.filter((a) => byId.has(a.stopId)).map((a, i) => ({
+      id: "da" + i, kind: a.kind, sub: a.sub || null, stopId: a.stopId, line: a.line, dir: a.dir || null,
+      src: "app", by: "demo-" + i, at: t0 - a.min * 60000, demo: true,
     })));
   }
 
@@ -508,35 +550,92 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
   const stopLayer = L.layerGroup().addTo(map);
   const stopMarkers = new Map();
+  for (const s of STOPS) s._metro = !!(s.lines && s.lines.some((l) => /^M\d$/.test(l)));
   function drawStops() {
-    stopLayer.clearLayers(); stopMarkers.clear();
+    stopLayer.clearLayers(); stopMarkers.clear(); shownLabels.clear();
     for (const s of STOPS) {
-      const metro = !!(s.lines && s.lines.some((l) => /^M/.test(l)));
       const m = L.circleMarker([s.lat, s.lon], {
-        radius: metro ? 5 : 4, className: metro ? "stop-metro" : "stop-bus", renderer: R, bubblingMouseEvents: false,
+        radius: s._metro ? 5 : 4, className: (s._metro ? "stop-metro" : "stop-bus") + (s.major ? " stop-major" : ""), renderer: R, bubblingMouseEvents: false,
       }).addTo(stopLayer);
-      m.bindTooltip(s.short || s.name, { permanent: true, direction: "right", className: "lbl " + (metro ? "lbl-metro" : "lbl-bus") + (s.major ? " lbl-major" : ""), interactive: false });
+      // étiquettes permanentes : métro et grands arrêts ; les autres, seulement de près (voir labels())
+      if (s._metro || s.major) m.bindTooltip(s.short || s.name, { permanent: true, direction: "right", className: "lbl " + (s._metro ? "lbl-metro" : "lbl-bus") + (s.major ? " lbl-major" : ""), interactive: false });
       m.on("click", () => onStopTap(s.id));
       stopMarkers.set(s.id, m);
+    }
+  }
+  // plusieurs centaines d'arrêts : les étiquettes des petits arrêts n'existent que dans la zone visible, à partir du zoom 15
+  const shownLabels = new Set();
+  function labels() {
+    const want = new Set();
+    if (map.getZoom() >= 15) {
+      const b = map.getBounds().pad(0.3);
+      for (const s of STOPS) if (!s._metro && !s.major && b.contains([s.lat, s.lon])) want.add(s.id);
+    }
+    for (const id of shownLabels) if (!want.has(id)) { stopMarkers.get(id).unbindTooltip(); shownLabels.delete(id); }
+    for (const id of want) {
+      if (shownLabels.has(id)) continue;
+      const s = byId.get(id);
+      stopMarkers.get(id).bindTooltip(s.short || s.name, { permanent: true, direction: "right", className: "lbl lbl-bus", interactive: false });
+      shownLabels.add(id);
     }
   }
   drawStops();
 
   function zoomClasses() {
     const z = map.getZoom(), c = map.getContainer().classList;
-    c.toggle("zlt125", z < 12.5); c.toggle("zlt14", z < 14); c.toggle("zlt15", z < 15); c.toggle("zge13", z >= 13);
+    c.toggle("zlt125", z < 12.5); c.toggle("zlt135", z < 13.5); c.toggle("zlt14", z < 14); c.toggle("zlt15", z < 15); c.toggle("zge13", z >= 13);
   }
   map.on("zoomend", zoomClasses);
+  map.on("zoomend moveend", labels);
 
   function fitAll(animate) {
-    const b = L.latLngBounds(STOPS.map((s) => [s.lat, s.lon]));
-    map.fitBounds(b, { paddingTopLeft: [12, 120], paddingBottomRight: [12, 96], animate: !!animate });
+    // Grand Lausanne (le réseau va jusqu'à Echallens et Cossonay : on recentre sur le cœur)
+    map.fitBounds([[46.502, 6.555], [46.556, 6.705]], { paddingTopLeft: [12, 120], paddingBottomRight: [12, 96], animate: !!animate });
   }
   function homeView() {
     map.fitBounds([[46.506, 6.598], [46.544, 6.662]], { paddingTopLeft: [4, 120], paddingBottomRight: [4, 96], maxZoom: 14, animate: false });
   }
   homeView();
   zoomClasses();
+  labels();
+
+  // ---------- position estimée ----------
+  // Trajet probable depuis chaque contrôle signalé avec sa ligne, et anneaux sur les arrêts de la zone la plus
+  // probable (au moins la moitié du maximum du trajet). Calcul : C.project (vigie-core.js).
+  const estLayer = L.layerGroup().addTo(map);
+  function trendRows() { return state.ratesRows.length ? state.ratesRows : (state.demoOn ? DEMO_TRENDS : []); }
+  function refreshRates() { state.rates = C.learnRates(trendRows()); }
+  function renderEstimates(now) {
+    estLayer.clearLayers();
+    state.proj = { stops: [], trails: [] };
+    if (!state.filters.controle || !state.filters.estimation) return;
+    state.proj = C.project(allReports(), NET, state.rates, now);
+    const real = new Set(state.clusters.filter((c) => c.kind === "controle").map((c) => c.stopId));
+    for (const t of state.proj.trails) {
+      const top = t.p[t.peak], strength = Math.min(1, 0.35 + top * 5);
+      for (let i = 1; i < t.stops.length; i++) {
+        const a = byId.get(t.stops[i - 1]), b = byId.get(t.stops[i]);
+        if (!a || !b) continue;
+        const o = strength * Math.min(1, 0.2 + 0.8 * t.p[i] / top);
+        const seg = [[a.lat, a.lon], [b.lat, b.lon]];
+        L.polyline(seg, { className: "trail-base", opacity: o * 0.14, interactive: false, renderer: R }).addTo(estLayer);
+        L.polyline(seg, { className: "trail", opacity: o, interactive: false, renderer: R }).addTo(estLayer);
+      }
+    }
+    for (const e of state.proj.stops) {
+      if (real.has(e.stopId) || e.rel < 0.5) continue;
+      const s = byId.get(e.stopId);
+      if (!s) continue;
+      const d = Math.round(18 + 20 * Math.min(1, e.p / 0.2));
+      const m = L.marker([s.lat, s.lon], {
+        icon: L.divIcon({ className: "gh-wrap", iconSize: [d, d], iconAnchor: [d / 2, d / 2],
+          html: '<div class="gh" style="--col:' + C.colorFor(Math.min(1, e.p * 3)) + '"></div>' }),
+        zIndexOffset: 500, keyboard: true, title: "Position estimée des contrôleurs · " + s.name,
+      });
+      m.on("click", () => openEstimate(e.stopId));
+      m.addTo(estLayer);
+    }
+  }
 
   // ---------- points de signalement ----------
   const clusterLayer = L.layerGroup().addTo(map);
@@ -576,6 +675,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
       }
     }
     for (const [key, m] of clusterMarkers) if (!keep.has(key)) { clusterLayer.removeLayer(m); clusterMarkers.delete(key); }
+    renderEstimates(now);
 
     const nC = visible.filter((c) => c.kind === "controle").length, nP = visible.filter((c) => c.kind === "perturbation").length;
     const parts = [];
@@ -638,9 +738,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
     if (!nq) return [];
     const scored = [];
     for (const s of STOPS) {
-      const names = [s.name, s.short].concat(s.alias || []).filter(Boolean).map(C.normalize);
       let best = 9;
-      for (const n of names) {
+      for (const n of s._n) {
         if (n.startsWith(nq)) best = Math.min(best, 0);
         else if (n.split(" ").some((w) => w.startsWith(nq))) best = Math.min(best, 1);
         else if (n.includes(nq)) best = Math.min(best, 2);
@@ -656,7 +755,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   }
 
   // ---------- formulaire de signalement ----------
-  const form = { kind: "controle", sub: null, stopId: null, line: null };
+  const form = { kind: "controle", sub: null, stopId: null, line: null, dir: null };
   function onStopTap(id) {
     if (state.sheet && state.sheet.kind === "report") { setFormStop(id); return; }
     openReport({ stopId: id });
@@ -664,7 +763,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   let setFormStop = () => {};
 
   function openReport(pre) {
-    Object.assign(form, { kind: "controle", sub: null, stopId: null, line: null }, pre || {});
+    Object.assign(form, { kind: "controle", sub: null, stopId: null, line: null, dir: null }, pre || {});
     openSheet("report", "Signaler", () => {
       const wrap = el("div", { class: "stack" });
       const seg = el("div", { class: "seg", role: "group", "aria-label": "Type de signalement" });
@@ -691,13 +790,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
       // arrêt
       const stopBox = el("div");
       const lineBox = el("div");
+      const dirBox = el("div", { hidden: true });
       const drawStop = () => {
         stopBox.replaceChildren(el("p", { class: "label", text: "Arrêt" }));
         if (form.stopId) {
           const s = byId.get(form.stopId);
           stopBox.append(el("div", { class: "picked" },
-            el("div", null, el("strong", { text: s.name }), " ", el("span", { class: "badges" }, (s.lines || []).map(badge))),
-            el("button", { type: "button", class: "link", onclick: () => { form.stopId = null; form.line = null; picked.setPicked(null); drawStop(); drawLines(); sync(); stopBox.querySelector("input")?.focus(); } }, "Changer")));
+            el("div", null, el("strong", { text: s.name })),
+            el("button", { type: "button", class: "link", onclick: () => { form.stopId = null; form.line = null; form.dir = null; picked.setPicked(null); drawStop(); drawLines(); sync(); stopBox.querySelector("input")?.focus(); } }, "Changer")));
         } else {
           const input = el("input", { id: "stopSearch", class: "field", type: "search", autocomplete: "off", placeholder: "Nom de l'arrêt (ex. Chauderon)", "aria-label": "Rechercher un arrêt" });
           const list = el("div", { class: "sugg", role: "listbox" });
@@ -714,34 +814,46 @@ button { font: inherit; color: inherit; cursor: pointer; }
           }
         }
       };
+      // ligne puis sens : toutes les lignes de l'arrêt, puis les terminus atteignables depuis cet arrêt
       const drawLines = () => {
-        lineBox.replaceChildren(el("p", { class: "label", text: "Ligne (facultatif)" }));
-        const row = el("div", { class: "chips" });
         const s = form.stopId && byId.get(form.stopId);
-        const options = (s && s.lines && s.lines.length ? s.lines : ["M1", "M2"]);
-        for (const l of options) {
-          row.append(el("button", { type: "button", class: "opt", "aria-pressed": String(form.line === l), onclick: () => { form.line = form.line === l ? null : l; drawLines(); } }, l));
+        lineBox.hidden = !s;
+        lineBox.replaceChildren(el("p", { class: "label", text: "Ligne (facultatif)" }));
+        if (s) {
+          const row = el("div", { class: "chips", role: "group", "aria-label": "Ligne" });
+          const h = new Date().getHours(), night = h >= 22 || h < 6;   // lignes de nuit (N1…) : proposées la nuit
+          for (const l of (s.lines || []).filter((x) => night || !/^N\d/.test(x) || x === form.line)) {
+            row.append(el("button", { type: "button", class: "opt", "aria-pressed": String(form.line === l), "data-line": l,
+              onclick: () => { form.line = form.line === l ? null : l; form.dir = null; drawLines(); } }, l));
+          }
+          lineBox.append(row);
         }
-        const num = el("input", { id: "lineNum", class: "field num", inputmode: "numeric", maxlength: "2", placeholder: "N° bus", "aria-label": "Numéro de ligne de bus",
-          value: form.line && !/^M/.test(form.line) ? form.line : "" });
-        num.addEventListener("input", () => {
-          num.value = num.value.replace(/\D/g, "").slice(0, 2);
-          form.line = num.value ? String(+num.value) : (form.line && /^M/.test(form.line) ? form.line : null);
-          row.querySelectorAll(".opt").forEach((b) => b.setAttribute("aria-pressed", String(b.textContent === form.line)));
-        });
-        row.append(num);
-        lineBox.append(row);
+        drawDirs();
+      };
+      const drawDirs = () => {
+        const ways = form.stopId && form.line ? C.directionsAt(NET, form.line, form.stopId) : [];
+        dirBox.hidden = !ways.length;
+        dirBox.replaceChildren(el("p", { class: "label", text: "Sens (facultatif)" }));
+        if (!ways.length) return;
+        const row = el("div", { class: "chips", role: "group", "aria-label": "Sens" });
+        for (const { dir } of ways) {
+          row.append(el("button", { type: "button", class: "opt", "aria-pressed": String(form.dir === dir.id), "data-dir": dir.id,
+            onclick: () => { form.dir = form.dir === dir.id ? null : dir.id; drawDirs(); } }, "→ " + dir.label));
+        }
+        dirBox.append(row, el("p", { class: "hint", text: "Avec la ligne et le sens, la carte estime où ils seront dans les prochaines minutes." }));
       };
       setFormStop = (id) => {
         form.stopId = id;
         const s = byId.get(id);
+        if (form.line && !(s && (s.lines || []).includes(form.line))) form.line = null;
         if (s && s.lines && s.lines.length === 1 && !form.line) form.line = s.lines[0];
+        if (form.dir && !C.directionsAt(NET, form.line, id).some((w) => w.dir.id === form.dir)) form.dir = null;
         picked.setPicked(id); drawStop(); drawLines(); sync(); focusStop(id);
       };
 
       const privacy = el("p", { class: "privacy" });
       privacy.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
-      privacy.append("Seuls le lieu, la ligne et l'heure sont partagés. Pas de photo, de pseudo ni de description des agents.");
+      privacy.append("Seuls le lieu, la ligne, le sens et l'heure sont partagés. Pas de photo, de pseudo ni de description des agents.");
 
       const send = el("button", { type: "button", class: "primary", disabled: true }, "Envoyer le signalement");
       const why = el("p", { class: "hint", hidden: true });
@@ -753,11 +865,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
       send.addEventListener("click", async () => {
         if (!form.stopId) return;
         send.disabled = true;
-        const ok = await submit({ kind: form.kind, sub: form.kind === "perturbation" ? form.sub : null, stopId: form.stopId, line: form.line });
+        const ok = await submit({ kind: form.kind, sub: form.kind === "perturbation" ? form.sub : null, stopId: form.stopId, line: form.line, dir: form.dir });
         if (ok) { const id = form.stopId; closeSheet(); setTimeout(() => focusStop(id), 280); } else sync();
       });
 
-      wrap.append(el("div", null, el("p", { class: "label", text: "Qu'as-tu vu ?" }), seg), subBox, stopBox, lineBox, privacy, el("div", null, send, why));
+      wrap.append(el("div", null, el("p", { class: "label", text: "Qu'as-tu vu ?" }), seg), subBox, stopBox, lineBox, dirBox, privacy, el("div", null, send, why));
       drawStop(); drawLines(); setKind(form.kind);
       if (form.stopId) { picked.setPicked(form.stopId); setTimeout(() => focusStop(form.stopId), 60); }
       return wrap;
@@ -775,7 +887,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
   // ---------- envoi ----------
   async function submit(r) {
-    const doc = { kind: r.kind, sub: r.sub || null, of: r.of || null, stopId: r.stopId, line: r.line || null, src: "app", by: DEVICE, at: Date.now() };
+    // sens : identifiant du terminus ; rang de l'arrêt dans ce sens (sert à apprendre la vitesse des contrôles)
+    const way = r.line && r.dir ? C.directionsAt(NET, r.line, r.stopId).find((w) => w.dir.id === r.dir) : null;
+    const doc = { kind: r.kind, sub: r.sub || null, of: r.of || null, stopId: r.stopId, line: r.line || null,
+      dir: way ? r.dir : null, seq: way ? way.seq : null, src: "app", by: DEVICE, at: Date.now() };
     if (state.backend === "claude" && state.db) {
       try {
         await state.db.collection("reports").add(doc);
@@ -787,7 +902,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
         if (e && e.code === "quota_exceeded") { toast("La base est pleine : supprime d'anciens signalements."); return false; }
       }
     } else if (state.backend === "supabase" && state.sb) {
-      const { error } = await state.sb.rpc("signaler", { p_kind: doc.kind, p_stop_id: doc.stopId, p_device: DEVICE, p_line: doc.line, p_sub: doc.sub, p_of_kind: doc.of });
+      const args = { p_kind: doc.kind, p_stop_id: doc.stopId, p_device: DEVICE, p_line: doc.line, p_sub: doc.sub, p_of_kind: doc.of };
+      let { error } = await state.sb.rpc("signaler", Object.assign({ p_direction: doc.dir, p_seq: doc.seq }, args));
+      if (error && /PGRST202|Could not find the function/i.test((error.code || "") + " " + (error.message || ""))) {
+        ({ error } = await state.sb.rpc("signaler", args));    // base pas encore mise à jour (schema.sql) : sans le sens
+      }
       if (!error) { toast(r.kind === "fin" ? "Merci, c'est noté." : "Signalement envoyé"); if (state.pull) state.pull(); return true; }
       if (/Trop de signalements/.test(error.message || "")) { toast("Trop de signalements d'affilée : réessaie dans quelques minutes."); return false; }
       toast("Envoi impossible pour l'instant : gardé sur cet appareil.");
@@ -838,12 +957,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
       const tl = el("ul", { class: "tl", "aria-label": "Détail des signalements" });
       for (const r of cl.reports.slice(0, 6)) {
         tl.append(el("li", null, el("span", { class: "t", text: ago(r.at, now).replace("il y a ", "") }),
-          el("span", null, (r.src === "telegram" ? "Telegram" : "App") + (r.line ? " · ligne " + r.line : "")),
+          el("span", null, (r.src === "telegram" ? "Telegram" : "App") + (r.line ? " · " + lineDesc(r.line, r.dir) : "")),
           el("span", { class: "w", title: "Poids actuel" }, el("i", { style: "width:" + Math.round(r.w * 100 / 0.6) + "%;background:" + C.colorFor(r.w / 0.6) }))));
       }
       box.append(el("div", null, el("p", { class: "label", text: "Poids de chaque signalement" }), tl));
+      const withLine = cl.reports.find((x) => x.line) || {};
       const row = el("div", { class: "row" },
-        el("button", { type: "button", class: "secondary", onclick: async () => { if (await submit({ kind: cl.kind, sub: cl.subs[0] || null, stopId: cl.stopId, line: cl.lines[0] || null })) render(); } }, isP ? "Toujours en cours" : "Toujours là"),
+        el("button", { type: "button", class: "secondary", onclick: async () => { if (await submit({ kind: cl.kind, sub: cl.subs[0] || null, stopId: cl.stopId, line: withLine.line || null, dir: withLine.dir || null })) render(); } }, isP ? "Toujours en cours" : "Toujours là"),
         el("button", { type: "button", class: "secondary", onclick: async () => { if (await submit({ kind: "fin", of: cl.kind, stopId: cl.stopId, line: null })) render(); } }, isP ? "C'est rétabli" : "Plus là"));
       box.append(row, el("p", { class: "note", text: "La confiance baisse de moitié toutes les " + C.CFG[cl.kind].half + " min sans nouveau signalement." }));
       return box;
@@ -852,11 +972,50 @@ button { font: inherit; color: inherit; cursor: pointer; }
     focusStop(first.stopId);
   }
 
+  // ---------- fiche d'une position estimée ----------
+  function speedText(line) {
+    const demo = !state.ratesRows.length && state.demoOn ? ", démo" : "";
+    const l = state.rates.lines.get(line), rate = C.rateFor(state.rates, line), n = state.rates.net.pairs;
+    if (l) return C.paceText(rate) + " (appris sur " + l.pairs + " observation" + (l.pairs > 1 ? "s" : "") + demo + ")";
+    if (n) return C.paceText(rate) + " (moyenne de toutes les lignes, " + n + " observation" + (n > 1 ? "s" : "") + demo + ")";
+    return C.paceText(rate) + " (hypothèse de départ, en attendant assez de signalements)";
+  }
+  function openEstimate(stopId) {
+    picked.setPicked(null);
+    const build = () => {
+      const now = Date.now();
+      const box = el("div", { class: "stack" });
+      const e = state.proj.stops.find((x) => x.stopId === stopId);
+      if (!e) { box.append(el("p", { class: "facts", text: "Cette estimation n'est plus d'actualité : le signalement est trop ancien ou a été démenti." })); return box; }
+      const s = byId.get(stopId), t = state.proj.trails[e.trail];
+      const zone = t ? [t.stops[t.zone[0]], t.stops[t.zone[1]]].map(stopName) : [];
+      const pct = Math.max(1, Math.round(e.p * 100));
+      const col = C.colorFor(Math.min(1, e.p * 3));
+      box.append(...[
+        el("div", null,
+          el("div", { class: "k-head" }, el("i", { class: "shape circle", style: "background:none;border:2px dashed " + col + ";box-sizing:border-box" }), "Position estimée des contrôleurs"),
+          el("div", { class: "k-stop", text: s.name }), el("span", { class: "badges" }, badge(e.line))),
+        el("div", { class: "est" }, el("strong", { text: "≈ " + pct + " %" }),
+          el("span", { class: "facts", text: "de chances qu'ils soient à cet arrêt en ce moment" })),
+        el("p", { class: "facts" }, "Signalés à ", el("strong", { text: stopName(e.from) }), " " + ago(e.at, now) + ", " + lineDesc(e.line, e.dirGiven ? e.dir : null) + (e.dirGiven ? "" : " (sens non précisé)") + ". ",
+          "Sur cette ligne, les contrôleurs avancent " + speedText(e.line) + "."),
+        zone.length ? el("p", { class: "facts" }, "Zone la plus probable maintenant : ", el("strong", { text: zone[0] === zone[1] ? zone[0] : zone[0] + " – " + zone[1] }), ".") : null,
+        el("p", { class: "note", text: "C'est une estimation : plus l'arrêt est loin et le signalement ancien, plus c'est incertain, car ils ont pu changer de ligne, faire demi-tour ou terminer leur contrôle." + (e.dirGiven ? "" : " Sens non précisé : les deux sens sont envisagés, chacun pour moitié.") }),
+        el("div", { class: "row" },
+          el("button", { type: "button", class: "secondary", onclick: async () => { if (await submit({ kind: "controle", stopId, line: e.line, dir: e.dir })) render(); } }, "Je les vois ici"),
+          el("button", { type: "button", class: "secondary", onclick: async () => { if (await submit({ kind: "fin", of: "controle", stopId, line: null })) render(); } }, "Pas ici")),
+      ].filter(Boolean));
+      return box;
+    };
+    openSheet("estimate", "Estimation", build, () => sheetBody.replaceChildren(build()));
+    focusStop(stopId);
+  }
+
   // ---------- fil ----------
   function feedItems() {
     const items = [];
     if (state.demoOn) for (const m of state.demoFeed) items.push({ at: m.at, text: m.text, p: m.p, src: "telegram", demo: true });
-    for (const r of state.live.concat(state.local)) items.push({ at: r.at, p: { kind: r.kind, sub: r.sub, of: r.of, stopId: r.stopId, line: r.line, usable: true }, src: r.src });
+    for (const r of state.live.concat(state.local)) items.push({ at: r.at, p: { kind: r.kind, sub: r.sub, of: r.of, stopId: r.stopId, line: r.line, dir: r.dir, usable: true }, src: r.src });
     return items.filter((i) => Date.now() - i.at < 3 * 3600e3).sort((a, b) => b.at - a.at);
   }
   function parseTags(p) {
@@ -868,7 +1027,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
       if (p.stopId) tags.push(el("span", { class: "tag", text: stopName(p.stopId) + (p.fuzzy ? " (approché)" : "") }));
       else tags.push(el("span", { class: "tag miss", text: "non localisé" }));
       if (p.line) tags.push(badge(p.line));
-      if (p.dirStopId) tags.push(el("span", { class: "tag", text: "→ " + stopName(p.dirStopId) }));
+      if (p.dir && dirLabel(p.line, p.dir)) tags.push(el("span", { class: "tag", text: "→ " + dirLabel(p.line, p.dir) }));
+      else if (p.dirStopId) tags.push(el("span", { class: "tag", text: "→ " + stopName(p.dirStopId) }));
     }
     return tags;
   }
@@ -908,9 +1068,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
         w.innerHTML = '<div class="mk ' + kind + '" style="--col:' + C.colorFor(c) + ';--txt:' + (c < .42 ? "#2A1D00" : "#fff") + '"><span class="core"><span>' + (n || "") + "</span></span></div>";
         return w;
       };
+      const ghost = el("div", { style: "width:28px;height:28px;justify-self:center" });
+      ghost.innerHTML = '<div class="gh" style="--col:' + C.colorFor(0.35) + '"></div>';
       box.append(el("div", { class: "leg" },
         sample(0.6, "c", "3"), el("p", null, el("strong", { text: "Contrôleurs" }), " — le chiffre indique le nombre de signalements."),
-        sample(0.5, "p", "!"), el("p", null, el("strong", { text: "Perturbation" }), " — panne, retard, déviation, véhicule bondé.")));
+        sample(0.5, "p", "!"), el("p", null, el("strong", { text: "Perturbation" }), " — panne, retard, déviation, véhicule bondé."),
+        ghost, el("p", null, el("strong", { text: "Position estimée" }), " — où les contrôleurs sont probablement maintenant, d'après la ligne, le sens et le temps écoulé.")));
       box.append(el("div", null, el("p", { class: "label", text: "Taille et couleur = indice de confiance" }),
         el("div", { class: "ramp" },
           el("figure", null, sample(0.2, "c"), el("figcaption", { text: "faible" })),
@@ -920,10 +1083,22 @@ button { font: inherit; color: inherit; cursor: pointer; }
         el("li", null, el("strong", { text: "1 message récent" }), " ≈ 45 % ; ", el("strong", { text: "3 messages en 6 min" }), " ≈ 80 %."),
         el("li", null, "La confiance ", el("strong", { text: "baisse de moitié toutes les 20 min" }), " (45 min pour une perturbation) ; un point disparaît après 2 h."),
         el("li", null, "« Plus là » réduit fortement les signalements antérieurs du même arrêt."),
-        el("li", null, "Une même personne ne compte qu'une fois par arrêt.")));
+        el("li", null, "Une même personne ne compte qu'une fois par arrêt."),
+        el("li", null, "Avec la ligne (et le sens), un ", el("strong", { text: "trajet pointillé" }), " montre où ils ont pu aller ; plus c'est loin, plus c'est incertain : ils ont pu changer de ligne, de sens ou arrêter.")));
+      // tendances apprises sur tous les signalements depuis le lancement
+      const rows = [...state.rates.lines].sort((a, b) => b[1].pairs - a[1].pairs);
+      const demoTrends = !state.ratesRows.length && state.demoOn;
+      const trend = el("ul", { class: "trend" });
+      for (const [line, x] of rows.slice(0, 12)) {
+        trend.append(el("li", null, badge(line), el("span", { text: C.paceText(x.rate) }), el("span", { class: "n", text: x.pairs + " obs." })));
+      }
+      box.append(el("div", null, el("p", { class: "label", text: "Vitesse des contrôles, apprise" + (demoTrends ? " (démo)" : "") }),
+        rows.length ? trend : el("p", { class: "facts", text: "Pas encore assez de signalements avec ligne et sens : l'app suppose " + C.paceText(1 / C.CFG.move.pace) + ", sur toutes les lignes." }),
+        el("p", { class: "note", text: "Calculée sur tous les signalements depuis le lancement : deux contrôles signalés à la suite sur la même ligne, dans le même sens et à moins de 40 min d'écart donnent leur vitesse. Recalculée chaque heure ; tant qu'une ligne a peu de données, elle suit la moyenne du réseau." })));
+      const reseau = STOPS.length + " arrêts et " + NET.byLine.size + " lignes tl, horaire officiel suisse (opentransportdata.swiss" + (D.meta && D.meta.period && D.meta.period[0] ? ", " + new Date(D.meta.period[0]).toLocaleDateString("fr-CH") : "") + ").";
       box.append(el("p", { class: "note", text: IN_CLAUDE
-        ? "Prototype : fond de carte simplifié, lignes M1 et M2 et " + STOPS.length + " arrêts principaux. " + (D.meta && D.meta.note ? D.meta.note + " " : "") + "La version en ligne affiche la carte complète des transports (OpenStreetMap) et tous les arrêts (GTFS officiel)."
-        : "Fond épuré : OpenFreeMap / OpenMapTiles ; plan des lignes : ÖPNVKarte (memomaps.de) ; données © contributeurs OpenStreetMap. Positions des arrêts : Wikipédia et transport.opendata.ch." }));
+        ? "Aperçu : fond de carte simplifié. " + reseau
+        : "Fond épuré : OpenFreeMap / OpenMapTiles ; plan des lignes : ÖPNVKarte (memomaps.de) ; données © contributeurs OpenStreetMap. " + reseau }));
       if (!IN_CLAUDE) {
         const fonds = el("div", { class: "chips", role: "group", "aria-label": "Fond de carte" });
         for (const key of ["simple", "reseau"]) {
@@ -965,7 +1140,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   const chipDemo = $("#chipDemo");
   chipDemo.hidden = !SHOW_DEMO;
   const syncDemoChip = () => { chipDemo.setAttribute("aria-pressed", String(state.demoOn)); chipDemo.setAttribute("aria-label", state.demoOn ? "Démo activée : masquer les données fictives" : "Afficher la démo"); };
-  chipDemo.addEventListener("click", () => { state.demoOn = !state.demoOn; pref.set("demo", state.demoOn); syncDemoChip(); render(); });
+  chipDemo.addEventListener("click", () => { state.demoOn = !state.demoOn; pref.set("demo", state.demoOn); syncDemoChip(); refreshRates(); render(); });
   syncDemoChip();
 
   // ---------- installation (site uniquement) ----------
@@ -1018,6 +1193,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
   // ---------- démarrage ----------
   buildDemo();
+  refreshRates();
   render();
   setInterval(render, 30000);
 
@@ -1039,12 +1215,18 @@ button { font: inherit; color: inherit; cursor: pointer; }
         await new Promise((ok, ko) => { const sc = document.createElement("script"); sc.src = "__SUPABASE_JS__"; sc.onload = ok; sc.onerror = ko; document.head.append(sc); });
       } catch (e) { toast("Connexion impossible : vérifie ton réseau puis rouvre l'app."); return; }
       const sb = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } });
-      const COLS = "id,kind,sub,of_kind,stop_id,line,src,voter,at";
-      const fromRow = (r) => ({ id: "sb" + r.id, kind: r.kind, sub: r.sub, of: r.of_kind, stopId: r.stop_id, line: r.line, src: r.src, by: r.voter || null, at: Date.parse(r.at) });
+      // colonne « direction » : absente tant que supabase/schema.sql n'a pas été relancé -> lecture sans le sens
+      let cols = "id,kind,sub,of_kind,stop_id,line,direction,src,voter,at";
+      const fromRow = (r) => ({ id: "sb" + r.id, kind: r.kind, sub: r.sub, of: r.of_kind, stopId: r.stop_id, line: r.line, dir: r.direction || null, src: r.src, by: r.voter || null, at: Date.parse(r.at) });
       state.sb = sb;
+      const fetchRecent = () => sb.from("signalements").select(cols)
+        .gte("at", new Date(Date.now() - 4 * 3600e3).toISOString()).order("at", { ascending: false }).limit(1000);
       state.pull = async () => {
-        const { data, error } = await sb.from("signalements").select(COLS)
-          .gte("at", new Date(Date.now() - 4 * 3600e3).toISOString()).order("at", { ascending: false }).limit(1000);
+        let { data, error } = await fetchRecent();
+        if (error && cols.includes(",direction") && /direction|42703/i.test((error.code || "") + " " + (error.message || ""))) {
+          cols = cols.replace(",direction", "");
+          ({ data, error } = await fetchRecent());
+        }
         if (error || !Array.isArray(data)) return false;
         state.live = data.map(fromRow).filter(validLive);
         state.backend = "supabase";
@@ -1059,6 +1241,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
       // le temps réel peut se couper (veille du téléphone, 24 h max) : on resynchronise régulièrement
       setInterval(() => { if (!document.hidden) state.pull(); }, 120000);
       document.addEventListener("visibilitychange", () => { if (!document.hidden) state.pull(); });
+      // vitesse des contrôles apprise par la base (table tendances, recalculée chaque heure)
+      const loadTrends = async () => {
+        const { data, error } = await sb.from("tendances").select("line,direction,paires,arrets,minutes");
+        if (!error && Array.isArray(data)) { state.ratesRows = data; refreshRates(); render(); }
+      };
+      loadTrends();
+      setInterval(() => { if (!document.hidden) loadTrends(); }, 30 * 60000);
     })();
   }
 })();

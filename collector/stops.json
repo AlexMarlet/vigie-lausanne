@@ -1,536 +1,459 @@
 [
-{
-"id": "ouchy",
-"major": true,
-"name": "Ouchy-Olympique",
-"short": "Ouchy",
-"lines": [
-"M2"
-],
-"alias": [
-"ouchy",
-"ouchy olympique",
-"port ouchy"
-],
-"lat": 46.507194,
-"lon": 6.626556
-},
-{
-"id": "jordils",
-"name": "Jordils",
-"lines": [
-"M2"
-],
-"lat": 46.509889,
-"lon": 6.627361
-},
-{
-"id": "delices",
-"name": "Délices",
-"lines": [
-"M2"
-],
-"lat": 46.51225,
-"lon": 6.628083
-},
-{
-"id": "grancy",
-"name": "Grancy",
-"lines": [
-"M2"
-],
-"lat": 46.514889,
-"lon": 6.628861
-},
-{
-"id": "gare",
-"major": true,
-"name": "Lausanne-Gare",
-"short": "Gare",
-"lines": [
-"M2"
-],
-"alias": [
-"gare",
-"lausanne gare",
-"gare lausanne",
-"gare cff",
-"gare centrale",
-"place gare"
-],
-"lat": 46.51725,
-"lon": 6.630139
-},
-{
-"id": "flon",
-"major": true,
-"name": "Lausanne-Flon",
-"short": "Flon",
-"lines": [
-"M1",
-"M2"
-],
-"alias": [
-"flon",
-"lausanne flon",
-"place europe",
-"europe"
-],
-"lat": 46.5208,
-"lon": 6.63034
-},
-{
-"id": "riponne",
-"name": "Riponne-M. Béjart",
-"short": "Riponne",
-"lines": [
-"M2"
-],
-"alias": [
-"riponne",
-"riponne bejart",
-"riponne maurice bejart",
-"place riponne"
-],
-"lat": 46.522889,
-"lon": 6.632611
-},
-{
-"id": "bessieres",
-"name": "Bessières",
-"lines": [
-"M2"
-],
-"alias": [
-"pont bessieres"
-],
-"lat": 46.520806,
-"lon": 6.636972
-},
-{
-"id": "ours",
-"name": "Ours",
-"lines": [
-"M2"
-],
-"alias": [
-"place ours"
-],
-"lat": 46.521306,
-"lon": 6.640528
-},
-{
-"id": "chuv",
-"major": true,
-"name": "CHUV",
-"lines": [
-"M2"
-],
-"alias": [
-"hopital"
-],
-"lat": 46.52639,
-"lon": 6.64139
-},
-{
-"id": "sallaz",
-"major": true,
-"name": "Sallaz",
-"lines": [
-"M2"
-],
-"alias": [
-"place sallaz"
-],
-"lat": 46.53278,
-"lon": 6.64611
-},
-{
-"id": "fourmi",
-"name": "Fourmi",
-"lines": [
-"M2"
-],
-"lat": 46.538778,
-"lon": 6.651028
-},
-{
-"id": "vennes",
-"name": "Vennes",
-"lines": [
-"M2"
-],
-"lat": 46.541222,
-"lon": 6.657583
-},
-{
-"id": "croisettes",
-"major": true,
-"name": "Croisettes",
-"lines": [
-"M2"
-],
-"alias": [
-"epalinges croisettes"
-],
-"lat": 46.54289,
-"lon": 6.66146
-},
-{
-"id": "vigie",
-"name": "Vigie",
-"lines": [
-"M1"
-],
-"lat": 46.521534,
-"lon": 6.623925
-},
-{
-"id": "montelly",
-"name": "Montelly",
-"lines": [
-"M1"
-],
-"lat": 46.521825,
-"lon": 6.613559
-},
-{
-"id": "provence",
-"name": "Provence",
-"lines": [
-"M1"
-],
-"lat": 46.523265,
-"lon": 6.608654
-},
-{
-"id": "malley",
-"major": true,
-"name": "Malley",
-"lines": [
-"M1"
-],
-"alias": [
-"prilly malley"
-],
-"lat": 46.524136,
-"lon": 6.602563
-},
-{
-"id": "bourdonnette",
-"name": "Bourdonnette",
-"lines": [
-"M1"
-],
-"lat": 46.523265,
-"lon": 6.589807
-},
-{
-"id": "chamberonne",
-"name": "UNIL-Chamberonne",
-"short": "Chamberonne",
-"lines": [
-"M1"
-],
-"alias": [
-"unil chamberonne",
-"unil dorigny",
-"dorigny"
-],
-"lat": 46.524217,
-"lon": 6.584705
-},
-{
-"id": "mouline",
-"name": "UNIL-Mouline",
-"short": "Mouline",
-"lines": [
-"M1"
-],
-"alias": [
-"unil mouline",
-"unil"
-],
-"lat": 46.524989,
-"lon": 6.578893
-},
-{
-"id": "sorge",
-"name": "UNIL-Sorge",
-"short": "Sorge",
-"lines": [
-"M1"
-],
-"alias": [
-"unil sorge"
-],
-"lat": 46.522449,
-"lon": 6.573575
-},
-{
-"id": "epfl",
-"major": true,
-"name": "EPFL",
-"lines": [
-"M1"
-],
-"alias": [
-"poly"
-],
-"lat": 46.522196,
-"lon": 6.566137
-},
-{
-"id": "bassenges",
-"name": "Bassenges",
-"lines": [
-"M1"
-],
-"lat": 46.524588,
-"lon": 6.564592
-},
-{
-"id": "cerisaie",
-"name": "Cerisaie",
-"lines": [
-"M1"
-],
-"lat": 46.527752,
-"lon": 6.56655
-},
-{
-"id": "crochy",
-"name": "Crochy",
-"lines": [
-"M1"
-],
-"lat": 46.532715,
-"lon": 6.569973
-},
-{
-"id": "epenex",
-"name": "Epenex",
-"lines": [
-"M1"
-],
-"lat": 46.537714,
-"lon": 6.573584
-},
-{
-"id": "renens",
-"major": true,
-"name": "Renens-Gare",
-"short": "Renens",
-"lines": [
-"M1"
-],
-"alias": [
-"renens",
-"renens gare",
-"gare renens",
-"renens cff"
-],
-"lat": 46.537621,
-"lon": 6.578516
-},
-{
-"id": "chauderon",
-"name": "Chauderon",
-"alias": [
-"place chauderon"
-],
-"lat": 46.523593,
-"lon": 6.624824
-},
-{
-"id": "belair",
-"name": "Bel-Air",
-"alias": [
-"bel air",
-"belair"
-],
-"lat": 46.522282,
-"lon": 6.629073
-},
-{
-"id": "stfrancois",
-"name": "St-François",
-"alias": [
-"st francois",
-"saint francois",
-"st f",
-"stf",
-"place st francois"
-],
-"lat": 46.519389,
-"lon": 6.633672
-},
-{
-"id": "georgette",
-"name": "Georgette",
-"lat": 46.517825,
-"lon": 6.638119
-},
-{
-"id": "tunnel",
-"name": "Tunnel",
-"alias": [
-"place tunnel"
-],
-"lat": 46.525447,
-"lon": 6.634499
-},
-{
-"id": "maladiere",
-"name": "Maladière",
-"lat": 46.51743,
-"lon": 6.605411
-},
-{
-"id": "prelaz",
-"name": "Prélaz",
-"lat": 46.526331,
-"lon": 6.61249
-},
-{
-"id": "pully",
-"major": true,
-"name": "Pully-Gare",
-"short": "Pully",
-"alias": [
-"pully",
-"pully gare",
-"gare pully"
-],
-"lat": 46.51032,
-"lon": 6.658834
-},
-{
-"id": "lutry",
-"major": true,
-"name": "Lutry-Corniche",
-"short": "Lutry",
-"alias": [
-"lutry",
-"lutry corniche"
-],
-"lat": 46.5007,
-"lon": 6.694084
-},
-{
-"id": "bellevaux",
-"name": "Bellevaux",
-"lat": 46.538993,
-"lon": 6.633726
-},
-{
-"id": "blecherette",
-"name": "Blécherette",
-"alias": [
-"blech"
-],
-"lat": 46.542243,
-"lon": 6.621132
-},
-{
-"id": "beaulieu",
-"name": "Beaulieu",
-"lat": 46.528123,
-"lon": 6.623602
-},
-{
-"id": "chailly",
-"name": "Chailly-Village",
-"short": "Chailly",
-"alias": [
-"chailly",
-"chailly village"
-],
-"lat": 46.523172,
-"lon": 6.655223
-},
-{
-"id": "ruffy",
-"name": "Victor-Ruffy",
-"alias": [
-"victor ruffy",
-"ruffy"
-],
-"lat": 46.531639,
-"lon": 6.64844
-},
-{
-"id": "vidy",
-"name": "Vidy-Port",
-"short": "Vidy",
-"alias": [
-"vidy",
-"vidy port"
-],
-"lat": 46.515007,
-"lon": 6.607657
-},
-{
-"id": "montoie",
-"name": "Montoie",
-"lat": 46.518295,
-"lon": 6.608573
-},
-{
-"id": "stade",
-"name": "Stade Olympique",
-"alias": [
-"pontaise",
-"stade olympique"
-],
-"lat": 46.533833,
-"lon": 6.626063
-},
-{
-"id": "14avril",
-"name": "Renens-14 Avril",
-"short": "14 Avril",
-"alias": [
-"14 avril",
-"renens 14 avril",
-"quatorze avril"
-],
-"lat": 46.53929,
-"lon": 6.580007
-},
-{
-"id": "crissier",
-"name": "Crissier, Place Centrale",
-"short": "Crissier",
-"alias": [
-"crissier",
-"crissier place centrale"
-],
-"lat": 46.549898,
-"lon": 6.579549
-},
-{
-"id": "croset",
-"name": "Ecublens, Croset",
-"short": "Croset",
-"alias": [
-"croset",
-"ecublens croset",
-"ecublens"
-],
-"lat": 46.534692,
-"lon": 6.56637
-},
-{
-"id": "lemont",
-"name": "Le Mont, Grand-Mont",
-"short": "Grand-Mont",
-"alias": [
-"le mont",
-"mont sur lausanne",
-"grand mont"
-],
-"lat": 46.563031,
-"lon": 6.633205
-}
+{"id": "ouchy", "name": "Ouchy-Olympique", "short": "Ouchy", "alias": ["ouchy", "ouchy olympique", "port ouchy", "Lausanne, Ouchy-Olympique"], "lines": ["M2", "2", "24"]},
+{"id": "jordils", "name": "Jordils", "alias": ["Lausanne, Jordils"], "lines": ["M2", "2"]},
+{"id": "delices", "name": "Délices", "alias": ["Lausanne, Délices"], "lines": ["M2", "25"]},
+{"id": "grancy", "name": "Grancy", "alias": ["Lausanne, Grancy"], "lines": ["M2"]},
+{"id": "gare", "name": "Lausanne-Gare", "short": "Gare", "amb": true, "alias": ["gare", "lausanne gare", "gare lausanne", "gare cff", "gare centrale", "place gare"], "lines": ["M2", "1", "3", "20", "21", "60", "Bus-LEB", "N1", "N2", "N3", "N4", "N6"]},
+{"id": "flon", "name": "Lausanne-Flon", "short": "Flon", "alias": ["flon", "lausanne flon", "place europe", "europe"], "lines": ["M1", "M2"]},
+{"id": "riponne", "name": "Riponne-M. Béjart", "short": "Riponne", "alias": ["riponne", "riponne bejart", "riponne maurice bejart", "place riponne", "Lausanne, Riponne-M. Béjart"], "lines": ["M2", "1", "2", "4", "7", "8", "9", "16", "18", "20", "21", "60", "N1", "N2", "N3"]},
+{"id": "bessieres", "name": "Bessières", "alias": ["pont bessieres", "Lausanne, Bessières"], "lines": ["M2", "6", "N6"]},
+{"id": "ours", "name": "Ours", "alias": ["place ours", "Lausanne, Ours"], "lines": ["M2", "6", "7", "N3", "N6"]},
+{"id": "chuv", "name": "CHUV", "alias": ["hopital", "Lausanne, CHUV"], "lines": ["M2", "N2"]},
+{"id": "sallaz", "name": "Sallaz", "alias": ["place sallaz", "Lausanne, Sallaz"], "lines": ["M2", "6", "41", "42", "N2", "N3"]},
+{"id": "fourmi", "name": "Fourmi", "alias": ["Lausanne, Fourmi"], "lines": ["M2", "N2"]},
+{"id": "vennes", "name": "Vennes", "alias": ["Lausanne, Vennes"], "lines": ["M2", "N2"]},
+{"id": "croisettes", "name": "Croisettes", "alias": ["epalinges croisettes", "Croisettes Epalinges"], "lines": ["M2", "44", "45", "46", "54", "64", "N2"]},
+{"id": "vigie", "name": "Vigie", "alias": ["Lausanne, Vigie"], "lines": ["M1", "17"]},
+{"id": "montelly", "name": "Montelly", "alias": ["Lausanne, Montelly"], "lines": ["M1", "16", "N5"]},
+{"id": "provence", "name": "Provence", "alias": ["Lausanne, Provence"], "lines": ["M1"]},
+{"id": "malley", "name": "Malley", "alias": ["prilly malley", "Lausanne, Malley"], "lines": ["M1", "32", "33", "N5"]},
+{"id": "bourdonnette", "name": "Bourdonnette", "alias": ["Lausanne, Bourdonnette"], "lines": ["M1", "1", "24", "N5"]},
+{"id": "chamberonne", "name": "UNIL-Chamberonne", "short": "Chamberonne", "alias": ["unil chamberonne", "unil dorigny", "dorigny", "Chavannes-R., UNIL-Chamberonne", "UNIL-Chamberonne Chavannes"], "lines": ["M1"]},
+{"id": "mouline", "name": "UNIL-Mouline", "short": "Mouline", "alias": ["unil mouline", "unil", "Chavannes-R., UNIL-Mouline", "UNIL-Mouline Chavannes"], "lines": ["M1"]},
+{"id": "sorge", "name": "UNIL-Sorge", "short": "Sorge", "alias": ["unil sorge", "Ecublens VD, UNIL-Sorge", "UNIL-Sorge Ecublens"], "lines": ["M1", "31", "N5"]},
+{"id": "epfl", "name": "EPFL", "alias": ["poly", "Ecublens VD, EPFL", "EPFL Ecublens"], "lines": ["M1"]},
+{"id": "bassenges", "name": "Bassenges", "alias": ["Ecublens VD, Bassenges", "Bassenges Ecublens"], "lines": ["M1"]},
+{"id": "cerisaie", "name": "Cerisaie", "alias": ["Ecublens VD, Cerisaie", "Cerisaie Ecublens"], "lines": ["M1"]},
+{"id": "crochy", "name": "Crochy", "alias": ["Chavannes-R., Crochy", "Crochy Chavannes"], "lines": ["M1"]},
+{"id": "epenex", "name": "Epenex", "alias": ["Ecublens VD, Epenex", "Epenex Ecublens"], "lines": ["M1"]},
+{"id": "renens", "name": "Renens-Gare", "short": "Renens", "amb": true, "alias": ["renens", "renens gare", "gare renens", "renens cff", "Renens VD, gare"], "lines": ["M1", "25", "31", "32", "33", "36", "38", "54", "58"]},
+{"id": "chauderon", "name": "Chauderon", "alias": ["place chauderon", "Lausanne, Chauderon"], "lines": ["1", "2", "3", "4", "6", "7", "8", "9", "16", "18", "19", "20", "21", "25", "60", "N1", "N2", "N3", "N4", "N5", "N6"]},
+{"id": "belair", "name": "Bel-Air", "amb": true, "alias": ["bel air", "belair", "Lausanne, Bel-Air"], "lines": ["1", "2", "4", "6", "7", "8", "9", "16", "18", "20", "21", "25", "N1", "N2", "N3", "N5", "N6"]},
+{"id": "stfrancois", "name": "St-François", "alias": ["st francois", "saint francois", "st f", "stf", "place st francois", "Lausanne, St-François"], "lines": ["1", "2", "4", "6", "8", "9", "13", "25", "N1", "N2", "N3", "N4", "N5", "N6"]},
+{"id": "georgette", "name": "Georgette", "alias": ["Lausanne, Georgette"], "lines": ["1", "2", "4", "8", "9", "25", "N1", "N2", "N3", "N4", "N6"]},
+{"id": "tunnel", "name": "Tunnel", "alias": ["place tunnel", "Lausanne, Tunnel"], "lines": ["1", "4", "7", "8", "9", "16", "18", "60", "N2", "N3"]},
+{"id": "maladiere", "name": "Maladière", "alias": ["Lausanne, Maladière"], "lines": ["1", "6"]},
+{"id": "prelaz", "name": "Prélaz", "alias": ["Lausanne, Prélaz"], "lines": ["1", "2", "6", "7", "8", "9", "18", "19", "20", "21", "25", "N4"]},
+{"id": "pully", "name": "Pully-Gare", "short": "Pully", "amb": true, "alias": ["pully", "pully gare", "gare pully"], "lines": ["8", "25", "47", "48"]},
+{"id": "lutry", "name": "Lutry-Corniche", "short": "Lutry", "alias": ["lutry", "lutry corniche", "Corniche Lutry"], "lines": ["9"]},
+{"id": "bellevaux", "name": "Bellevaux", "alias": ["Lausanne, Bellevaux"], "lines": ["3", "8", "18", "60", "N1"]},
+{"id": "blecherette", "name": "Blécherette", "alias": ["blech", "Lausanne, Blécherette"], "lines": ["1", "20", "21", "N1"]},
+{"id": "beaulieu", "name": "Beaulieu", "alias": ["Lausanne, Beaulieu"], "lines": ["2", "21", "N1"]},
+{"id": "chailly", "name": "Chailly-Village", "short": "Chailly", "alias": ["chailly", "chailly village", "Lausanne, Chailly-Village"], "lines": ["7", "N6"]},
+{"id": "ruffy", "name": "Victor-Ruffy", "alias": ["victor ruffy", "ruffy", "Lausanne, Victor-Ruffy"], "lines": ["6", "N3"]},
+{"id": "vidy", "name": "Vidy-Port", "short": "Vidy", "alias": ["vidy", "vidy port", "Lausanne, Vidy-Port"], "lines": ["24"]},
+{"id": "montoie", "name": "Montoie", "alias": ["Lausanne, Montoie"], "lines": ["1", "6", "N5"]},
+{"id": "stade", "name": "Stade Olympique", "alias": ["pontaise", "stade olympique", "Lausanne, Stade Olympique"], "lines": ["1", "20", "N1"]},
+{"id": "14avril", "name": "Renens-14 Avril", "short": "14 Avril", "alias": ["14 avril", "renens 14 avril", "quatorze avril", "Renens VD, 14 Avril", "14 Avril Renens"], "lines": ["17", "19", "38", "N4"]},
+{"id": "crissier", "name": "Crissier, Place Centrale", "short": "Crissier", "alias": ["crissier", "crissier place centrale", "Place Centrale Crissier"], "lines": ["9", "18", "32", "N4"]},
+{"id": "croset", "name": "Ecublens, Croset", "short": "Croset", "alias": ["croset", "ecublens croset", "ecublens", "Ecublens VD, Croset", "Croset Ecublens"], "lines": ["33", "N5"]},
+{"id": "lemont", "name": "Le Mont, Grand-Mont", "short": "Grand-Mont", "alias": ["le mont", "mont sur lausanne", "grand mont", "Le Mont-sur-L., Grand-Mont", "Grand-Mont Le Mont"], "lines": ["8", "54", "60", "N1"]},
+{"id": "1er-aout", "name": "Renens, 1er Août", "short": "1er Août", "alias": ["Renens VD, 1er Août", "1er Août Renens"], "lines": ["32", "38"]},
+{"id": "1er-mai", "name": "Renens, 1er Mai", "short": "1er Mai", "alias": ["Renens VD, 1er Mai", "1er Mai Renens"], "lines": ["38", "N4"]},
+{"id": "abeilles", "name": "Abeilles", "alias": ["Lausanne, Abeilles"], "lines": ["41", "N3"]},
+{"id": "allee-de-dorigny", "name": "Ecublens, Allée de Dorigny", "short": "Allée de Dorigny", "alias": ["Ecublens VD, allée de Dorigny", "Allée de Dorigny Ecublens"], "lines": ["1"]},
+{"id": "allieres-chuv", "name": "Allières/CHUV", "alias": ["Lausanne, Allières/CHUV"], "lines": ["6", "N3"]},
+{"id": "alpes", "name": "Alpes", "alias": ["Lausanne, Alpes"], "lines": ["8", "21", "25"]},
+{"id": "arc-en-ciel", "name": "Crissier, Arc-en-Ciel", "short": "Arc-en-Ciel", "alias": ["Arc-en-Ciel Crissier"], "lines": ["17", "N4"]},
+{"id": "argand", "name": "Ecublens, Argand", "short": "Argand", "alias": ["Ecublens VD, Argand", "Argand Ecublens"], "lines": ["31", "N5"]},
+{"id": "assens-gare", "name": "Assens, Gare", "short": "Gare", "amb": true, "alias": ["Gare Assens"], "lines": ["Bus-LEB"]},
+{"id": "aubepines", "name": "Aubépines", "alias": ["Lausanne, Aubépines"], "lines": ["4"]},
+{"id": "avenir", "name": "Renens, Avenir", "short": "Avenir", "alias": ["Renens VD, Avenir", "Avenir Renens"], "lines": ["17", "19", "38", "N4"]},
+{"id": "avenue-du-leman", "name": "Avenue du Léman", "alias": ["Lausanne, avenue du Léman"], "lines": ["4", "9", "N6"]},
+{"id": "avenue-william", "name": "Lutry, Avenue William", "short": "Avenue William", "alias": ["Avenue William Lutry"], "lines": ["68", "N6"]},
+{"id": "ballegue", "name": "Epalinges, Ballègue", "short": "Ballègue", "alias": ["Ballègue Epalinges"], "lines": ["44", "46"]},
+{"id": "barre", "name": "Barre", "alias": ["Lausanne, Barre"], "lines": ["16"]},
+{"id": "bateliere", "name": "Batelière", "alias": ["Lausanne, Batelière"], "lines": ["1", "25"]},
+{"id": "baumettes", "name": "Renens, Baumettes", "short": "Baumettes", "alias": ["Renens VD, Baumettes", "Baumettes Renens"], "lines": ["9", "18", "N4"]},
+{"id": "beau-rivage", "name": "Beau-Rivage", "alias": ["Lausanne, Beau-Rivage"], "lines": ["2"]},
+{"id": "beau-site", "name": "Beau-Site", "alias": ["Lausanne, Beau-Site"], "lines": ["21", "N1"]},
+{"id": "beaulieu-jomini", "name": "Beaulieu-Jomini", "alias": ["Lausanne, Beaulieu-Jomini"], "lines": ["2", "3", "20", "21", "N1"]},
+{"id": "bellerive", "name": "Bellerive", "alias": ["Lausanne, Bellerive"], "lines": ["2", "24"]},
+{"id": "belmont-centre", "name": "Belmont, Centre", "short": "Centre", "amb": true, "alias": ["Belmont-sur-L., centre", "Centre Belmont"], "lines": ["47", "N6"]},
+{"id": "belvedere", "name": "Belvédère", "alias": ["Lausanne, Belvédère"], "lines": ["16", "N5"]},
+{"id": "benj-constant", "name": "Benj. Constant", "alias": ["Lausanne, Benj. Constant"], "lines": ["13"]},
+{"id": "berges", "name": "Chavannes, Berges", "short": "Berges", "alias": ["Chavannes-R., Berges", "Berges Chavannes"], "lines": ["31", "N5"]},
+{"id": "bergieres", "name": "Bergières", "alias": ["Lausanne, Bergières"], "lines": ["2", "21", "N1"]},
+{"id": "bethanie", "name": "Béthanie", "alias": ["Lausanne, Béthanie"], "lines": ["4"]},
+{"id": "bethusy", "name": "Béthusy", "alias": ["Lausanne, Béthusy"], "lines": ["6", "7", "N3", "N6"]},
+{"id": "biolleyre", "name": "Epalinges, Biolleyre", "short": "Biolleyre", "alias": ["Biolleyre Epalinges"], "lines": ["44", "46"]},
+{"id": "biondes", "name": "Renens, Biondes", "short": "Biondes", "alias": ["Renens VD, Biondes", "Biondes Renens"], "lines": ["9", "18", "N4"]},
+{"id": "blessoney", "name": "Belmont, Blessoney", "short": "Blessoney", "alias": ["Belmont-sur-L., Blessoney", "Blessoney Belmont"], "lines": ["47", "N6"]},
+{"id": "blevallaire", "name": "Ecublens, Blévallaire", "short": "Blévallaire", "alias": ["Ecublens VD, Blévallaire", "Blévallaire Ecublens"], "lines": ["1"]},
+{"id": "bochet", "name": "St-Sulpice, Bochet", "short": "Bochet", "alias": ["St-Sulpice VD, Bochet", "Bochet St-Sulpice"], "lines": ["31", "N5"]},
+{"id": "bois-de-ban", "name": "Epalinges, Bois-de-Ban", "short": "Bois-de-Ban", "alias": ["Bois-de-Ban Epalinges"], "lines": ["44"]},
+{"id": "bois-de-vaux", "name": "Bois de Vaux", "alias": ["Lausanne, Bois de Vaux"], "lines": ["1", "25", "N5"]},
+{"id": "bois-gentil", "name": "Bois-Gentil", "alias": ["Lausanne, Bois-Gentil"], "lines": ["1", "20", "N1"]},
+{"id": "bois-murat", "name": "Epalinges, Bois-Murat", "short": "Bois-Murat", "alias": ["Bois-Murat Epalinges"], "lines": ["45", "46"]},
+{"id": "boissonnet", "name": "Boissonnet", "alias": ["Lausanne, Boissonnet"], "lines": ["41", "N3"]},
+{"id": "boisy", "name": "Boisy", "alias": ["Lausanne, Boisy"], "lines": ["2", "21", "N1"]},
+{"id": "bonne-esperance", "name": "Bonne-Espérance", "alias": ["Lausanne, Bonne-Espérance"], "lines": ["4", "9", "N6"]},
+{"id": "borjod", "name": "Renens, Borjod", "short": "Borjod", "alias": ["Renens VD, Borjod", "Borjod Renens"], "lines": ["38", "N4"]},
+{"id": "bossieres", "name": "Lutry, Bossières", "short": "Bossières", "alias": ["Bossières Lutry"], "lines": ["69"]},
+{"id": "bossons", "name": "Bossons", "alias": ["Lausanne, Bossons"], "lines": ["21", "N1"]},
+{"id": "boston", "name": "Boston", "alias": ["Lausanne, Boston"], "lines": ["1", "2", "6", "7", "8", "9", "18", "19", "20", "21", "25", "Bus-LEB", "N4"]},
+{"id": "bottens-croisee", "name": "Bottens, Croisée", "short": "Croisée", "amb": true, "alias": ["Croisée Bottens"], "lines": ["60"]},
+{"id": "bourdonnette-nord", "name": "Bourdonnette nord", "alias": ["Lausanne, Bourdonnette nord"], "lines": ["25", "N5"]},
+{"id": "bourdonniere", "name": "Pully, Bourdonnière", "short": "Bourdonnière", "alias": ["Bourdonnière Pully"], "lines": ["21"]},
+{"id": "bourg", "name": "Crissier, Bourg", "short": "Bourg", "amb": true, "alias": ["Bourg Crissier"], "lines": ["18", "32", "54", "N4"]},
+{"id": "bourg-dessus", "name": "Renens, Bourg-Dessus", "short": "Bourg-Dessus", "alias": ["Renens VD, Bourg-Dessus", "Bourg-Dessus Renens"], "lines": ["18", "38", "N4"]},
+{"id": "boverattes", "name": "Pully, Boverattes", "short": "Boverattes", "alias": ["Boverattes Pully"], "lines": ["47"]},
+{"id": "boveresses", "name": "Boveresses", "alias": ["Lausanne, Boveresses"], "lines": ["6", "41", "N3"]},
+{"id": "brelaz", "name": "Lutry, Brélaz", "short": "Brélaz", "alias": ["Brélaz Lutry"], "lines": ["69"]},
+{"id": "bretigny-sur-morrens-croisee", "name": "Bretigny-sur-Morrens, Croisée", "short": "Croisée", "amb": true, "alias": ["Croisée Bretigny-sur-Morrens"], "lines": ["60"]},
+{"id": "brulees", "name": "Lutry, Brûlées", "short": "Brûlées", "alias": ["Brûlées Lutry"], "lines": ["68"]},
+{"id": "bruyere", "name": "Pully, Bruyère", "short": "Bruyère", "alias": ["Bruyère Pully"], "lines": ["48"]},
+{"id": "budron", "name": "Le Mont, Budron", "short": "Budron", "alias": ["Le Mont-sur-L., Budron", "Budron Le Mont"], "lines": ["54", "60"]},
+{"id": "burenoz", "name": "Belmont, Burenoz", "short": "Burenoz", "alias": ["Belmont-sur-L., Burenoz", "Burenoz Belmont"], "lines": ["49"]},
+{"id": "bussigny-gare", "name": "Bussigny, Gare", "short": "Gare", "amb": true, "alias": ["Gare Bussigny"], "lines": ["35", "56"]},
+{"id": "buyere", "name": "Bussigny, Buyère", "short": "Buyère", "alias": ["Buyère Bussigny"], "lines": ["17", "N4"]},
+{"id": "c-f-ramuz", "name": "Pully, C. F. Ramuz", "short": "C. F. Ramuz", "alias": ["C. F. Ramuz Pully"], "lines": ["8", "25"]},
+{"id": "campus-des-medias", "name": "Ecublens, Campus des médias", "short": "Campus des médias", "alias": ["Ecublens VD, Campus des médias", "Campus des médias Ecublens"], "lines": ["1", "31", "N5"]},
+{"id": "cascades", "name": "Cascades", "alias": ["Lausanne, Cascades"], "lines": ["16"]},
+{"id": "casernes", "name": "Casernes", "alias": ["Lausanne, casernes"], "lines": ["1", "3", "20", "N1"]},
+{"id": "caudoz", "name": "Pully, Caudoz", "short": "Caudoz", "alias": ["Caudoz Pully"], "lines": ["49"]},
+{"id": "caudray", "name": "Renens, Caudray", "short": "Caudray", "alias": ["Renens VD, Caudray", "Caudray Renens"], "lines": ["32", "33", "N5"]},
+{"id": "cavenette", "name": "Cugy, Cavenette", "short": "Cavenette", "alias": ["Cugy VD, Cavenette", "Cavenette Cugy"], "lines": ["54", "60"]},
+{"id": "cecil", "name": "Cécil", "alias": ["Lausanne, Cécil"], "lines": ["1", "3", "6", "20", "21", "Bus-LEB", "N1", "N2", "N3", "N4", "N6"]},
+{"id": "censuy", "name": "Renens, Censuy", "short": "Censuy", "alias": ["Renens VD, Censuy", "Censuy Renens"], "lines": ["25", "32", "33", "N5"]},
+{"id": "centre-sportif-rochettaz", "name": "Pully, Centre Sportif Rochettaz", "short": "Centre Sportif Rochettaz", "alias": ["Centre Sportif Rochettaz Pully"], "lines": ["49"]},
+{"id": "cery-fleur-de-lys-gare", "name": "Cery-Fleur-de-Lys, Gare", "short": "Gare", "amb": true, "alias": ["Gare Cery-Fleur-de-Lys"], "lines": ["Bus-LEB"]},
+{"id": "cesar-roux", "name": "César-Roux", "alias": ["Lausanne, César-Roux"], "lines": ["7", "N2", "N3"]},
+{"id": "chaffeises", "name": "Belmont, Chaffeises", "short": "Chaffeises", "alias": ["Belmont-sur-L., Chaffeises", "Chaffeises Belmont"], "lines": ["49"]},
+{"id": "chalet-a-gobet", "name": "Chalet-à-Gobet", "alias": ["Lausanne, Chalet-à-Gobet"], "lines": ["45", "64"]},
+{"id": "chalet-a-gobet-jorat", "name": "Chalet-à-Gobet/Jorat", "alias": ["Lausanne, Chalet-à-Gobet/Jorat"], "lines": ["64", "N2"]},
+{"id": "chalet-a-matthey", "name": "Chalet à Matthey", "alias": ["Lausanne, Chalet à Matthey"], "lines": ["64", "N2"]},
+{"id": "chalet-des-enfants", "name": "Chalet des Enfants", "alias": ["Lausanne, Chalet des Enfants"], "lines": ["54"]},
+{"id": "champ-rond", "name": "Champ-Rond", "alias": ["Lausanne, Champ-Rond"], "lines": ["42"]},
+{"id": "champagne", "name": "Ecublens, Champagne", "short": "Champagne", "alias": ["Ecublens VD, Champagne", "Champagne Ecublens"], "lines": ["1"]},
+{"id": "champs-courbes", "name": "Ecublens, Champs-Courbes", "short": "Champs-Courbes", "alias": ["Ecublens VD, Champs-Courbes", "Champs-Courbes Ecublens"], "lines": ["33", "N5"]},
+{"id": "chandolin", "name": "Chandolin", "alias": ["Lausanne, Chandolin"], "lines": ["13"]},
+{"id": "chantres", "name": "St-Sulpice, Chantres", "short": "Chantres", "alias": ["St-Sulpice VD, Chantres", "Chantres St-Sulpice"], "lines": ["31", "N5"]},
+{"id": "chasseur", "name": "Prilly, Chasseur", "short": "Chasseur", "alias": ["Chasseur Prilly"], "lines": ["33", "Bus-LEB"]},
+{"id": "chataignier", "name": "Pully, Châtaignier", "short": "Châtaignier", "alias": ["Châtaignier Pully"], "lines": ["21", "47"]},
+{"id": "chatelard", "name": "Cheseaux, Châtelard", "short": "Châtelard", "alias": ["Cheseaux-sur-L., Châtelard", "Châtelard Cheseaux"], "lines": ["54"]},
+{"id": "chauderon-ale", "name": "Chauderon-Ale", "alias": ["Lausanne, Chauderon-Ale"], "lines": ["4", "19"]},
+{"id": "chavannes-cedres", "name": "Chavannes, Cèdres", "short": "Cèdres", "amb": true, "alias": ["Chavannes-R., Cèdres", "Cèdres Chavannes"], "lines": ["31"]},
+{"id": "chemin-du-cap", "name": "Chemin du Cap", "alias": ["Lausanne, chemin du Cap"], "lines": ["4"]},
+{"id": "chenaulaz", "name": "Pully, Chenaulaz", "short": "Chenaulaz", "alias": ["Chenaulaz Pully"], "lines": ["47", "N6"]},
+{"id": "cheseaux-bel-air", "name": "Cheseaux, Bel-Air", "short": "Bel-Air", "amb": true, "alias": ["Cheseaux-sur-L., Bel-Air", "Bel-Air Cheseaux"], "lines": ["Bus-LEB"]},
+{"id": "cheseaux-gare", "name": "Cheseaux, Gare", "short": "Gare", "amb": true, "alias": ["Cheseaux-sur-L., gare", "Gare Cheseaux"], "lines": ["54", "Bus-LEB"]},
+{"id": "chevreuils", "name": "Chevreuils", "alias": ["Lausanne, Chevreuils"], "lines": ["64", "N2"]},
+{"id": "chicoree", "name": "Crissier, Chicorée", "short": "Chicorée", "alias": ["Chicorée Crissier"], "lines": ["32", "38", "N4"]},
+{"id": "chisaz", "name": "Crissier, Chisaz", "short": "Chisaz", "alias": ["Chisaz Crissier"], "lines": ["54"]},
+{"id": "chocolatiere", "name": "Chocolatière", "alias": ["Lausanne, Chocolatière"], "lines": ["16"]},
+{"id": "cigale", "name": "Cigale", "alias": ["Lausanne, Cigale"], "lines": ["41", "N3"]},
+{"id": "clergere", "name": "Pully, Clergère", "short": "Clergère", "alias": ["Clergère Pully"], "lines": ["9", "47", "49", "N6"]},
+{"id": "clochatte", "name": "Clochatte", "alias": ["Lausanne, Clochatte"], "lines": ["18"]},
+{"id": "closalet", "name": "Crissier, Closalet", "short": "Closalet", "alias": ["Closalet Crissier"], "lines": ["36"]},
+{"id": "closelet", "name": "Closelet", "alias": ["Lausanne, Closelet"], "lines": ["2"]},
+{"id": "cocagne", "name": "Bussigny, Cocagne", "short": "Cocagne", "alias": ["Cocagne Bussigny"], "lines": ["17", "35", "N4"]},
+{"id": "cojonnex-ehl", "name": "Cojonnex/EHL", "alias": ["Lausanne, Cojonnex/EHL"], "lines": ["45", "64", "N2"]},
+{"id": "colice", "name": "Villars-Ste-Croix, Colice", "short": "Colice", "alias": ["Colice Villars-Ste-Croix"], "lines": ["32", "35", "N4"]},
+{"id": "colline", "name": "Lutry, Colline", "short": "Colline", "alias": ["Colline Lutry"], "lines": ["68", "N6"]},
+{"id": "concorde", "name": "Chavannes, Concorde", "short": "Concorde", "alias": ["Chavannes-R., Concorde", "Concorde Chavannes"], "lines": ["31", "32", "N5"]},
+{"id": "condemine", "name": "Bussigny, Condémine", "short": "Condémine", "alias": ["Condémine Bussigny"], "lines": ["35"]},
+{"id": "coppoz", "name": "Le Mont, Coppoz", "short": "Coppoz", "alias": ["Le Mont-sur-L., Coppoz", "Coppoz Le Mont"], "lines": ["8", "N1"]},
+{"id": "coppoz-poste", "name": "Le Mont, Coppoz-Poste", "short": "Coppoz-Poste", "alias": ["Le Mont-sur-L., Coppoz-Poste", "Coppoz-Poste Le Mont"], "lines": ["8", "60", "N1"]},
+{"id": "corminjoz", "name": "Prilly, Corminjoz", "short": "Corminjoz", "alias": ["Corminjoz Prilly"], "lines": ["9", "N4"]},
+{"id": "corsy-dessous", "name": "Lutry, Corsy-Dessous", "short": "Corsy-Dessous", "alias": ["Corsy-Dessous Lutry"], "lines": ["68", "N6"]},
+{"id": "corsy-dessus", "name": "Lutry, Corsy-Dessus", "short": "Corsy-Dessus", "alias": ["Corsy-Dessus Lutry"], "lines": ["68", "N6"]},
+{"id": "cossonay-penthalaz-gare", "name": "Cossonay-Penthalaz, Gare", "short": "Gare", "amb": true, "alias": ["Gare Cossonay-Penthalaz"], "lines": ["58"]},
+{"id": "cossonay-ville-centre", "name": "Cossonay-Ville, Centre", "short": "Centre", "amb": true, "alias": ["Centre Cossonay-Ville"], "lines": ["58"]},
+{"id": "cotes", "name": "Le Mont, Côtes", "short": "Côtes", "alias": ["Le Mont-sur-L., Côtes", "Côtes Le Mont"], "lines": ["8", "N1"]},
+{"id": "cottages", "name": "Cottages", "alias": ["Lausanne, Cottages"], "lines": ["16"]},
+{"id": "couchirard", "name": "Couchirard", "alias": ["Lausanne, Couchirard"], "lines": ["17"]},
+{"id": "coudraie", "name": "Prilly, Coudraie", "short": "Coudraie", "alias": ["Coudraie Prilly"], "lines": ["4", "33"]},
+{"id": "coudrette", "name": "Coudrette", "alias": ["Lausanne, Coudrette"], "lines": ["7", "N6"]},
+{"id": "cour", "name": "Cour", "alias": ["Lausanne, Cour"], "lines": ["1"]},
+{"id": "craivavers", "name": "Craivavers", "alias": ["Lausanne, Craivavers"], "lines": ["42"]},
+{"id": "croisee-tilleuls", "name": "Renens, Croisée/Tilleuls", "short": "Croisée/Tilleuls", "alias": ["Renens VD, Croisée/Tilleuls", "Croisée/Tilleuls Renens"], "lines": ["17", "19", "N4"]},
+{"id": "croix-blanche", "name": "Epalinges, Croix-Blanche", "short": "Croix-Blanche", "alias": ["Croix-Blanche Epalinges"], "lines": ["45", "46", "N2"]},
+{"id": "croix-d-ouchy", "name": "Croix d'Ouchy", "alias": ["Lausanne, Croix d'Ouchy"], "lines": ["2"]},
+{"id": "croix-de-plan", "name": "Bussigny, Croix de Plan", "short": "Croix de Plan", "alias": ["Croix de Plan Bussigny"], "lines": ["17", "N4"]},
+{"id": "croix-lutry", "name": "Lutry, Croix/Lutry", "short": "Croix/Lutry", "alias": ["Croix/Lutry Lutry"], "lines": ["47", "68", "69", "N6"]},
+{"id": "croix-peage", "name": "Villars-Ste-Croix, Croix-Péage", "short": "Croix-Péage", "alias": ["Croix-Péage Villars-Ste-Croix"], "lines": ["17", "32", "35", "58", "N4"]},
+{"id": "cugy-poste", "name": "Cugy, Poste", "short": "Poste", "amb": true, "alias": ["Cugy VD, poste", "Poste Cugy"], "lines": ["54", "60"]},
+{"id": "cugy-village", "name": "Cugy, Village", "short": "Village", "amb": true, "alias": ["Cugy VD, village", "Village Cugy"], "lines": ["54", "60"]},
+{"id": "culturaz", "name": "Lutry, Culturaz", "short": "Culturaz", "alias": ["Culturaz Lutry"], "lines": ["69"]},
+{"id": "cuvillard", "name": "Vufflens-la-Ville, Cuvillard", "short": "Cuvillard", "alias": ["Cuvillard Vufflens-la-Ville"], "lines": ["56"]},
+{"id": "daillettes", "name": "Pully, Daillettes", "short": "Daillettes", "alias": ["Daillettes Pully"], "lines": ["48"]},
+{"id": "dallaz", "name": "Bussigny, Dallaz", "short": "Dallaz", "alias": ["Dallaz Bussigny"], "lines": ["56"]},
+{"id": "dapples", "name": "Dapples", "alias": ["Lausanne, Dapples"], "lines": ["1"]},
+{"id": "denantou", "name": "Denantou", "alias": ["Lausanne, Denantou"], "lines": ["21"]},
+{"id": "desert", "name": "Désert", "alias": ["Lausanne, Désert"], "lines": ["2"]},
+{"id": "devin", "name": "Devin", "alias": ["Lausanne, Devin"], "lines": ["42"]},
+{"id": "dorigny", "name": "Chavannes, Dorigny", "short": "Dorigny", "alias": ["Chavannes-R., Dorigny", "Dorigny Chavannes"], "lines": ["25", "N5"]},
+{"id": "dranse", "name": "Dranse", "alias": ["Lausanne, Dranse"], "lines": ["4"]},
+{"id": "druey", "name": "Druey", "alias": ["Lausanne, Druey"], "lines": ["1", "20"]},
+{"id": "druey-college", "name": "Druey-Collège", "alias": ["Lausanne, Druey-Collège"], "lines": ["1", "20"]},
+{"id": "echallens-gare", "name": "Echallens, Gare", "short": "Gare", "amb": true, "alias": ["Gare Echallens"], "lines": ["Bus-LEB"]},
+{"id": "echerins", "name": "Lutry, Echerins", "short": "Echerins", "alias": ["Echerins Lutry"], "lines": ["47", "68", "N6"]},
+{"id": "ecole-des-metiers", "name": "Ecole des Métiers", "alias": ["Lausanne, Ecole des Métiers"], "lines": ["17"]},
+{"id": "eglantine", "name": "Eglantine", "alias": ["Lausanne, Eglantine"], "lines": ["4", "9", "N6"]},
+{"id": "eglise", "name": "Vufflens-la-Ville, Église", "short": "Église", "amb": true, "alias": ["Église Vufflens-la-Ville"], "lines": ["56", "58"]},
+{"id": "elysee", "name": "Elysée", "alias": ["Lausanne, Elysée"], "lines": ["25"]},
+{"id": "en-coulaye", "name": "Villars-Ste-Croix, En Coulaye", "short": "En Coulaye", "alias": ["En Coulaye Villars-Ste-Croix"], "lines": ["32", "35", "N4"]},
+{"id": "en-enjalin", "name": "Ecublens, En Enjalin", "short": "En Enjalin", "alias": ["Ecublens VD, En Enjalin", "En Enjalin Ecublens"], "lines": ["33", "N5"]},
+{"id": "en-marin", "name": "En Marin", "alias": ["Lausanne, En Marin"], "lines": ["45", "54", "N2"]},
+{"id": "en-praz-bin", "name": "Epalinges, En Praz Bin", "short": "En Praz Bin", "alias": ["En Praz Bin Epalinges"], "lines": ["46"]},
+{"id": "entre-bois", "name": "Entre-Bois", "alias": ["Lausanne, Entre-Bois"], "lines": ["3"]},
+{"id": "epenex-pont-bleu", "name": "Ecublens, Epenex/Pont-Bleu", "short": "Epenex/Pont-Bleu", "alias": ["Ecublens VD, Epenex/Pont-Bleu", "Epenex/Pont-Bleu Ecublens"], "lines": ["33", "N5"]},
+{"id": "epfl-colladon", "name": "Ecublens, EPFL/Colladon", "short": "EPFL/Colladon", "alias": ["Ecublens VD, EPFL/Colladon", "EPFL/Colladon Ecublens"], "lines": ["1"]},
+{"id": "epinettes", "name": "Epinettes", "alias": ["Lausanne, Epinettes"], "lines": ["1"]},
+{"id": "epsic", "name": "EPSIC", "alias": ["Lausanne, EPSIC"], "lines": ["17"]},
+{"id": "etagnieres-village", "name": "Etagnières, Village", "short": "Village", "amb": true, "alias": ["Village Etagnières"], "lines": ["Bus-LEB"]},
+{"id": "etavez", "name": "Le Mont, Etavez", "short": "Etavez", "alias": ["Le Mont-sur-L., Etavez", "Etavez Le Mont"], "lines": ["54", "60"]},
+{"id": "eugene-rambert", "name": "Eugène-Rambert", "alias": ["Lausanne, Eugène-Rambert"], "lines": ["4"]},
+{"id": "faraz", "name": "Mex, Faraz", "short": "Faraz", "alias": ["Mex VD, Faraz", "Faraz Mex"], "lines": ["32", "56"]},
+{"id": "fauconnieres", "name": "Fauconnières", "alias": ["Lausanne, Fauconnières"], "lines": ["7", "N6"]},
+{"id": "faverges", "name": "Faverges", "alias": ["Lausanne, Faverges"], "lines": ["4"]},
+{"id": "feleire", "name": "Crissier, Feleire", "short": "Feleire", "alias": ["Feleire Crissier"], "lines": ["36", "N4"]},
+{"id": "figuiers", "name": "Figuiers", "alias": ["Lausanne, Figuiers"], "lines": ["6", "25", "N5"]},
+{"id": "floreyres", "name": "Floreyres", "alias": ["Lausanne, Floreyres"], "lines": ["13"]},
+{"id": "florimont", "name": "Epalinges, Florimont", "short": "Florimont", "alias": ["Florimont Epalinges"], "lines": ["44"]},
+{"id": "florissant", "name": "Renens, Florissant", "short": "Florissant", "alias": ["Renens VD, Florissant", "Florissant Renens"], "lines": ["18", "N4"]},
+{"id": "flumeaux", "name": "Prilly, Flumeaux", "short": "Flumeaux", "alias": ["Flumeaux Prilly"], "lines": ["33", "N4"]},
+{"id": "follieu", "name": "Renens, Follieu", "short": "Follieu", "alias": ["Renens VD, Follieu", "Follieu Renens"], "lines": ["38"]},
+{"id": "fontenay", "name": "Fontenay", "alias": ["Lausanne, Fontenay"], "lines": ["6"]},
+{"id": "foret", "name": "Forêt", "alias": ["Lausanne, Forêt"], "lines": ["3", "8", "18", "N1"]},
+{"id": "fougeres", "name": "Le Mont, Fougères", "short": "Fougères", "alias": ["Le Mont-sur-L., Fougères", "Fougères Le Mont"], "lines": ["54", "60"]},
+{"id": "foyer", "name": "Foyer", "alias": ["Lausanne, Foyer"], "lines": ["6", "41", "42", "N3"]},
+{"id": "froideville-croisee", "name": "Froideville, Croisée", "short": "Croisée", "amb": true, "alias": ["Croisée Froideville"], "lines": ["60"]},
+{"id": "froideville-village", "name": "Froideville, Village", "short": "Village", "amb": true, "alias": ["Village Froideville"], "lines": ["60"]},
+{"id": "galicien", "name": "Prilly-Malley, Galicien", "short": "Galicien", "alias": ["Galicien Prilly-Malley"], "lines": ["1", "2", "6", "7", "8", "9", "17", "18", "19", "20", "21", "25", "N4"]},
+{"id": "gare-arena", "name": "Prilly-Malley, Gare/aréna", "short": "Gare/aréna", "alias": ["Gare/aréna Prilly-Malley"], "lines": ["7"]},
+{"id": "gare-epenex", "name": "Renens, Gare/Epenex", "short": "Gare/Epenex", "alias": ["Renens VD, gare/Epenex", "Gare/Epenex Renens"], "lines": ["33", "N5"]},
+{"id": "girarde", "name": "Epalinges, Girarde", "short": "Girarde", "alias": ["Girarde Epalinges"], "lines": ["45", "46"]},
+{"id": "giziaux", "name": "Epalinges, Giziaux", "short": "Giziaux", "alias": ["Giziaux Epalinges"], "lines": ["45", "N2"]},
+{"id": "glycines", "name": "Chavannes, Glycines", "short": "Glycines", "alias": ["Chavannes-R., Glycines", "Glycines Chavannes"], "lines": ["25", "31", "32", "N5"]},
+{"id": "grand-chemin", "name": "Epalinges, Grand Chemin", "short": "Grand Chemin", "alias": ["Grand Chemin Epalinges"], "lines": ["45", "N2"]},
+{"id": "grand-pont", "name": "Lutry, Grand-Pont", "short": "Grand-Pont", "alias": ["Grand-Pont Lutry"], "lines": ["9", "N6"]},
+{"id": "grand-record", "name": "Bussigny, Grand-Record", "short": "Grand-Record", "alias": ["Grand-Record Bussigny"], "lines": ["35", "56"]},
+{"id": "grand-vennes", "name": "Grand Vennes", "alias": ["Lausanne, Grand Vennes"], "lines": ["16"]},
+{"id": "grand-vigne", "name": "Prilly, Grand Vigne", "short": "Grand Vigne", "alias": ["Grand Vigne Prilly"], "lines": ["33", "N4"]},
+{"id": "grande-borde", "name": "Grande-Borde", "alias": ["Lausanne, Grande-Borde"], "lines": ["1", "4", "7", "8", "9", "16", "18"]},
+{"id": "grande-salle", "name": "Vufflens-la-Ville, Grande salle", "short": "Grande salle", "alias": ["Grande salle Vufflens-la-Ville"], "lines": ["58"]},
+{"id": "grands-champs", "name": "Belmont, Grands Champs", "short": "Grands Champs", "alias": ["Belmont-sur-L., Grands Champs", "Grands Champs Belmont"], "lines": ["47", "49", "N6"]},
+{"id": "grangette", "name": "Grangette", "alias": ["Lausanne, Grangette"], "lines": ["8", "N1"]},
+{"id": "grattapaille", "name": "Grattapaille", "alias": ["Lausanne, Grattapaille"], "lines": ["21", "N1"]},
+{"id": "gravesse", "name": "Lutry, Gravesse", "short": "Gravesse", "alias": ["Gravesse Lutry"], "lines": ["69"]},
+{"id": "grey", "name": "Grey", "alias": ["Lausanne, Grey"], "lines": ["2"]},
+{"id": "grillon", "name": "Cugy, Grillon", "short": "Grillon", "alias": ["Cugy VD, Grillon", "Grillon Cugy"], "lines": ["54", "60"]},
+{"id": "gymnase-de-beaulieu", "name": "Gymnase de Beaulieu", "alias": ["Lausanne, Gymnase de Beaulieu"], "lines": ["4"]},
+{"id": "halle-de-sebeillon", "name": "Halle de Sébeillon", "alias": ["Lausanne, Halle de Sébeillon"], "lines": ["1", "2", "6", "7", "8", "9", "17", "18", "19", "20", "21", "25", "N4"]},
+{"id": "haute-combe", "name": "Haute Combe", "alias": ["Lausanne, Haute Combe"], "lines": ["64", "N2"]},
+{"id": "hermitage", "name": "Hermitage", "alias": ["Lausanne, Hermitage"], "lines": ["16"]},
+{"id": "hopital-ophtalmique", "name": "Hôpital ophtalmique", "alias": ["Lausanne, Hôpital ophtalmique"], "lines": ["4"]},
+{"id": "hotel-de-ville-ecal", "name": "Renens, Hôtel-de-Ville/ECAL", "short": "Hôtel-de-Ville/ECAL", "alias": ["Renens VD, Hôtel-de-Ville/ECAL", "Hôtel-de-Ville/ECAL Renens"], "lines": ["17", "19", "N4"]},
+{"id": "huttins", "name": "Prilly, Huttins", "short": "Huttins", "alias": ["Huttins Prilly"], "lines": ["9"]},
+{"id": "industrie", "name": "Renens, Industrie", "short": "Industrie", "alias": ["Renens VD, Industrie", "Industrie Renens"], "lines": ["38", "N4"]},
+{"id": "jardin-botanique", "name": "Jardin botanique", "alias": ["Lausanne, jardin botanique"], "lines": ["1", "25"]},
+{"id": "joliette", "name": "Pully, Joliette", "short": "Joliette", "alias": ["Joliette Pully"], "lines": ["8", "25"]},
+{"id": "jordil", "name": "Bussigny, Jordil", "short": "Jordil", "alias": ["Jordil Bussigny"], "lines": ["35"]},
+{"id": "jordillon", "name": "Lutry, Jordillon", "short": "Jordillon", "alias": ["Jordillon Lutry"], "lines": ["47", "N6"]},
+{"id": "jouxtens-mezery-gare", "name": "Jouxtens-Mézery, Gare", "short": "Gare", "amb": true, "alias": ["Gare Jouxtens-Mézery"], "lines": ["Bus-LEB"]},
+{"id": "jura", "name": "Crissier, Jura", "short": "Jura", "alias": ["Jura Crissier"], "lines": ["17", "36", "54", "58", "N4"]},
+{"id": "jurigoz", "name": "Jurigoz", "alias": ["Lausanne, Jurigoz"], "lines": ["8", "21", "25"]},
+{"id": "la-conversion-gare", "name": "La Conversion, Gare", "short": "Gare", "amb": true, "alias": ["Gare La Conversion"], "lines": ["68", "N6"]},
+{"id": "la-rusteriaz", "name": "Bottens, La Rustériaz", "short": "La Rustériaz", "alias": ["La Rustériaz Bottens"], "lines": ["60"]},
+{"id": "la-vaux", "name": "Penthaz, La Vaux", "short": "La Vaux", "alias": ["La Vaux Penthaz"], "lines": ["58"]},
+{"id": "lac-sauvabelin", "name": "Lac Sauvabelin", "alias": ["Lausanne, Lac Sauvabelin"], "lines": ["16"]},
+{"id": "laiterie", "name": "Froideville, Laiterie", "short": "Laiterie", "alias": ["Laiterie Froideville"], "lines": ["60"]},
+{"id": "landar", "name": "Lutry, Landar", "short": "Landar", "alias": ["Landar Lutry"], "lines": ["47", "68", "N6"]},
+{"id": "languedoc", "name": "Languedoc", "alias": ["Lausanne, Languedoc"], "lines": ["6"]},
+{"id": "lausanne-cedres", "name": "Cèdres", "amb": true, "alias": ["Lausanne, Cèdres"], "lines": ["1", "25"]},
+{"id": "laviau", "name": "St-Sulpice, Laviau", "short": "Laviau", "alias": ["St-Sulpice VD, Laviau", "Laviau St-Sulpice"], "lines": ["31", "N5"]},
+{"id": "le-moulin", "name": "Cugy, Le Moulin", "short": "Le Moulin", "alias": ["Cugy VD, Le Moulin", "Le Moulin Cugy"], "lines": ["60"]},
+{"id": "le-sansy", "name": "Villars-Ste-Croix, Le Sansy", "short": "Le Sansy", "alias": ["Le Sansy Villars-Ste-Croix"], "lines": ["32", "35", "N4"]},
+{"id": "lentillieres", "name": "Crissier, Lentillières", "short": "Lentillières", "alias": ["Lentillières Crissier"], "lines": ["36", "N4"]},
+{"id": "les-champs", "name": "Lutry, Les Champs", "short": "Les Champs", "alias": ["Les Champs Lutry"], "lines": ["68", "69", "N6"]},
+{"id": "les-chavannes", "name": "Les Chavannes", "alias": ["Lausanne, Les Chavannes"], "lines": ["42"]},
+{"id": "les-esserts", "name": "Mex, Les Esserts", "short": "Les Esserts", "alias": ["Mex VD, Les Esserts", "Les Esserts Mex"], "lines": ["58"]},
+{"id": "les-liaudes", "name": "Pully, Les Liaudes", "short": "Les Liaudes", "alias": ["Les Liaudes Pully"], "lines": ["48"]},
+{"id": "les-ripes-gare", "name": "Les Ripes, Gare", "short": "Gare", "amb": true, "alias": ["Gare Les Ripes"], "lines": ["Bus-LEB"]},
+{"id": "libellules", "name": "Libellules", "alias": ["Lausanne, Libellules"], "lines": ["16"]},
+{"id": "lion-d-or", "name": "Epalinges, Lion d'Or", "short": "Lion d'Or", "alias": ["Lion d'Or Epalinges"], "lines": ["45", "54", "N2"]},
+{"id": "lisiere", "name": "Lisière", "alias": ["Lausanne, Lisière"], "lines": ["16"]},
+{"id": "longemalle", "name": "Renens, Longemalle", "short": "Longemalle", "alias": ["Renens VD, Longemalle", "Longemalle Renens"], "lines": ["32", "33", "N5"]},
+{"id": "lutry-gare", "name": "Lutry, Gare", "short": "Gare", "amb": true, "alias": ["Gare Lutry"], "lines": ["68", "69"]},
+{"id": "maillefer", "name": "Le Mont, Maillefer", "short": "Maillefer", "alias": ["Le Mont-sur-L., Maillefer", "Maillefer Le Mont"], "lines": ["3"]},
+{"id": "maladiere-figuiers", "name": "Maladière-Figuiers", "alias": ["Lausanne, Maladière-Figuiers"], "lines": ["25", "N5"]},
+{"id": "maladiere-lac", "name": "Maladière-Lac", "alias": ["Lausanne, Maladière-Lac"], "lines": ["2"]},
+{"id": "malavaux", "name": "Belmont, Malavaux", "short": "Malavaux", "alias": ["Belmont-sur-L., Malavaux", "Malavaux Belmont"], "lines": ["49"]},
+{"id": "marais", "name": "Renens, Marais", "short": "Marais", "alias": ["Renens VD, Marais", "Marais Renens"], "lines": ["32", "33", "N5"]},
+{"id": "marcolet", "name": "Crissier, Marcolet", "short": "Marcolet", "alias": ["Marcolet Crissier"], "lines": ["36", "54", "58"]},
+{"id": "margerol", "name": "Pully, Margerol", "short": "Margerol", "alias": ["Margerol Pully"], "lines": ["48"]},
+{"id": "marionnettes", "name": "Lutry, Marionnettes", "short": "Marionnettes", "alias": ["Marionnettes Lutry"], "lines": ["68"]},
+{"id": "marronnier", "name": "Paudex, Marronnier", "short": "Marronnier", "alias": ["Marronnier Paudex"], "lines": ["9", "N6"]},
+{"id": "martheray", "name": "Cheseaux, Martheray", "short": "Martheray", "alias": ["Cheseaux-sur-L., Martheray", "Martheray Cheseaux"], "lines": ["54"]},
+{"id": "martines", "name": "Le Mont, Martines", "short": "Martines", "alias": ["Le Mont-sur-L., Martines", "Martines Le Mont"], "lines": ["8", "N1"]},
+{"id": "mauvernay", "name": "Mauvernay", "alias": ["Lausanne, Mauvernay"], "lines": ["45", "64", "N2"]},
+{"id": "memise", "name": "Mémise", "alias": ["Lausanne, Mémise"], "lines": ["1", "4", "7", "8", "9", "16", "18"]},
+{"id": "metairie", "name": "Pully, Métairie", "short": "Métairie", "alias": ["Métairie Pully"], "lines": ["8", "25"]},
+{"id": "mex-village", "name": "Mex, Village", "short": "Village", "amb": true, "alias": ["Mex VD, village", "Village Mex"], "lines": ["58"]},
+{"id": "mirabeau", "name": "Mirabeau", "alias": ["Lausanne, Mirabeau"], "lines": ["1", "2", "21", "N1", "N2", "N3", "N4"]},
+{"id": "molliettes", "name": "Molliettes", "alias": ["Lausanne, Molliettes"], "lines": ["64", "N2"]},
+{"id": "mon-repos", "name": "Mon Repos", "alias": ["Lausanne, Mon Repos"], "lines": ["13"]},
+{"id": "mongevon", "name": "Crissier, Mongevon", "short": "Mongevon", "alias": ["Mongevon Crissier"], "lines": ["36", "58"]},
+{"id": "mont-blanc", "name": "Mont-Blanc", "alias": ["Lausanne, Mont-Blanc"], "lines": ["3", "20"]},
+{"id": "mont-d-or", "name": "Mont d'Or", "alias": ["Lausanne, Mont d'Or"], "lines": ["6"]},
+{"id": "mont-fleuri", "name": "Mont-Fleuri", "alias": ["Lausanne, Mont-Fleuri"], "lines": ["2"]},
+{"id": "mont-goulin", "name": "Prilly, Mont-Goulin", "short": "Mont-Goulin", "alias": ["Mont-Goulin Prilly"], "lines": ["4", "33"]},
+{"id": "montaney", "name": "Ecublens, Montaney", "short": "Montaney", "alias": ["Ecublens VD, Montaney", "Montaney Ecublens"], "lines": ["33", "N5"]},
+{"id": "montbenon", "name": "Montbenon", "alias": ["Lausanne, Montbenon"], "lines": ["13"]},
+{"id": "montchoisi", "name": "Montchoisi", "alias": ["Lausanne, Montchoisi"], "lines": ["8", "21", "25"]},
+{"id": "monteclard", "name": "Epalinges, Montéclard", "short": "Montéclard", "alias": ["Montéclard Epalinges"], "lines": ["44"]},
+{"id": "montetan", "name": "Montétan", "alias": ["Lausanne, Montétan"], "lines": ["9"]},
+{"id": "montillier", "name": "Pully, Montillier", "short": "Montillier", "alias": ["Montillier Pully"], "lines": ["9", "48", "N6"]},
+{"id": "montolieu", "name": "Montolieu", "alias": ["Lausanne, Montolieu"], "lines": ["41", "N3"]},
+{"id": "montremoen", "name": "Crissier, Montremoën", "short": "Montremoën", "alias": ["Montremoën Crissier"], "lines": ["54"]},
+{"id": "morrens-village", "name": "Morrens, Village", "short": "Village", "amb": true, "alias": ["Morrens VD, village", "Village Morrens"], "lines": ["54", "60"]},
+{"id": "motte", "name": "Motte", "alias": ["Lausanne, Motte"], "lines": ["3", "8", "18", "N1"]},
+{"id": "mouline-2", "name": "Chavannes, Mouline", "short": "Mouline", "alias": ["Chavannes-R., Mouline", "Mouline Chavannes"], "lines": ["31", "N5"]},
+{"id": "moulins", "name": "Pully, Moulins", "short": "Moulins", "alias": ["Moulins Pully"], "lines": ["9", "N6"]},
+{"id": "mousquines", "name": "Mousquines", "alias": ["Lausanne, Mousquines"], "lines": ["13"]},
+{"id": "musee-olympique", "name": "Musée Olympique", "alias": ["Lausanne, Musée Olympique"], "lines": ["21", "25"]},
+{"id": "noutes", "name": "Crissier, Noutes", "short": "Noutes", "alias": ["Noutes Crissier"], "lines": ["32"]},
+{"id": "oiseaux", "name": "Oiseaux", "alias": ["Lausanne, Oiseaux"], "lines": ["1"]},
+{"id": "orzens", "name": "Lutry, Orzens", "short": "Orzens", "alias": ["Orzens Lutry"], "lines": ["68", "N6"]},
+{"id": "osches", "name": "Pully, Osches", "short": "Osches", "alias": ["Osches Pully"], "lines": ["47"]},
+{"id": "paqueret", "name": "St-Sulpice, Pâqueret", "short": "Pâqueret", "alias": ["St-Sulpice VD, Pâqueret", "Pâqueret St-Sulpice"], "lines": ["31", "N5"]},
+{"id": "paquis", "name": "Belmont, Pâquis", "short": "Pâquis", "alias": ["Belmont-sur-L., Pâquis", "Pâquis Belmont"], "lines": ["49"]},
+{"id": "parc", "name": "Ecublens, Parc", "short": "Parc", "amb": true, "alias": ["Ecublens VD, Parc", "Parc Ecublens"], "lines": ["33", "N5"]},
+{"id": "parc-bourget", "name": "Parc Bourget", "alias": ["Lausanne, Parc Bourget"], "lines": ["24"]},
+{"id": "parc-musee-olympique", "name": "Parc Musée Olympique", "alias": ["Lausanne, Parc Musée Olympique"], "lines": ["24"]},
+{"id": "parc-rivier", "name": "Parc Rivier", "alias": ["Lausanne, Parc Rivier"], "lines": ["2"]},
+{"id": "parc-scient", "name": "St-Sulpice, Parc Scient.", "short": "Parc Scient.", "alias": ["St-Sulpice VD, Parc Scient.", "Parc Scient. St-Sulpice"], "lines": ["1"]},
+{"id": "parc-velodrome", "name": "Parc Vélodrome", "alias": ["Lausanne, Parc Vélodrome"], "lines": ["1", "20", "N1"]},
+{"id": "paudex-village", "name": "Paudex, Village", "short": "Village", "amb": true, "alias": ["Village Paudex"], "lines": ["9", "N6"]},
+{"id": "pavement", "name": "Pavement", "alias": ["Lausanne, Pavement"], "lines": ["18"]},
+{"id": "pavillard", "name": "Pully, Pavillard", "short": "Pavillard", "alias": ["Pavillard Pully"], "lines": ["48"]},
+{"id": "pecheurs", "name": "Pêcheurs", "alias": ["Lausanne, Pêcheurs"], "lines": ["2", "24"]},
+{"id": "penthalaz-poste", "name": "Penthalaz, Poste", "short": "Poste", "amb": true, "alias": ["Poste Penthalaz"], "lines": ["58"]},
+{"id": "penthalaz-verney", "name": "Penthalaz, Verney", "short": "Verney", "amb": true, "alias": ["Verney Penthalaz"], "lines": ["58"]},
+{"id": "penthaz-village", "name": "Penthaz, Village", "short": "Village", "amb": true, "alias": ["Village Penthaz"], "lines": ["58"]},
+{"id": "perraudettaz", "name": "Pully, Perraudettaz", "short": "Perraudettaz", "alias": ["Perraudettaz Pully"], "lines": ["9", "48", "N6"]},
+{"id": "perrelet", "name": "Renens, Perrelet", "short": "Perrelet", "alias": ["Renens VD, Perrelet", "Perrelet Renens"], "lines": ["17", "19", "N4"]},
+{"id": "perrettes", "name": "Ecublens, Perrettes", "short": "Perrettes", "alias": ["Ecublens VD, Perrettes", "Perrettes Ecublens"], "lines": ["33", "N5"]},
+{"id": "perronnaz", "name": "Montblesson, Perronnaz", "short": "Perronnaz", "alias": ["Perronnaz Montblesson"], "lines": ["64", "N2"]},
+{"id": "petit-chateau", "name": "Petit Château", "alias": ["Lausanne, Petit Château"], "lines": ["16"]},
+{"id": "petit-mont", "name": "Le Mont, Petit-Mont", "short": "Petit-Mont", "alias": ["Le Mont-sur-L., Petit-Mont", "Petit-Mont Le Mont"], "lines": ["8", "N1"]},
+{"id": "piecettes", "name": "Piécettes", "alias": ["Lausanne, Piécettes"], "lines": ["18"]},
+{"id": "pierraz-portay", "name": "Pully, Pierraz-Portay", "short": "Pierraz-Portay", "alias": ["Pierraz-Portay Pully"], "lines": ["8", "25"]},
+{"id": "pierrefleur", "name": "Pierrefleur", "alias": ["Lausanne, Pierrefleur"], "lines": ["2"]},
+{"id": "piscine", "name": "Renens, Piscine", "short": "Piscine", "amb": true, "alias": ["Renens VD, piscine", "Piscine Renens"], "lines": ["25"]},
+{"id": "place-de-sport", "name": "Ecublens, Place de sport", "short": "Place de sport", "alias": ["Ecublens VD, place de sport", "Place de sport Ecublens"], "lines": ["33", "N5"]},
+{"id": "plaine", "name": "Chavannes, Plaine", "short": "Plaine", "alias": ["Chavannes-R., Plaine", "Plaine Chavannes"], "lines": ["31"]},
+{"id": "planches", "name": "Epalinges, Planches", "short": "Planches", "alias": ["Planches Epalinges"], "lines": ["45", "46", "64", "N2"]},
+{"id": "planta", "name": "Chavannes, Planta", "short": "Planta", "alias": ["Chavannes-R., Planta", "Planta Chavannes"], "lines": ["31", "32", "N5"]},
+{"id": "polny", "name": "Epalinges, Polny", "short": "Polny", "alias": ["Polny Epalinges"], "lines": ["44", "46"]},
+{"id": "ponfilet", "name": "Lutry, Ponfilet", "short": "Ponfilet", "alias": ["Ponfilet Lutry"], "lines": ["68"]},
+{"id": "pont-chauderon", "name": "Pont Chauderon", "alias": ["Lausanne, Pont Chauderon"], "lines": ["1", "3", "6", "20", "21"]},
+{"id": "pont-de-chailly", "name": "Pont-de-Chailly", "alias": ["Lausanne, Pont-de-Chailly"], "lines": ["7", "42", "N6"]},
+{"id": "pont-marc-dufour", "name": "Pont Marc Dufour", "alias": ["Lausanne, Pont Marc Dufour"], "lines": ["6"]},
+{"id": "pontet", "name": "Ecublens, Pontet", "short": "Pontet", "alias": ["Ecublens VD, Pontet", "Pontet Ecublens"], "lines": ["33", "N5"]},
+{"id": "port", "name": "Pully, Port", "short": "Port", "amb": true, "alias": ["Port Pully"], "lines": ["21", "47"]},
+{"id": "port-franc", "name": "Port-Franc", "alias": ["Lausanne, Port-Franc"], "lines": ["17"]},
+{"id": "pra-forny", "name": "Aran, Pra Forny", "short": "Pra Forny", "alias": ["Pra Forny Aran"], "lines": ["47", "N6"]},
+{"id": "pra-grana", "name": "Grandvaux, Pra Grana", "short": "Pra Grana", "alias": ["Pra Grana Grandvaux"], "lines": ["47", "N6"]},
+{"id": "praz-berthoud", "name": "Praz-Berthoud", "alias": ["Lausanne, Praz-Berthoud"], "lines": ["41", "N3"]},
+{"id": "praz-collet", "name": "Praz-Collet", "alias": ["Lausanne, Praz-Collet"], "lines": ["64", "N2"]},
+{"id": "praz-sechaud", "name": "Praz-Séchaud", "alias": ["Lausanne, Praz-Séchaud"], "lines": ["6", "41", "N3"]},
+{"id": "pre-d-yverdon", "name": "Epalinges, Pré-d'Yverdon", "short": "Pré-d'Yverdon", "alias": ["Pré-d'Yverdon Epalinges"], "lines": ["64", "N2"]},
+{"id": "pre-fleuri", "name": "St-Sulpice, Pré-Fleuri", "short": "Pré-Fleuri", "alias": ["St-Sulpice VD, Pré-Fleuri", "Pré-Fleuri St-Sulpice"], "lines": ["1"]},
+{"id": "pre-pariset", "name": "Pully, Pré Pariset", "short": "Pré Pariset", "alias": ["Pré Pariset Pully"], "lines": ["47"]},
+{"id": "prefaully", "name": "Chavannes, Préfaully", "short": "Préfaully", "alias": ["Chavannes-R., Préfaully", "Préfaully Chavannes"], "lines": ["32", "N5"]},
+{"id": "presbytere", "name": "Presbytère", "alias": ["Lausanne, Presbytère"], "lines": ["2", "21", "N1"]},
+{"id": "prilly-centre", "name": "Prilly, Centre", "short": "Centre", "amb": true, "alias": ["Centre Prilly"], "lines": ["9", "33", "N4"]},
+{"id": "prilly-malley-gare", "name": "Prilly-Malley, Gare", "short": "Gare", "amb": true, "alias": ["Gare Prilly-Malley"], "lines": ["32", "33"]},
+{"id": "provence-nord", "name": "Provence nord", "alias": ["Lausanne, Provence nord"], "lines": ["16"]},
+{"id": "provence-sud", "name": "Provence sud", "alias": ["Lausanne, Provence sud"], "lines": ["16"]},
+{"id": "pully-verney", "name": "Pully, Verney", "short": "Verney", "amb": true, "alias": ["Verney Pully"], "lines": ["21"]},
+{"id": "rapille", "name": "Rapille", "alias": ["Lausanne, Rapille"], "lines": ["4"]},
+{"id": "recordon", "name": "Recordon", "alias": ["Lausanne, Recordon"], "lines": ["1", "2", "6", "7", "8", "9", "18", "19", "20", "21", "25", "N4"]},
+{"id": "renges", "name": "Ecublens, Renges", "short": "Renges", "alias": ["Ecublens VD, Renges", "Renges Ecublens"], "lines": ["33", "N5"]},
+{"id": "rente", "name": "Bussigny, Rente", "short": "Rente", "alias": ["Rente Bussigny"], "lines": ["17", "35", "56", "N4"]},
+{"id": "reymondin", "name": "Pully, Reymondin", "short": "Reymondin", "alias": ["Reymondin Pully"], "lines": ["9", "N6"]},
+{"id": "riant-cour", "name": "Riant-Cour", "alias": ["Lausanne, Riant-Cour"], "lines": ["1", "25"]},
+{"id": "riettaz", "name": "Bussigny, Riettaz", "short": "Riettaz", "alias": ["Riettaz Bussigny"], "lines": ["35"]},
+{"id": "rionzi", "name": "Le Mont, Rionzi", "short": "Rionzi", "alias": ["Le Mont-sur-L., Rionzi", "Rionzi Le Mont"], "lines": ["8", "N1"]},
+{"id": "rionzi-college", "name": "Le Mont, Rionzi/collège", "short": "Rionzi/collège", "alias": ["Le Mont-sur-L., Rionzi/collège", "Rionzi/collège Le Mont"], "lines": ["3"]},
+{"id": "rive", "name": "Lutry, Rive", "short": "Rive", "alias": ["Rive Lutry"], "lines": ["9", "68", "69"]},
+{"id": "roche", "name": "Renens, Roche", "short": "Roche", "alias": ["Renens VD, Roche", "Roche Renens"], "lines": ["18", "N4"]},
+{"id": "rochettaz", "name": "Pully, Rochettaz", "short": "Rochettaz", "alias": ["Rochettaz Pully"], "lines": ["47"]},
+{"id": "romanel-gare", "name": "Romanel, Gare", "short": "Gare", "amb": true, "alias": ["Romanel-sur-Lausanne, gare", "Gare Romanel"], "lines": ["Bus-LEB"]},
+{"id": "roses", "name": "Pully, Roses", "short": "Roses", "alias": ["Roses Pully"], "lines": ["48"]},
+{"id": "rosiaz", "name": "Pully, Rosiaz", "short": "Rosiaz", "alias": ["Rosiaz Pully"], "lines": ["7", "48", "N6"]},
+{"id": "rouvene", "name": "Belmont, Rouvène", "short": "Rouvène", "alias": ["Belmont-sur-L., Rouvène", "Rouvène Belmont"], "lines": ["49"]},
+{"id": "rouvraie", "name": "Rouvraie", "alias": ["Lausanne, Rouvraie"], "lines": ["3", "8", "18", "N1"]},
+{"id": "rozavere", "name": "Rozavère", "alias": ["Lausanne, Rozavère"], "lines": ["42"]},
+{"id": "rue-du-lac", "name": "Renens, Rue du Lac", "short": "Rue du Lac", "alias": ["Renens VD, rue du Lac", "Rue du Lac Renens"], "lines": ["32", "33", "N5"]},
+{"id": "ruisselet", "name": "Pully, Ruisselet", "short": "Ruisselet", "alias": ["Ruisselet Pully"], "lines": ["49"]},
+{"id": "russel", "name": "St-Sulpice, Russel", "short": "Russel", "alias": ["St-Sulpice VD, Russel", "Russel St-Sulpice"], "lines": ["31", "N5"]},
+{"id": "sablons", "name": "Sablons", "alias": ["Lausanne, Sablons"], "lines": ["1", "25", "N5"]},
+{"id": "sapelle", "name": "Lutry, Sapelle", "short": "Sapelle", "alias": ["Sapelle Lutry"], "lines": ["47", "N6"]},
+{"id": "sauge", "name": "Bussigny, Sauge", "short": "Sauge", "alias": ["Sauge Bussigny"], "lines": ["35"]},
+{"id": "saugiaz", "name": "Renens, Saugiaz", "short": "Saugiaz", "alias": ["Renens VD, Saugiaz", "Saugiaz Renens"], "lines": ["38", "N4"]},
+{"id": "savoie", "name": "Lutry, Savoie", "short": "Savoie", "alias": ["Savoie Lutry"], "lines": ["69"]},
+{"id": "savuit-place", "name": "Lutry, Savuit-place", "short": "Savuit-place", "alias": ["Savuit-place Lutry"], "lines": ["69"]},
+{"id": "scierie", "name": "Crissier, Scierie", "short": "Scierie", "alias": ["Scierie Crissier"], "lines": ["32"]},
+{"id": "siege-du-cio", "name": "Siège du CIO", "alias": ["Lausanne, Siège du CIO"], "lines": ["24"]},
+{"id": "signal", "name": "Signal", "alias": ["Lausanne, Signal"], "lines": ["16"]},
+{"id": "somais", "name": "Pully, Somais", "short": "Somais", "alias": ["Somais Pully"], "lines": ["21", "47"]},
+{"id": "sottelles", "name": "Bussigny, Sottelles", "short": "Sottelles", "alias": ["Sottelles Bussigny"], "lines": ["35", "56"]},
+{"id": "sous-l-eglise", "name": "Renens, Sous l'Eglise", "short": "Sous l'Eglise", "alias": ["Renens VD, Sous l'Eglise", "Sous l'Eglise Renens"], "lines": ["17", "19", "N4"]},
+{"id": "sports-unil-epfl", "name": "Sports UNIL-EPFL", "alias": ["Lausanne, sports UNIL-EPFL"], "lines": ["24"]},
+{"id": "st-etienne", "name": "St-Etienne", "alias": ["Lausanne, St-Etienne"], "lines": ["6", "41", "N3"]},
+{"id": "st-germain", "name": "Bussigny, St-Germain", "short": "St-Germain", "alias": ["St-Germain Bussigny"], "lines": ["35"]},
+{"id": "st-paul", "name": "St-Paul", "alias": ["Lausanne, St-Paul"], "lines": ["9"]},
+{"id": "st-roch", "name": "St-Roch", "alias": ["Lausanne, St-Roch"], "lines": ["3", "4", "20", "21"]},
+{"id": "st-sulpice-centre", "name": "St-Sulpice, Centre", "short": "Centre", "amb": true, "alias": ["St-Sulpice VD, centre", "Centre St-Sulpice"], "lines": ["31", "N5"]},
+{"id": "stade-de-coubertin", "name": "Stade de Coubertin", "alias": ["Lausanne, Stade de Coubertin"], "lines": ["24"]},
+{"id": "stand", "name": "Ecublens, Stand", "short": "Stand", "alias": ["Ecublens VD, Stand", "Stand Ecublens"], "lines": ["33", "N5"]},
+{"id": "suchet-foret", "name": "Ecublens, Suchet-Forêt", "short": "Suchet-Forêt", "alias": ["Ecublens VD, Suchet-Forêt", "Suchet-Forêt Ecublens"], "lines": ["33", "N5"]},
+{"id": "sullens", "name": "Bussigny, Sullens", "short": "Sullens", "alias": ["Sullens Bussigny"], "lines": ["35"]},
+{"id": "sur-la-croix", "name": "Renens, Sur-la-Croix", "short": "Sur-la-Croix", "alias": ["Renens VD, Sur-la-Croix", "Sur-la-Croix Renens"], "lines": ["9", "18"]},
+{"id": "talluchet", "name": "Chavannes, Talluchet", "short": "Talluchet", "alias": ["Chavannes-R., Talluchet", "Talluchet Chavannes"], "lines": ["25"]},
+{"id": "tatironne", "name": "Bussigny, Tatironne", "short": "Tatironne", "alias": ["Tatironne Bussigny"], "lines": ["35"]},
+{"id": "temple-de-broye", "name": "Renens, Temple de Broye", "short": "Temple de Broye", "alias": ["Renens VD, Temple de Broye", "Temple de Broye Renens"], "lines": ["9", "38", "N4"]},
+{"id": "theatre-de-vidy", "name": "Théâtre de Vidy", "alias": ["Lausanne, Théâtre de Vidy"], "lines": ["2", "24"]},
+{"id": "timonet", "name": "Crissier, Timonet", "short": "Timonet", "alias": ["Timonet Crissier"], "lines": ["18", "32", "54", "N4"]},
+{"id": "tivoli", "name": "Tivoli", "alias": ["Lausanne, Tivoli"], "lines": ["16", "17", "N5"]},
+{"id": "tour-haldimand", "name": "Pully, Tour Haldimand", "short": "Tour Haldimand", "alias": ["Tour Haldimand Pully"], "lines": ["21"]},
+{"id": "tour-haldimand-lac", "name": "Tour Haldimand-Lac", "alias": ["Lausanne, Tour Haldimand-Lac"], "lines": ["24"]},
+{"id": "trabandan", "name": "Trabandan", "alias": ["Lausanne, Trabandan"], "lines": ["4"]},
+{"id": "tresy", "name": "Mex, Trésy", "short": "Trésy", "alias": ["Mex VD, Trésy", "Trésy Mex"], "lines": ["58"]},
+{"id": "tuileries", "name": "Epalinges, Tuileries", "short": "Tuileries", "alias": ["Tuileries Epalinges"], "lines": ["45", "46"]},
+{"id": "union-prilly-gare", "name": "Union-Prilly, Gare", "short": "Gare", "amb": true, "alias": ["Gare Union-Prilly"], "lines": ["Bus-LEB"]},
+{"id": "val-vert", "name": "Pully, Val-Vert", "short": "Val-Vert", "alias": ["Val-Vert Pully"], "lines": ["7", "47", "48", "N6"]},
+{"id": "valency", "name": "Valency", "alias": ["Lausanne, Valency"], "lines": ["9"]},
+{"id": "valentin", "name": "Valentin", "alias": ["Lausanne, Valentin"], "lines": ["1", "2", "20", "21", "N1"]},
+{"id": "vallee-de-la-jeunesse", "name": "Vallée de la Jeunesse", "alias": ["Lausanne,Vallée de la Jeunesse"], "lines": ["16"]},
+{"id": "vallon", "name": "Pully, Vallon", "short": "Vallon", "alias": ["Vallon Pully"], "lines": ["47"]},
+{"id": "vallonnette", "name": "Vallonnette", "alias": ["Lausanne, Vallonnette"], "lines": ["6", "N3"]},
+{"id": "valmont", "name": "Valmont", "alias": ["Lausanne, Valmont"], "lines": ["6", "41", "N3"]},
+{"id": "vaugueny", "name": "Epalinges, Vaugueny", "short": "Vaugueny", "alias": ["Vaugueny Epalinges"], "lines": ["44"]},
+{"id": "veilloud", "name": "Ecublens, Veilloud", "short": "Veilloud", "alias": ["Ecublens VD, Veilloud", "Veilloud Ecublens"], "lines": ["33", "N5"]},
+{"id": "venoge-nord", "name": "St-Sulpice, Venoge nord", "short": "Venoge nord", "alias": ["St-Sulpice VD, Venoge nord", "Venoge nord St-Sulpice"], "lines": ["33", "N5"]},
+{"id": "venoge-sud", "name": "St-Sulpice, Venoge sud", "short": "Venoge sud", "alias": ["St-Sulpice VD, Venoge sud", "Venoge sud St-Sulpice"], "lines": ["31", "N5"]},
+{"id": "verdeil", "name": "Verdeil", "alias": ["Lausanne, Verdeil"], "lines": ["13"]},
+{"id": "vernand-camares-gare", "name": "Vernand-Camarès, Gare", "short": "Gare", "amb": true, "alias": ["Gare Vernand-Camarès"], "lines": ["Bus-LEB"]},
+{"id": "vernie", "name": "Crissier, Vernie", "short": "Vernie", "alias": ["Vernie Crissier"], "lines": ["17", "36", "54", "58", "N4"]},
+{"id": "verriere", "name": "Paudex, Verrière", "short": "Verrière", "alias": ["Verrière Paudex"], "lines": ["21"]},
+{"id": "vers-chez-les-blanc", "name": "Vers-chez-les-Blanc", "alias": ["Lausanne, Vers-chez-les-Blanc"], "lines": ["64", "N2"]},
+{"id": "vert-bois-ehl", "name": "Vert-Bois/EHL", "alias": ["Lausanne, Vert-Bois/EHL"], "lines": ["64"]},
+{"id": "vieux-four", "name": "Bussigny, Vieux-Four", "short": "Vieux-Four", "alias": ["Vieux-Four Bussigny"], "lines": ["35"]},
+{"id": "vieux-moulin", "name": "Vieux-Moulin", "alias": ["Lausanne, Vieux-Moulin"], "lines": ["1", "3", "4", "7", "8", "9", "16", "18", "N1"]},
+{"id": "vignes", "name": "Pully, Vignes", "short": "Vignes", "alias": ["Vignes Pully"], "lines": ["21"]},
+{"id": "villard", "name": "Villard", "alias": ["Lausanne, Villard"], "lines": ["3", "20", "21", "N1", "N2", "N3", "N4", "N6"]},
+{"id": "villars", "name": "Ecublens, Villars", "short": "Villars", "alias": ["Ecublens VD, Villars", "Villars Ecublens"], "lines": ["33", "N5"]},
+{"id": "villars-ste-croix-village", "name": "Villars-Ste-Croix, Village", "short": "Village", "amb": true, "alias": ["Village Villars-Ste-Croix"], "lines": ["32", "35", "N4"]},
+{"id": "vinet", "name": "Vinet", "alias": ["Lausanne, Vinet"], "lines": ["2", "21", "N1"]},
+{"id": "virgile-rossel", "name": "Virgile-Rossel", "alias": ["Lausanne, Virgile-Rossel"], "lines": ["6", "N3"]},
+{"id": "voisinand", "name": "Lutry, Voisinand", "short": "Voisinand", "alias": ["Voisinand Lutry"], "lines": ["9", "68", "69"]},
+{"id": "vorsiaz", "name": "Renens, Vorsiaz", "short": "Vorsiaz", "alias": ["Renens VD, Vorsiaz", "Vorsiaz Renens"], "lines": ["18", "N4"]},
+{"id": "vufflens-la-ville-gare", "name": "Vufflens-la-Ville, Gare", "short": "Gare", "amb": true, "alias": ["Gare Vufflens-la-Ville"], "lines": ["56"]},
+{"id": "vulliemin", "name": "Vulliemin", "alias": ["Lausanne, Vulliemin"], "lines": ["16"]},
+{"id": "vulliette", "name": "Vulliette", "alias": ["Lausanne, Vulliette"], "lines": ["45", "54", "64", "N2"]}
 ]

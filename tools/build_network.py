@@ -442,6 +442,12 @@ def write(net: dict, path: pathlib.Path, feed: str) -> None:
     path.write_text("".join(parts), encoding="utf-8")
 
 
+def essential(net: dict) -> dict:
+    """Ce que l'app utilise : sans la source, ni les temps et parts de courses (qui varient d'une semaine à l'autre)."""
+    lines = [{**l, "dirs": [{k: v for k, v in d.items() if k not in ("min", "share")} for d in l["dirs"]]} for l in net["lines"]]
+    return {"lines": lines, "stops": net["stops"]}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     ap.add_argument("gtfs", type=pathlib.Path)
@@ -451,9 +457,12 @@ def main() -> None:
     a = ap.parse_args()
     legacy = json.loads(ARRETS.read_text(encoding="utf-8"))["arrets"] if ARRETS.exists() else []
     net = build(a.gtfs, a.date, a.days, legacy)
+    n_dirs = sum(len(l["dirs"]) for l in net["lines"])
+    if a.out.exists() and essential(json.loads(a.out.read_text(encoding="utf-8"))) == essential(net):
+        print(f"::notice title=Réseau tl::inchangé ({len(net['lines'])} lignes, {len(net['stops'])} arrêts)", flush=True)
+        return
     feed_name = pathlib.Path(str(a.gtfs) + ".name")
     write(net, a.out, feed_name.read_text(encoding="utf-8").strip() if feed_name.exists() else a.gtfs.name)
-    n_dirs = sum(len(l["dirs"]) for l in net["lines"])
     n_legacy = sum(1 for o in legacy if "lat" in o)
     print(f"::notice title=Réseau tl::{len(net['lines'])} lignes ({n_dirs} sens), {len(net['stops'])} arrêts · "
           f"opérateurs : {', '.join(net['source']['agencies'])} · arrêts historiques retrouvés : "

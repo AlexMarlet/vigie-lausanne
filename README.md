@@ -4,7 +4,8 @@
 [![Déploiement](https://github.com/AlexMarlet/vigie-lausanne/actions/workflows/pages.yml/badge.svg)](https://github.com/AlexMarlet/vigie-lausanne/actions/workflows/pages.yml)
 
 Carte communautaire des **contrôles** et **perturbations** sur le réseau de transports du Grand Lausanne, un peu comme Waze.
-Chacun signale en deux gestes ce qu'il voit à un arrêt ; la carte affiche chaque signalement avec un **indice de confiance** : plus il y a de signalements récents au même endroit, plus le point est gros et rouge ; plus ils vieillissent, plus il pâlit.
+Chacun signale en deux gestes ce qu'il voit à un arrêt, avec la ligne et le sens s'il les connaît ; la carte affiche chaque signalement avec un **indice de confiance** : plus il y a de signalements récents au même endroit, plus le point est gros et rouge ; plus ils vieillissent, plus il pâlit.
+Avec la ligne et le sens, la carte montre aussi **où les contrôleurs sont probablement maintenant**, à partir de leur vitesse habituelle sur cette ligne, **apprise** sur tous les signalements.
 
 **App : https://vigie-lausanne.ch**
 
@@ -39,15 +40,48 @@ confiance                C = 1 − (1 − w1)(1 − w2)…(1 − wn)
 
 Une même personne ne compte qu'une fois par arrêt. Réglages : `CFG` en haut de `core/vigie-core.js`.
 
+## Position estimée
+
+Pour un contrôle signalé à un arrêt avec sa ligne (et, mieux, son sens), il y a `a` minutes :
+
+```
+arrêts parcourus depuis     k ~ Poisson(λ × a)        λ = arrêts par minute sur cette ligne
+restés sur la ligne/le sens × 0,85 par arrêt           sinon : autre ligne, demi-tour, fin du contrôle
+présence à k arrêts plus loin  p = w × P(k) × 0,85^k   w = poids du signalement (ci-dessus)
+```
+
+Sens inconnu : les deux sens comptent pour moitié. Plusieurs signalements se combinent comme pour la confiance
+(1 − Π(1 − p)) ; un « pas ici » / « plus là » à un arrêt y divise l'estimation par 4. La carte trace le trajet probable
+et entoure les arrêts de la zone la plus probable (au moins la moitié du maximum). Plus d'estimation après 45 min.
+
+**Apprentissage.** Chaque heure, la base (`vigie_private.apprendre()`) relit tous les signalements depuis le lancement :
+deux contrôles signalés à la suite sur la même ligne, dans le même sens, à 2–40 min d'écart et 0–10 arrêts plus loin,
+donnent un couple (arrêts, minutes). La table publique `tendances` en garde les totaux par ligne et par sens. L'app en
+tire la vitesse : a priori 1 arrêt / 3 min (poids : 30 min d'observation), puis
+`λ_réseau = (10 + Σarrêts) / (30 + Σminutes)` et `λ_ligne = (30 × λ_réseau + arrêts) / (30 + minutes)`.
+Une ligne peu observée suit donc la moyenne du réseau. La légende de l'app affiche ces vitesses.
+
 ## Structure
 
 | Dossier | Contenu |
 |---|---|
 | `web/` | L'app : gabarit HTML, service worker, manifest, icônes, page Confidentialité |
-| `core/` | Moteur partagé : parseur de messages et calcul de confiance, avec ses tests |
-| `supabase/` | Schéma de la base (`schema.sql`), effacement automatique (`purge.sql`), tests |
-| `tools/` | Construction du site (`build_app.py`), vérification de la base (`check_supabase.py`), données des arrêts et du fond de carte |
+| `core/` | Moteur partagé : parseur de messages, confiance, sens, position estimée, vitesse apprise ; tests |
+| `supabase/` | Schéma de la base (`schema.sql`), tâches horaires : archive anonyme et apprentissage (`purge.sql`), tests |
+| `tools/` | Réseau tl depuis l'horaire officiel (`fetch_gtfs.py`, `build_network.py` → `reseau.json`), arrêts historiques et alias (`arrets.json`), construction du site (`build_app.py`), vérifications |
 | `collector/` | Lecture d'un groupe Telegram (étape suivante du projet, non branchée) |
+
+## Réseau (horaire officiel)
+
+`tools/reseau.json` contient les 450+ arrêts et les 47 lignes tl (métro, bus, lignes de nuit) avec, pour chaque sens,
+l'ordre des arrêts. Il est produit à partir de l'horaire officiel suisse au format GTFS
+([opentransportdata.swiss](https://opentransportdata.swiss)) par le workflow **Réseau tl**, chaque lundi : il télécharge
+le dernier fichier, extrait les lignes tl circulant les 14 prochains jours, et ne fait un commit (puis un redéploiement)
+que si les arrêts ou les lignes ont changé.
+
+- Sens d'une ligne = un terminus des parcours réguliers ; les courses partielles et de dépôt sont ignorées, une branche devient un sens à part.
+- `tools/arrets.json` garde les identifiants des arrêts historiques (retrouvés par position) et les alias du groupe (« st f », « poly »…). Pour ajouter un alias : une entrée `{"id": …, "alias": […]}`.
+- En local : `python3 tools/fetch_gtfs.py gtfs.zip && python3 tools/build_network.py gtfs.zip` (fichier d'environ 280 Mo).
 
 ## Développer en local
 
@@ -67,8 +101,8 @@ Sur le site en ligne, la démo reste accessible avec `?demo` à la fin de l'adre
 
 ### 1. Base de données (Supabase, offre gratuite)
 1. Créer un projet sur [supabase.com](https://supabase.com), région **Central Europe (Zurich)**.
-2. SQL Editor → New query : coller `supabase/schema.sql` → Run.
-3. Nouvelle requête : coller `supabase/purge.sql` → Run (efface les signalements après 48 h ; Supabase demande de confirmer la suppression, c'est voulu).
+2. SQL Editor → New query : coller `supabase/schema.sql` → Run. Le script peut être relancé : il met à jour une base existante sans perdre de données.
+3. Nouvelle requête : coller `supabase/purge.sql` → Run (chaque heure : archive anonyme après 48 h, calcul des tendances ; Supabase demande de confirmer la suppression, c'est voulu).
 4. Settings → API Keys : copier la clé **publishable** (`sb_publishable_…`). L'URL du projet est dans le bouton **Connect**.
 
 La clé publishable est faite pour être publique. La clé **secrète** ne va jamais dans l'app ni dans ce dépôt.
@@ -89,9 +123,10 @@ Le build refuse de publier une clé secrète par erreur. `VIGIE_OFFLINE=1 npm ru
 
 | Commande | Vérifie |
 |---|---|
-| `node core/test-core.js` | parseur de messages (24 cas) et calcul de confiance |
+| `node core/test-core.js` | parseur de messages (31 cas, sur les 457 arrêts), confiance, sens, position estimée, vitesse apprise |
 | `python3 collector/test_parser.py` | la version Python du parseur donne les mêmes résultats |
-| `python3 supabase/test_schema.py` | règles d'accès, anti-spam, anti-doublon, sur un vrai PostgreSQL |
+| `python3 tools/test_network.py` | extraction du réseau sur un petit GTFS fabriqué (sens, branches, courses partielles, fusion d'arrêts) |
+| `python3 supabase/test_schema.py` | mise à jour depuis l'ancien schéma, règles d'accès, anti-spam, sens, archive anonyme, apprentissage, sur un vrai PostgreSQL |
 
 La CI (`.github/workflows/ci.yml`) les lance à chaque push, avec une base PostgreSQL 17 jetable.
 
@@ -103,11 +138,11 @@ La CI (`.github/workflows/ci.yml`) les lance à chaque push, avec une base Postg
 
 ## Données et cadre légal
 
-- Seuls le type, l'arrêt, la ligne et l'heure sont publics. L'identifiant d'appareil sert uniquement à l'anti-spam, reste dans un schéma privé et disparaît après 1 heure. Détails : `web/confidentialite.html`.
+- Seuls le type, l'arrêt, la ligne, le sens et l'heure sont publics. L'identifiant d'appareil sert uniquement à l'anti-spam, reste dans un schéma privé et disparaît après 1 heure. Après 48 h, un signalement est anonymisé (sans empreinte, heure à la minute) et gardé pour apprendre la vitesse des contrôles ; seules les moyennes par ligne sont publiques. Détails : `web/confidentialite.html`.
 - En Suisse, signaler des contrôleurs n'est pas interdit en soi, contrairement à la France. L'app refuse volontairement photos, descriptions et texte libre pour protéger les agents.
 - Fond de carte épuré par défaut : [OpenFreeMap](https://openfreemap.org) (styles Positron et Dark, gratuits, sans clé ni limite), © OpenMapTiles, données © contributeurs OpenStreetMap. Quelques couches sont masquées et recolorées dans `web/index.template.html` (`FOND_HIDE`, `FOND_PAINT`).
 - Plan des lignes en option (légende de l'app) : [ÖPNVKarte](https://öpnvkarte.de) (memomaps.de, CC BY-SA). memomaps demande d'héberger soi-même la carte en cas de fort trafic.
-- Positions des arrêts : Wikipédia et [transport.opendata.ch](https://transport.opendata.ch). Contours des communes et du lac : swisstopo / OFS, via [swiss-maps](https://github.com/interactivethings/swiss-maps).
+- Arrêts, lignes et sens : horaire officiel suisse, [opentransportdata.swiss](https://opentransportdata.swiss) ([conditions d'utilisation](https://opentransportdata.swiss/fr/terms-of-use/)), source citée dans la légende de l'app. Contours des communes et du lac (aperçu Claude) : swisstopo / OFS, via [swiss-maps](https://github.com/interactivethings/swiss-maps).
 - Polices sous licence SIL Open Font License (`web/fonts/`). Leaflet (BSD-2-Clause), MapLibre GL (BSD-3-Clause), maplibre-gl-leaflet (ISC) et supabase-js (MIT) sont installés par `npm ci`.
 
 ## Licence
