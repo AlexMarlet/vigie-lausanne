@@ -1,11 +1,14 @@
 """
-Télécharge le dernier horaire officiel suisse au format GTFS (opentransportdata.swiss).
+Télécharge le dernier horaire officiel suisse au format GTFS.
 
     python3 tools/fetch_gtfs.py gtfs.zip
 
-Le jeu de données change chaque année au changement d'horaire de décembre (2e dimanche) :
-« timetable-2026-gtfs2020 » jusqu'au 12.12.2026, puis « timetable-2027-gtfs2020 ». Le fichier le plus récent
-est trouvé par l'API CKAN du portail (mis à jour deux fois par semaine). Lancé par GitHub Actions.
+Sources, dans l'ordre :
+1. opentransportdata.swiss (producteur officiel) : lien permanent vers le dernier fichier, puis API CKAN du
+   portail. Le jeu de données change chaque année au changement d'horaire de décembre (2e dimanche) :
+   « timetable-2026-gtfs2020 » jusqu'au 12.12.2026, puis « timetable-2027-gtfs2020 ».
+2. gtfs.geops.ch : copie quotidienne des mêmes données, période d'horaire en cours.
+Le nom de la source retenue est écrit dans gtfs.zip.name. Lancé par GitHub Actions.
 """
 from __future__ import annotations
 
@@ -16,9 +19,12 @@ import re
 import shutil
 import sys
 import urllib.request
+import zipfile
 
 PORTAL = "https://data.opentransportdata.swiss"
-UA = {"User-Agent": "vigie-lausanne (https://github.com/AlexMarlet/vigie-lausanne)"}
+GEOPS = "https://gtfs.geops.ch/dl/gtfs_complete.zip"
+UA = {"User-Agent": "Mozilla/5.0 (compatible; vigie-lausanne/1.0; +https://github.com/AlexMarlet/vigie-lausanne)",
+      "Accept": "*/*"}
 
 
 def timetable_year(today: dt.date) -> int:
@@ -28,45 +34,54 @@ def timetable_year(today: dt.date) -> int:
     return today.year + 1 if today >= second_sunday else today.year
 
 
-def get_json(url: str) -> dict:
-    with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60) as r:
-        return json.load(r)
+def open_url(url: str, timeout: int = 60):
+    return urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=timeout)
 
 
-def newest_zip(year: int) -> tuple[str, str]:
-    """(nom, url) du zip GTFS le plus récent du jeu de données de l'année."""
-    pkg = get_json(f"{PORTAL}/api/3/action/package_show?id=timetable-{year}-gtfs2020")["result"]
-    zips = [r for r in pkg.get("resources", []) if str(r.get("url", "")).lower().split("?")[0].endswith(".zip")
-            or str(r.get("format", "")).lower() == "zip"]
+def ckan_newest_zip(year: int) -> str:
+    with open_url(f"{PORTAL}/api/3/action/package_show?id=timetable-{year}-gtfs2020") as r:
+        pkg = json.load(r)["result"]
+    zips = [x for x in pkg.get("resources", []) if str(x.get("url", "")).lower().split("?")[0].endswith(".zip")]
     if not zips:
-        raise RuntimeError(f"aucun zip dans timetable-{year}-gtfs2020")
+        raise RuntimeError("aucun zip dans le jeu de données")
 
-    def key(r):
-        # date dans le nom (GTFS_FP2026_20261022.zip ou GTFS_FP2026_2026-10-22.zip), sinon date de création
-        m = re.search(r"(20\d\d)-?(\d\d)-?(\d\d)(?!\d)", str(r.get("name") or r.get("url")))
-        return (m.group(1) + m.group(2) + m.group(3)) if m else str(r.get("created", ""))[:10].replace("-", "")
-    best = max(zips, key=key)
-    return str(best.get("name") or best["url"].rsplit("/", 1)[-1]), best["url"]
+    def key(x):
+        m = re.search(r"(20\d\d)-?(\d\d)-?(\d\d)(?!\d)", str(x.get("name") or x.get("url")))
+        return (m.group(1) + m.group(2) + m.group(3)) if m else str(x.get("created", ""))[:10].replace("-", "")
+    return max(zips, key=key)["url"]
+
+
+def download(url: str, out: pathlib.Path) -> str:
+    """Télécharge et vérifie que c'est bien un GTFS ; renvoie le nom du fichier final."""
+    with open_url(url, timeout=900) as r, out.open("wb") as f:
+        final = r.geturl()
+        shutil.copyfileobj(r, f, length=1 << 20)
+    with zipfile.ZipFile(out) as z:
+        missing = {"stops.txt", "stop_times.txt", "trips.txt", "routes.txt"} - set(z.namelist())
+        if missing:
+            raise RuntimeError(f"zip incomplet ({', '.join(sorted(missing))} manquant)")
+    return final.rsplit("/", 1)[-1].split("?")[0] or url
 
 
 def main() -> None:
     out = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "gtfs.zip")
     year = timetable_year(dt.date.today())
-    last_error = None
-    for y in (year, year - 1 if year > dt.date.today().year else year + 1):
+    sources = [
+        (f"opentransportdata {year} (lien permanent)", lambda: f"{PORTAL}/dataset/timetable-{year}-gtfs2020/permalink"),
+        (f"opentransportdata {year} (API)", lambda: ckan_newest_zip(year)),
+        ("gtfs.geops.ch (copie quotidienne)", lambda: GEOPS),
+    ]
+    for label, get_url in sources:
         try:
-            name, url = newest_zip(y)
-        except Exception as exc:  # jeu de données pas encore publié, portail indisponible…
-            last_error = exc
+            name = download(get_url(), out)
+        except Exception as exc:
+            print(f"::warning title=GTFS::{label} : {type(exc).__name__} {exc}", flush=True)
             continue
-        print(f"GTFS : {name} ({url})", flush=True)
-        with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=600) as r, out.open("wb") as f:
-            shutil.copyfileobj(r, f, length=1 << 20)
         size = out.stat().st_size // (1 << 20)
-        print(f"::notice title=GTFS::{name} téléchargé ({size} Mo)", flush=True)
-        pathlib.Path(str(out) + ".name").write_text(name, encoding="utf-8")
+        print(f"::notice title=GTFS::{label} : {name} ({size} Mo)", flush=True)
+        pathlib.Path(str(out) + ".name").write_text(f"{name} ({label.split(' ')[0]})", encoding="utf-8")
         return
-    raise SystemExit(f"::error title=GTFS::téléchargement impossible : {last_error}")
+    sys.exit("::error title=GTFS::aucune source n'a répondu")
 
 
 if __name__ == "__main__":
