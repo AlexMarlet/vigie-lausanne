@@ -1,8 +1,10 @@
 -- Vigie — schéma Supabase. À coller dans SQL Editor > New query, puis Run.
--- Peut être relancé sans risque : rien n'est supprimé.
+-- Peut être relancé sans risque : aucune donnée n'est supprimée (mise à jour d'une version précédente comprise).
 --
--- Ce que voit le public (clé publishable) : les signalements des 4 dernières heures, sans identifiant d'appareil.
+-- Ce que voit le public (clé publishable) : les signalements des 4 dernières heures, sans identifiant d'appareil,
+-- et les tendances apprises (vitesse des contrôles par ligne).
 -- Ce qu'il peut faire : signaler via la fonction public.signaler(), limitée à 6 signalements par appareil et par 10 minutes.
+-- Après 48 heures, un signalement passe dans une archive privée et anonyme (sans empreinte), qui sert à apprendre.
 
 -- ---------------------------------------------------------------- signalements (publics)
 create table if not exists public.signalements (
@@ -17,6 +19,9 @@ create table if not exists public.signalements (
   ext_id    text,      -- empreinte du message Telegram (anti-doublon)
   at        timestamptz not null default now()
 );
+-- sens de circulation (identifiant de l'arrêt terminus) et rang de l'arrêt dans ce sens (0 = départ)
+alter table public.signalements add column if not exists direction text check (char_length(direction) between 1 and 80);
+alter table public.signalements add column if not exists seq smallint check (seq between 0 and 199);
 
 -- Anti-doublon des messages Telegram (les signalements de l'app ont ext_id vide : jamais en conflit).
 create unique index if not exists signalements_src_ext_id on public.signalements (src, ext_id);
@@ -27,8 +32,8 @@ revoke all on public.signalements from anon, authenticated;
 grant select on public.signalements to anon, authenticated;
 grant all on public.signalements to service_role;
 
--- ---------------------------------------------------------------- journal des appareils (privé)
--- Schéma non exposé par l'API : sert uniquement à l'anti-spam, jamais lisible depuis l'app.
+-- ---------------------------------------------------------------- schéma privé
+-- Non exposé par l'API : journal anti-spam et archive, jamais lisibles depuis l'app.
 create schema if not exists vigie_private;
 revoke all on schema vigie_private from public, anon, authenticated;
 
@@ -37,6 +42,38 @@ create table if not exists vigie_private.appareils (
   at      timestamptz not null default now()
 );
 create index if not exists appareils_device_at on vigie_private.appareils (device, at desc);
+
+-- Archive anonyme : ni empreinte, ni identifiant de message, heure arrondie à la minute.
+create table if not exists vigie_private.archive (
+  id        bigint primary key,
+  kind      text not null,
+  sub       text,
+  of_kind   text,
+  stop_id   text not null,
+  line      text,
+  direction text,
+  seq       smallint,
+  src       text not null,
+  at        timestamptz not null
+);
+create index if not exists archive_ligne_at on vigie_private.archive (line, direction, at);
+
+-- ---------------------------------------------------------------- tendances apprises (publiques)
+-- Pour chaque ligne et chaque sens : couples de signalements de contrôle successifs (même ligne, même sens,
+-- 2 à 40 min d'écart, 0 à 10 arrêts plus loin). arrets / minutes = vitesse moyenne des contrôleurs.
+create table if not exists public.tendances (
+  line      text not null,
+  direction text not null,
+  paires    int not null,
+  arrets    int not null,
+  minutes   numeric not null,
+  maj       timestamptz not null default now(),
+  primary key (line, direction)
+);
+alter table public.tendances enable row level security;
+revoke all on public.tendances from anon, authenticated;
+grant select on public.tendances to anon, authenticated;
+grant all on public.tendances to service_role;
 
 -- ---------------------------------------------------------------- règles d'accès et temps réel
 do $$
@@ -49,6 +86,11 @@ begin
       using (at > now() - interval '4 hours');
   end if;
 
+  if not exists (select 1 from pg_policies
+                 where schemaname = 'public' and tablename = 'tendances' and policyname = 'lecture') then
+    create policy "lecture" on public.tendances for select to anon, authenticated using (true);
+  end if;
+
   -- Temps réel : l'app reçoit les nouveaux signalements sans recharger.
   if not exists (select 1 from pg_publication_tables
                  where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'signalements') then
@@ -57,13 +99,18 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------- signaler depuis l'app
+-- Ancienne version (sans le sens) remplacée ; les appels sans p_direction / p_seq restent valables.
+drop function if exists public.signaler(text, text, text, text, text, text);
+
 create or replace function public.signaler(
-  p_kind    text,
-  p_stop_id text,
-  p_device  text,
-  p_line    text default null,
-  p_sub     text default null,
-  p_of_kind text default null
+  p_kind      text,
+  p_stop_id   text,
+  p_device    text,
+  p_line      text default null,
+  p_sub       text default null,
+  p_of_kind   text default null,
+  p_direction text default null,
+  p_seq       int  default null
 ) returns bigint
 language plpgsql
 security definer
@@ -72,6 +119,8 @@ as $$
 declare
   recent int;
   new_id bigint;
+  v_direction text := case when p_line is not null and char_length(p_direction) between 1 and 80 then p_direction end;
+  v_seq smallint := case when p_line is not null and p_direction is not null and p_seq between 0 and 199 then p_seq end;
 begin
   if p_device is null or p_device !~ '^[0-9a-f]{16,64}$' then
     raise exception 'Appareil non reconnu.';
@@ -86,13 +135,67 @@ begin
 
   insert into vigie_private.appareils (device) values (p_device);
 
-  insert into public.signalements (kind, sub, of_kind, stop_id, line, src, voter)
-  values (p_kind, p_sub, p_of_kind, p_stop_id, p_line, 'app',
+  insert into public.signalements (kind, sub, of_kind, stop_id, line, direction, seq, src, voter)
+  values (p_kind, p_sub, p_of_kind, p_stop_id, p_line, v_direction, case when v_direction is not null then v_seq end, 'app',
           md5(p_device || ':' || p_stop_id || ':' || to_char(now() at time zone 'Europe/Zurich', 'YYYY-MM-DD')))
   returning id into new_id;
 
   return new_id;
 end $$;
 
-revoke all on function public.signaler(text, text, text, text, text, text) from public;
-grant execute on function public.signaler(text, text, text, text, text, text) to anon, authenticated;
+revoke all on function public.signaler(text, text, text, text, text, text, text, int) from public;
+grant execute on function public.signaler(text, text, text, text, text, text, text, int) to anon, authenticated;
+
+-- ---------------------------------------------------------------- tâches planifiées (voir purge.sql)
+-- Signalements de plus de 48 h : déplacés dans l'archive anonyme.
+create or replace function vigie_private.archiver() returns int
+language sql
+security definer
+set search_path = ''
+as $$
+  with moved as (
+    delete from public.signalements where at < now() - interval '48 hours'
+    returning id, kind, sub, of_kind, stop_id, line, direction, seq, src, at
+  ), kept as (
+    insert into vigie_private.archive (id, kind, sub, of_kind, stop_id, line, direction, seq, src, at)
+    select id, kind, sub, of_kind, stop_id, line, direction, seq, src, date_trunc('minute', at) from moved
+    on conflict (id) do nothing
+    returning 1
+  )
+  select count(*)::int from kept;
+$$;
+
+-- Tendances : recalculées sur tout l'historique (archive + signalements récents).
+create or replace function vigie_private.apprendre() returns int
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  n int;
+begin
+  delete from public.tendances;
+  insert into public.tendances (line, direction, paires, arrets, minutes)
+  with ctl as (
+    select line, direction, seq, at from vigie_private.archive
+     where kind = 'controle' and line is not null and direction is not null and seq is not null
+    union all
+    select line, direction, seq, at from public.signalements
+     where kind = 'controle' and line is not null and direction is not null and seq is not null
+  ), suite as (
+    select line, direction, seq, at,
+           lead(seq) over w as seq2, lead(at) over w as at2
+      from ctl
+    window w as (partition by line, direction order by at)
+  )
+  select line, direction, count(*), sum(seq2 - seq), round(sum(extract(epoch from at2 - at) / 60.0), 1)
+    from suite
+   where at2 > at + interval '2 minutes' and at2 <= at + interval '40 minutes'
+     and seq2 between seq and seq + 10
+   group by line, direction;
+  get diagnostics n = row_count;
+  return n;
+end $$;
+
+revoke all on function vigie_private.archiver() from public, anon, authenticated;
+revoke all on function vigie_private.apprendre() from public, anon, authenticated;
