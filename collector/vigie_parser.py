@@ -174,3 +174,33 @@ def parse_message(text: str, gaz: Gazetteer) -> dict:
         "fuzzy": bool(loc and loc["fuzzy"]),
         "usable": kind != "question" and stop_id is not None,
     }
+
+
+# ---------- sens de circulation (comme resolveDirection dans core/vigie-core.js) ----------
+def directions_at(lines: dict, line: str, stop_id: str) -> list[tuple[str, int]]:
+    """Sens (identifiant du terminus, rang de l'arrêt) où l'on peut partir de cet arrêt sur cette ligne."""
+    out = []
+    for d in lines.get(line, {}).get("dirs", []):
+        if stop_id in d["stops"]:
+            i = d["stops"].index(stop_id)
+            if i < len(d["stops"]) - 1:
+                out.append((d["id"], i))
+    return out
+
+
+def resolve_direction(lines: dict, stop_lines: list, stop_id: str, dir_stop_id: str, line: str | None):
+    """« … direction X » : {line, dir, seq} si X vient après l'arrêt sur une seule ligne, sinon None.
+    lines : {id_ligne: {"dirs": [{"id", "stops"}]}} (collector/lignes.json)."""
+    if not stop_id or not dir_stop_id or stop_id == dir_stop_id:
+        return None
+    found = []
+    for l in [line] if line else (stop_lines or []):
+        for did, seq in directions_at(lines, l, stop_id):
+            stops = next(d["stops"] for d in lines[l]["dirs"] if d["id"] == did)
+            if dir_stop_id in stops[seq + 1:]:
+                found.append({"line": l, "dir": did, "seq": seq})
+    if len({f["line"] for f in found}) != 1:
+        return None
+    if len({f["dir"] for f in found}) == 1:
+        return found[0]
+    return {"line": found[0]["line"], "dir": None, "seq": None}

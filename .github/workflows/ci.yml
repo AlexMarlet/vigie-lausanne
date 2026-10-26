@@ -36,7 +36,7 @@ jobs:
       - name: Construction du site
         run: python3 tools/build_app.py
       - name: Liste d'arrêts du collecteur à jour
-        run: git diff --exit-code collector/stops.json
+        run: git diff --exit-code collector/stops.json collector/lignes.json
       - name: Parseur Python du collecteur
         run: python3 collector/test_parser.py
       - name: Schéma Supabase sur PostgreSQL 17

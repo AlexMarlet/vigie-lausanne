@@ -30,7 +30,7 @@ from dotenv import load_dotenv
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 
-from vigie_parser import Gazetteer, parse_message
+from vigie_parser import Gazetteer, parse_message, resolve_direction
 
 HERE = pathlib.Path(__file__).parent
 load_dotenv(HERE / ".env")
@@ -47,6 +47,7 @@ SALT = os.environ.get("VIGIE_SALT", "change-moi")      # rend l'empreinte non r�
 BACKFILL_MIN = int(os.environ.get("VIGIE_BACKFILL_MIN", "120"))
 
 GAZ = Gazetteer(json.loads((HERE / "stops.json").read_text(encoding="utf-8")))
+LINES = {l["id"]: l for l in json.loads((HERE / "lignes.json").read_text(encoding="utf-8"))}
 
 
 def fingerprint(chat_id: int, msg_id: int) -> str:
@@ -57,12 +58,17 @@ def to_row(chat_id: int, msg_id: int, text: str, date: datetime) -> dict | None:
     p = parse_message(text, GAZ)
     if not p["usable"]:
         return None
+    # « … direction X » : ligne et sens déduits quand c'est sans ambiguïté (sert à la position estimée)
+    stop = GAZ.by_id.get(p["stop_id"], {})
+    way = resolve_direction(LINES, stop.get("lines", []), p["stop_id"], p["dir_stop_id"], p["line"]) if p["dir_stop_id"] else None
     return {
         "kind": p["kind"],
         "sub": p["sub"],
         "of_kind": p["of"],
         "stop_id": p["stop_id"],
-        "line": p["line"],
+        "line": p["line"] or (way and way["line"]),
+        "direction": way and way["dir"],
+        "seq": way and way["seq"],
         "src": "telegram",
         "ext_id": fingerprint(chat_id, msg_id),
         "at": date.astimezone(timezone.utc).isoformat(),

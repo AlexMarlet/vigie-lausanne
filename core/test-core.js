@@ -62,6 +62,15 @@ rd = core.resolveDirection(NET, ["M1", "M2"], "epfl", "renens", null);
 assert(rd && rd.line === "M1" && rd.dir === "renens", "« EPFL direction Renens » → M1 vers Renens");
 assert(core.resolveDirection(NET, ["M2"], "riponne", "riponne", null) === null, "direction = arrêt lui-même : rien");
 assert(core.resolveDirection(NET, ["M2"], "riponne", "malley", null) === null, "direction hors ligne : rien");
+// même déduction que le collecteur Python, sur le vrai réseau (collector/lignes.json)
+const REAL = core.buildNetwork(require("../collector/lignes.json"));
+const byStop = new Map(STOPS.map((s) => [s.id, s]));
+for (const [text, line, dir] of [["🚨 Contrôleurs au Flon direction Ouchy", "M2", "ouchy"],
+  ["Contrôle en civil EPFL quai direction Renens 10h45", "M1", "renens"], ["Contrôle M1 UNIL Sorge → EPFL", "M1", "renens"]]) {
+  const p = core.parseMessage(text, gaz);
+  const w = core.resolveDirection(REAL, byStop.get(p.stopId).lines, p.stopId, p.dirStopId, p.line);
+  assert(w && w.line === line && w.dir === dir, "sens déduit : " + text);
+}
 
 const close = (x, y) => Math.abs(x - y) < 1e-9;
 const prior = core.learnRates([]);

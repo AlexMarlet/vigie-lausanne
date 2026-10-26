@@ -182,12 +182,16 @@ def load_data(repo_url: str | None) -> tuple[dict, list]:
     return {"data": data, "colors": coords["colors"]}, stops
 
 
-def write_collector_stops(stops: list) -> None:
-    """Liste d'arrêts du collecteur Telegram (même répertoire que l'app ; vérifiée par la CI)."""
+def write_collector_stops(stops: list, lines: list) -> None:
+    """Données du collecteur Telegram, identiques à celles de l'app (vérifiées par la CI) : arrêts (stops.json)
+    et ordre des arrêts de chaque sens (lignes.json, pour « … direction X »)."""
     keep = ("id", "name", "short", "amb", "alias", "lines")
     rows = [{k: s[k] for k in keep if k in s} for s in stops]
     (ROOT / "collector/stops.json").write_text(
         "[\n" + ",\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n]\n", encoding="utf-8")
+    compact = [{"id": l["id"], "dirs": [{"id": d["id"], "stops": d["stops"]} for d in l["dirs"]]} for l in lines]
+    (ROOT / "collector/lignes.json").write_text(
+        "[\n" + ",\n".join(json.dumps(l, ensure_ascii=False, separators=(",", ":")) for l in compact) + "\n]\n", encoding="utf-8")
 
 
 def render_app(template: str, head: str, data: dict, colors: dict, config: dict, leaflet: str, supabase: str,
@@ -216,8 +220,8 @@ def main() -> None:
     a = ap.parse_args()
     if a.donnees:
         stops, lines, _ = load_network()
-        write_collector_stops(stops)
-        print(f"collector/stops.json : {len(stops)} arrêts, {len(lines)} lignes")
+        write_collector_stops(stops, lines)
+        print(f"collector/stops.json, lignes.json : {len(stops)} arrêts, {len(lines)} lignes")
         return
 
     url, key = public_config()
@@ -229,7 +233,7 @@ def main() -> None:
 
     bundle, stops = load_data(repo_url)
     template = read("web/index.template.html")
-    write_collector_stops(stops)
+    write_collector_stops(stops, bundle["data"]["lines"])
 
     if a.artifact:
         page = render_app(template, GOOGLE_FONTS, bundle["data"], bundle["colors"], {}, LEAFLET_CDN, SUPABASE_CDN, MAPLIBRE_CDN)
