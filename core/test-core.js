@@ -145,7 +145,8 @@ assert(flon.rel < 0.5 && !flon.main && bes.main && close(bes.rel, 1), "l'autre s
 const r1 = K({ stopId: "riponne", dir: "croisettes", by: "u1", at: now - 10 * min, id: "m1" });
 const r2 = K({ stopId: "chuv", by: "u2", at: now - 3 * min, id: "m2" });
 const links = core.linkMovements([r1, r2], NET3, now);
-assert(links.moved.get(r1) && links.moved.get(r1).next === r2 && links.confirmed.get(r2) === "croisettes",
+const dirsOf = (c) => (c || []).map((x) => x.dir.id).sort().join(",");
+assert(links.moved.get(r1) && links.moved.get(r1).next === r2 && dirsOf(links.confirmed.get(r2)) === "croisettes",
   "revus 3 arrêts plus loin 7 min après : déplacement, sens confirmé pour le nouveau signalement");
 const conf = core.project([r1, r2], NET3, prior, now);
 assert(conf.trails.length === 1 && conf.trails[0].from === "chuv" && conf.trails[0].dir === "croisettes",
@@ -156,7 +157,7 @@ const afterCl = core.computeClusters([r1, r2], now, undefined, links).find((c) =
 assert(close(afterCl.confidence, before * 0.25) && afterCl.movedTo === "chuv", "point d'origine réduit : ils sont partis plus loin");
 const noDir = Object.assign({}, r1, { dir: null, id: "m3" });
 const l2 = core.linkMovements([noDir, r2], NET3, now);
-assert(l2.moved.has(noDir) && l2.confirmed.get(r2) === "croisettes", "origine sans sens : le sens vient du déplacement");
+assert(l2.moved.has(noDir) && dirsOf(l2.confirmed.get(r2)) === "croisettes", "origine sans sens : le sens vient du déplacement");
 const tooFast = K({ stopId: "sallaz", by: "u3", at: r1.at + min, id: "m4" });
 assert(!core.linkMovements([r1, tooFast], NET3, now).moved.size, "4 arrêts en 1 min : pas un déplacement");
 const otherWay = K({ stopId: "chuv", dir: "ouchy", by: "u4", at: now - 3 * min, id: "m5" });
@@ -170,5 +171,49 @@ const l3 = core.linkMovements([r1, r2, back], NET3, now);
 const backCl = core.computeClusters([r1, r2, back], now, undefined, l3).find((c) => c.stopId === "riponne");
 assert(!l3.moved.has(back) && backCl.movedTo === null && backCl.confidence > afterCl.confidence,
   "revus ici après le déplacement : nouveau signalement à plein poids, pas de « partis d'ici »");
+
+// cas relevés en relecture (2)
+// sens déjà confirmé : un signalement suivant en arrière ne le renverse pas
+const r3 = K({ stopId: "bessieres", by: "u8", at: now - 1 * min, id: "m9" });
+const l4 = core.linkMovements([r1, r2, r3], NET3, now);
+assert(l4.moved.has(r1) && !l4.moved.has(r2) && !l4.confirmed.has(r3), "sens confirmé : revus en arrière ensuite, pas un déplacement");
+const p4 = core.project([r1, r2, r3], NET3, prior, now, undefined, l4);
+assert(p4.trails.some((t) => t.from === "chuv" && t.dir === "croisettes" && t.confirmed), "le signalement confirmé garde son sens");
+// tronc commun à deux branches (même groupe de sens) : la confirmation garde les deux, selon leur part des courses
+const NET4 = core.buildNetwork([{ id: "47", dirs: [
+  { id: "p", to: "p", grp: "0", share: 0.5, stops: ["s", "t1", "t2", "t3", "p1", "p"] },
+  { id: "l", to: "l", grp: "0", share: 0.5, stops: ["s", "t1", "t2", "t3", "l1", "l"] },
+  { id: "s", to: "s", grp: "1", share: 1, stops: ["p", "p1", "t3", "t2", "t1", "s"] }] }]);
+const T = (o) => Object.assign({ kind: "controle", line: "47", src: "app" }, o);
+const ta = T({ stopId: "t1", by: "v1", at: now - 8 * min, id: "t-a" }), tb = T({ stopId: "t2", by: "v2", at: now - 2 * min, id: "t-b" });
+const l5 = core.linkMovements([ta, tb], NET4, now);
+assert(dirsOf(l5.confirmed.get(tb)) === "l,p", "tronc commun : les deux branches restent possibles");
+const p5 = core.project([ta, tb], NET4, { net: { rate: 1 }, lines: new Map() }, now, undefined, l5);
+assert(at(p5, "p1") > 0 && close(at(p5, "p1"), at(p5, "l1")), "tronc commun : chaque branche selon sa part des courses (50/50)");
+assert(at(p5, "t1") === 0, "tronc commun : rien en arrière");
+// boucle : l'estimation part de la position de l'arrêt dans le parcours, pas de son premier passage
+const NET5 = core.buildNetwork([{ id: "32", dirs: [
+  { id: "en", to: "en", grp: "0", share: 1, stops: ["g", "rn", "ao", "rn", "v", "en"] },
+  { id: "g", to: "g", grp: "1", share: 1, stops: ["en", "v", "rn", "g"] }] }]);
+const B = (o) => Object.assign({ kind: "controle", line: "32", src: "app" }, o);
+const la = B({ stopId: "ao", by: "w1", at: now - 6 * min, id: "b-a" }), lb = B({ stopId: "rn", by: "w2", at: now - 2 * min, id: "b-b" });
+const l6 = core.linkMovements([la, lb], NET5, now);
+assert(l6.moved.has(la) && l6.confirmed.get(lb)[0].seq === 3, "boucle : position de l'arrêt après le passage signalé");
+const p6 = core.project([la, lb], NET5, prior, now, undefined, l6);
+assert(at(p6, "v") > 0 && at(p6, "ao") === 0, "boucle : l'estimation continue (V), pas en arrière (1er-Août)");
+// boucle parcourue dans les deux sens (Renens, 1er-Août, Renens) : le déplacement donne la position, pas le sens
+const NET6 = core.buildNetwork([{ id: "32", dirs: [
+  { id: "en", to: "en", grp: "0", share: 1, stops: ["g", "rn", "ao", "rn", "v", "en"] },
+  { id: "g", to: "g", grp: "1", share: 1, stops: ["en", "v", "rn", "ao", "rn", "g"] }] }]);
+const l8 = core.linkMovements([la, lb], NET6, now);
+assert(l8.moved.has(la) && dirsOf(l8.confirmed.get(lb)) === "en,g", "boucle dans les deux sens : déplacement compatible avec les deux");
+const p8 = core.project([la, lb], NET6, prior, now, undefined, l8);
+assert(at(p8, "v") > 0 && at(p8, "g") > 0 && at(p8, "ao") === 0 && p8.trails.every((t) => !t.confirmed && !t.dirKnown),
+  "boucle dans les deux sens : estimation des deux côtés, sens non confirmé");
+// confirmation datée dans le futur (horloge du téléphone) : pas de lien tant qu'elle n'est pas arrivée
+const fut = K({ stopId: "chuv", by: "u9", at: now + 3 * min, id: "m10" });
+const l7 = core.linkMovements([r1, fut], NET3, now);
+assert(!l7.moved.size && core.project([r1, fut], NET3, prior, now, undefined, l7).trails.some((t) => t.from === "riponne"),
+  "confirmation datée dans le futur : l'estimation d'origine reste");
 console.log(bad ? `${bad} échec(s)` : "tous les tests passent");
 process.exit(bad ? 1 : 0);

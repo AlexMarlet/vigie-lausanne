@@ -22,7 +22,7 @@ L'app s'ouvre ensuite en plein écran avec son icône, comme une app classique.
 
 ## Utiliser l'app
 
-- **Signaler** : toucher un arrêt (ou son nom ; un appui jusqu'à 22 px du point suffit) ou le bouton Signaler, puis la ligne et le sens si on les connaît.
+- **Signaler** : toucher un arrêt (ou son nom ; un appui jusqu'à 22 px du point suffit) ou le bouton Signaler, puis la ligne et le sens si on les connaît. Quand une fiche est ouverte, un appui à côté des arrêts la ferme.
 - **Position estimée** : toucher un anneau pointillé, puis « Je les vois ici » (confirme et relance l'estimation depuis cet arrêt) ou « Pas ici ».
 - **Filtres** Contrôles / Perturbations / Estimations sous la barre du haut ; **thème** clair ou sombre avec le bouton lune / soleil (la légende permet de revenir au réglage du téléphone).
 
@@ -59,13 +59,16 @@ présence à k arrêts plus loin  p = w × part × P(k) × 0,85^k   w = poids du
 | Sens | `part` de l'estimation |
 |---|---|
 | signalé | 85 % dans ce sens, 15 % dans l'autre (demi-tour) |
-| confirmé (revus plus loin dans ce sens) | 100 % dans ce sens |
+| confirmé (revus plus loin dans ce sens) | 100 % dans ce sens ; sur un tronc commun à deux branches, chacune selon sa part des courses |
 | inconnu | moitié par sens de circulation ; dans un sens à deux branches, chaque branche selon sa part des courses |
 
 **Revus plus loin.** Un nouveau contrôle sur la même ligne, 1 à 45 min plus tard, plus loin dans un sens possible
-(dans le sens signalé s'il est connu ; au plus 12 arrêts et 1,5 arrêt/min), par exemple avec « Je les vois ici » sur
-une estimation, signifie qu'ils se sont déplacés : le signalement d'origine perd 75 % de son poids (point réduit) et
-ne projette plus rien ; l'estimation repart du nouvel arrêt, avec le sens confirmé (`linkMovements`).
+(le sens signalé ou déjà confirmé s'il est connu ; au plus 12 arrêts et 1,5 arrêt/min), par exemple avec « Je les vois
+ici » sur une estimation, signifie qu'ils se sont déplacés : le signalement d'origine perd 75 % de son poids (point
+réduit) et ne projette plus rien ; l'estimation repart du nouvel arrêt (à sa position dans le parcours, utile sur les
+boucles), dans le sens confirmé (`linkMovements`). Un déplacement possible dans les deux sens (boucle parcourue dans les
+deux sens) donne la position mais pas le sens. Un signalement daté dans le futur (horloge du téléphone) n'est relié
+qu'une fois l'heure atteinte.
 
 Plusieurs signalements se combinent comme pour la confiance (1 − Π(1 − p)). Un « pas ici » / « plus là » à un arrêt
 estimé y divise l'estimation par 4 ; à l'arrêt du signalement, il ne l'arrête pas (ils en sont repartis). La carte

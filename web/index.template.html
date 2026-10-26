@@ -85,6 +85,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
         border: 1px solid var(--hair); background: var(--glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
         border-radius: 999px; padding: 7px clamp(6px, 2.2vw, 10px); font-size: clamp(11.5px, 3.45vw, 13.5px); font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
 @media (max-width: 345px) { .chip .shape { display: none; } }
+/* place insuffisante (grande police du téléphone, police de secours) : sans icônes, puis plus serrés, en dernier
+   recours sur deux lignes — jamais coupés (voir fitFilters) */
+.filters.compact .chip .shape { display: none; }
+.filters.tight .chip { padding-left: 4px; padding-right: 4px; font-size: 11px; }
+.filters.wrap { flex-wrap: wrap; }
 .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
 .chip[aria-pressed="false"] { color: var(--ink-2); }
 .shape { width: 11px; height: 11px; display: inline-block; background: currentColor; flex: none; }
@@ -473,7 +478,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   const FOND_PARAM = (location.search.match(/[?&]fond=([a-z]+)/) || [])[1];
   let fondName = FONDS[FOND_PARAM] ? FOND_PARAM : (FONDS[pref.get("fond", "")] ? pref.get("fond", "") : "simple");
   let theme = ["light", "dark"].includes(pref.get("theme", "auto")) ? pref.get("theme", "auto") : "auto";
-  let baseLayer = null, glLoading = null, fondSeq = 0;
+  let baseLayer = null, glLoading = null, fondSeq = 0, fondDark = null;   // fondDark : variante du fond chargé
   function isDark() {
     const t = document.documentElement.getAttribute("data-theme");
     if (t === "dark" || t === "light") return t === "dark";
@@ -503,6 +508,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
         if (!hasWebGL()) throw new Error("webgl");
         await loadGL();
         const variant = isDark() && f.dark ? "dark" : "light";
+        fondDark = variant === "dark";
         style = await (await fetch(f[variant])).json();
         style.layers = style.layers.filter((l) => !FOND_HIDE.has(l.id));
         for (const l of style.layers) {
@@ -731,7 +737,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   // Appui à côté des éléments de la carte : les dessins ne changent pas de taille, seule la zone qui réagit grandit.
   // L'élément le plus proche du doigt (distance au bord du dessin), à portée (22 px du centre, 8 px du bord d'un gros
   // point) : arrêt, point de signalement ou anneau d'estimation (qui recouvrent leur arrêt). Juste à côté d'un élément,
-  // il l'emporte ; sinon un appui sur le nom d'un arrêt choisit cet arrêt. Ailleurs, l'appui ferme la fiche ouverte.
+  // il l'emporte ; sinon un appui sur le nom d'un arrêt choisit cet arrêt. Quand une fiche est ouverte (hors
+  // formulaire), seuls ces deux cas choisissent : tout autre appui ferme la fiche.
   const REACH = 22;
   function nearTargets(pt) {
     const out = [], over = new Map();               // arrêt → action du point / de l'anneau posé dessus
@@ -771,11 +778,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
   }
   map.on("click", (e) => {
     const { list, over } = nearTargets(e.containerPoint);
+    // fiche ouverte (sauf formulaire) : seul un appui juste à côté d'un élément ou sur un nom le choisit, sinon
+    // l'appui ferme la fiche (sans quoi presque toute la carte, près d'un arrêt, ouvrirait autre chose)
+    const browsing = !!(state.sheet && state.sheet.kind !== "report");
     let t = list[0] && list[0].gap <= 6 ? list[0] : null;
     if (!t) { const s = labelAt(e.containerPoint); if (s) t = { stopId: s.id, open: over.get(s.id) || null }; }
-    t = t || list[0];
+    if (!t && !browsing) t = list[0];
     if (t) { onStopTap(t.stopId, t.open); return; }
-    if (state.sheet && state.sheet.kind !== "report") closeSheet();
+    if (browsing) closeSheet();
   });
 
   function focusStop(id) {
@@ -1049,6 +1059,16 @@ button { font: inherit; color: inherit; cursor: pointer; }
     if (n) return C.paceText(rate) + " (moyenne de toutes les lignes, " + n + " observation" + (n > 1 ? "s" : "") + demo + ")";
     return C.paceText(rate) + " (hypothèse de départ, en attendant assez de signalements)";
   }
+  // sens dans lequel ils sont vus à cet arrêt d'après l'estimation : seulement si un seul sens du même signalement y passe
+  function seenDir(e, stopId) {
+    const dirs = new Set();
+    for (const t of state.proj.trails) {
+      if (t.from !== e.from || t.at !== e.at || t.line !== e.line) continue;
+      const i = t.stops.indexOf(stopId, 1);
+      if (i > 0 && t.p[i] >= C.CFG.move.minShow) dirs.add(t.dir);
+    }
+    return dirs.size === 1 ? [...dirs][0] : null;
+  }
   function openEstimate(stopId) {
     picked.setPicked(null);
     const build = () => {
@@ -1074,11 +1094,15 @@ button { font: inherit; color: inherit; cursor: pointer; }
         el("div", { class: "est" }, el("strong", { text: "≈ " + pct + " %" }),
           el("span", { class: "facts", text: "de chances qu'ils soient à cet arrêt en ce moment" })),
         el("div", { class: "row" },
-          el("button", { type: "button", class: "secondary", onclick: async () => { if (await submit({ kind: "controle", stopId, line: e.line, dir: e.dir })) render(); } }, "Je les vois ici"),
-          el("button", { type: "button", class: "secondary", onclick: async () => { if (await submit({ kind: "fin", of: "controle", stopId, line: null })) render(); } }, "Pas ici")),
+          // le sens n'est enregistré que s'il est sans ambiguïté ici (sur un tronc commun à deux branches, le
+          // déplacement le confirme pour les deux) ; après l'envoi, la fiche se ferme : la carte montre le nouveau point
+          el("button", { type: "button", class: "secondary", onclick: async () => {
+            if (await submit({ kind: "controle", stopId, line: e.line, dir: seenDir(e, stopId) })) { closeSheet(); render(); } } }, "Je les vois ici"),
+          el("button", { type: "button", class: "secondary", onclick: async () => {
+            if (await submit({ kind: "fin", of: "controle", stopId, line: null })) { closeSheet(); render(); } } }, "Pas ici")),
         el("p", { class: "facts" }, "Signalés à ", el("strong", { text: stopName(e.from) }), " " + ago(e.at, now) + " sur la ligne " + e.line + ". " + why),
         el("p", { class: "facts", text: "Sur cette ligne, les contrôleurs avancent " + speedText(e.line) + "." }),
-        e.main && zone.length ? el("p", { class: "facts" }, "Zone la plus probable maintenant : ", el("strong", { text: zone[0] === zone[1] ? zone[0] : zone[0] + " – " + zone[1] }), ".") : null,
+        (e.main || !e.dirKnown) && zone.length ? el("p", { class: "facts" }, "Zone la plus probable maintenant" + (e.dirKnown ? "" : " dans ce sens") + " : ", el("strong", { text: zone[0] === zone[1] ? zone[0] : zone[0] + " – " + zone[1] }), ".") : null,
         el("p", { class: "note", text: "C'est une estimation : plus l'arrêt est loin et le signalement ancien, plus c'est incertain, car ils ont pu changer de ligne, faire demi-tour ou terminer leur contrôle. « Je les vois ici » confirme le sens et fait repartir l'estimation de cet arrêt." }),
       ].filter(Boolean));
       return box;
@@ -1190,12 +1214,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
             FONDS[key].label));
         }
         box.append(el("div", null, el("p", { class: "label", text: "Fond de carte" }), fonds));
-        const themes = el("div", { class: "chips", role: "group", "aria-label": "Thème" });
-        for (const [key, txt] of [["auto", "Auto (téléphone)"], ["light", "Clair"], ["dark", "Sombre"]]) {
-          themes.append(el("button", { type: "button", class: "opt", "data-theme-choice": key, "aria-pressed": String(theme === key),
-            onclick: () => { applyTheme(key, true); themes.querySelectorAll(".opt").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.themeChoice === key))); } }, txt));
-        }
-        box.append(el("div", null, el("p", { class: "label", text: "Thème" }), themes));
+      }
+      const themes = el("div", { class: "chips", role: "group", "aria-label": "Thème" });
+      for (const [key, txt] of [["auto", IN_CLAUDE ? "Auto" : "Auto (téléphone)"], ["light", "Clair"], ["dark", "Sombre"]]) {
+        themes.append(el("button", { type: "button", class: "opt", "data-theme-choice": key, "aria-pressed": String(theme === key),
+          onclick: () => applyTheme(key, true) }, txt));
+      }
+      box.append(el("div", null, el("p", { class: "label", text: "Thème" }), themes));
+      if (!IN_CLAUDE) {
         const links = el("div", { class: "links" });
         if (canInstall()) links.append(el("button", { type: "button", class: "link", onclick: install }, "Installer l'app"));
         links.append(el("a", { href: "confidentialite.html" }, "Confidentialité"));
@@ -1226,18 +1252,37 @@ button { font: inherit; color: inherit; cursor: pointer; }
       pref.set("filters", state.filters); render();
     });
   });
+  // filtres toujours entiers sur une ligne : si la place manque (grande police du téléphone, police de secours avant
+  // le chargement), d'abord sans icônes, puis plus serrés, et en dernier recours sur deux lignes
+  const filtersEl = $(".filters");
+  function fitFilters() {
+    filtersEl.classList.remove("compact", "tight", "wrap");
+    for (const c of ["compact", "tight", "wrap"]) {
+      if (filtersEl.scrollWidth <= filtersEl.clientWidth + 1) break;
+      filtersEl.classList.add(c);
+    }
+  }
+  let fitW = -1;                                     // ne réagir qu'aux changements de largeur (pas de boucle)
+  if (window.ResizeObserver) {
+    new ResizeObserver((ents) => { const w = Math.round(ents[0].contentRect.width); if (w !== fitW) { fitW = w; fitFilters(); } }).observe(filtersEl);
+  }
+  fitFilters();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitFilters);
   function setDemo(on) { state.demoOn = !!on; pref.set("demo", state.demoOn); refreshRates(); render(); }
 
   // ---------- thème clair / sombre ----------
   // « auto » suit le téléphone ; le bouton du haut force clair ou sombre ; la légende permet de revenir en auto
   const MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
   const SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>';
+  // aperçu Claude : l'hôte peut imposer son thème (attribut data-theme) ; « auto » le rétablit au lieu de l'effacer
+  const HOST_THEME = IN_CLAUDE && theme === "auto" ? document.documentElement.getAttribute("data-theme") : null;
   function applyTheme(t, persist) {
-    const before = isDark();
     theme = t === "light" || t === "dark" ? t : "auto";
-    if (theme === "auto") document.documentElement.removeAttribute("data-theme");
-    else document.documentElement.setAttribute("data-theme", theme);
+    if (theme !== "auto") document.documentElement.setAttribute("data-theme", theme);
+    else if (HOST_THEME) document.documentElement.setAttribute("data-theme", HOST_THEME);
+    else document.documentElement.removeAttribute("data-theme");
     if (persist) pref.set("theme", theme);
+    document.querySelectorAll("[data-theme-choice]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.themeChoice === theme)));
     const dark = isDark();
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", dark ? "#11181D" : "#173E62");
@@ -1245,7 +1290,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
     b.innerHTML = dark ? SUN : MOON;
     b.setAttribute("aria-label", dark ? "Passer en mode clair" : "Passer en mode sombre");
     b.title = dark ? "Mode clair" : "Mode sombre";
-    if (!IN_CLAUDE && dark !== before && FONDS[fondName] && FONDS[fondName].dark) setFond(fondName);   // fond de carte assorti
+    // fond de carte assorti : comparé au fond chargé (en « auto », le réglage du téléphone a déjà changé ici)
+    if (!IN_CLAUDE && fondDark !== null && dark !== fondDark && FONDS[fondName] && FONDS[fondName].dark) setFond(fondName);
   }
   $("#btnTheme").addEventListener("click", () => applyTheme(isDark() ? "light" : "dark", true));
   applyTheme(theme);

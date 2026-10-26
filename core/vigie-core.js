@@ -349,11 +349,24 @@
   }
 
   // ---------- déplacements : contrôle revu plus loin sur la même ligne, dans le même sens ----------
-  // Pour chaque contrôle signalé avec sa ligne : le premier signalement suivant (même ligne, 1 à 45 min après) à un
-  // arrêt plus loin dans l'un de ses sens possibles (le sens signalé s'il y en a un), à une vitesse plausible
-  // (au plus maxSpeed arrêts par minute et ahead arrêts). Le premier est « dépassé » : ils en sont partis (point
-  // réduit, plus d'estimation depuis là) ; le second a un sens confirmé (l'estimation ne part plus que dans ce sens).
-  // Renvoie { moved: Map(signalement -> { next, dir }), confirmed: Map(signalement -> identifiant du sens) }.
+  // Sens possibles depuis un signalement : ceux confirmés par un déplacement (avec la position exacte de l'arrêt dans
+  // le parcours, utile sur les boucles), sinon le sens signalé, sinon tous ceux de l'arrêt. [{ dir, seq, share }]
+  function waysFrom(net, r, conf) {
+    const live = (conf || []).filter((x) => x.seq < x.dir.stops.length - 1);        // pas au terminus
+    if (live.length) return live;
+    const given = r.dir && dirById(net, r.line, r.dir);
+    if (given && given.at.has(r.stopId) && given.at.get(r.stopId) < given.stops.length - 1) {
+      return [{ dir: given, seq: given.at.get(r.stopId), share: 1 }];
+    }
+    return directionsAt(net, r.line, r.stopId);
+  }
+
+  // Pour chaque contrôle signalé avec sa ligne : le premier signalement suivant (même ligne, 1 à 45 min après, pas daté
+  // dans le futur) à un arrêt plus loin dans l'un de ses sens possibles (waysFrom), à une vitesse plausible (au plus
+  // maxSpeed arrêts par minute et ahead arrêts). Le premier est « dépassé » : ils en sont partis (point réduit, plus
+  // d'estimation depuis là). Le second a un sens confirmé : le ou les sens de ce déplacement (sur un tronc commun à
+  // deux branches, les deux), avec sa position dans chacun.
+  // Renvoie { moved: Map(signalement -> { next }), confirmed: Map(signalement -> [{ dir, seq, share }]) }.
   function linkMovements(reports, net, now, cfg) {
     cfg = cfg || CFG;
     const m = cfg.move;
@@ -362,23 +375,24 @@
       .sort((a, b) => a.at - b.at);
     for (let i = 0; i < ctl.length; i++) {
       const a = ctl[i];
-      const given = a.dir && dirById(net, a.line, a.dir);
-      const ways = given && given.at.has(a.stopId) ? [{ dir: given, seq: given.at.get(a.stopId) }] : directionsAt(net, a.line, a.stopId);
+      const ways = waysFrom(net, a, confirmed.get(a));           // un sens déjà confirmé reste le sens de a
       if (!ways.length) continue;
       for (let j = i + 1; j < ctl.length; j++) {
         const b = ctl[j], dt = (b.at - a.at) / 60000;
-        if (dt > m.horizon) break;
+        if (dt > m.horizon || b.at > now + 60000) break;           // trop tard, ou daté dans le futur (horloge fausse)
         if (b.line !== a.line || b.stopId === a.stopId || dt < 1) continue;
         const bDir = b.dir && dirById(net, b.line, b.dir);
-        let best = null;
-        for (const { dir, seq } of ways) {
-          if (bDir && bDir.to !== dir.to) continue;                       // l'autre a signalé un autre sens
-          const k = dir.stops.indexOf(b.stopId, seq + 1) - seq;
-          if (k >= 1 && k <= m.ahead && k <= m.maxSpeed * dt && (!best || k < best.k)) best = { dir, k };
+        let best = Infinity, hit = [];
+        for (const w of ways) {
+          if (bDir && bDir.to !== w.dir.to) continue;                       // l'autre a signalé un autre sens
+          const at = w.dir.stops.indexOf(b.stopId, w.seq + 1), k = at - w.seq;
+          if (at < 0 || k > m.ahead || k > m.maxSpeed * dt) continue;
+          if (k < best) { best = k; hit = []; }
+          if (k === best) hit.push({ dir: w.dir, seq: at, share: w.share != null ? w.share : 1 });
         }
-        if (!best) continue;
-        moved.set(a, { next: b, dir: best.dir.id });
-        if (!confirmed.has(b)) confirmed.set(b, bDir ? bDir.id : best.dir.id);
+        if (!hit.length) continue;
+        moved.set(a, { next: b });
+        if (!confirmed.has(b)) confirmed.set(b, hit);
         break;
       }
     }
@@ -420,18 +434,25 @@
       if (links.moved.has(r)) continue;            // revus plus loin : l'estimation part du dernier signalement
       // « plus là » à l'arrêt du signalement : ils en sont partis, l'estimation plus loin reste valable
       const w = (cfg.base[r.src] != null ? cfg.base[r.src] : 0.5) * Math.pow(0.5, age / cfg.controle.half);
-      const conf = links.confirmed.get(r);
-      const known = dirById(net, r.line, r.dir || conf);
-      const dirKnown = !!(known && known.at.has(r.stopId) && known.at.get(r.stopId) < known.stops.length - 1);
-      const confirmed = dirKnown && !!conf;
-      const all = directionsAt(net, r.line, r.stopId);
+      const conf = (links.confirmed.get(r) || []).filter((x) => x.seq < x.dir.stops.length - 1);   // pas au terminus
+      const given = r.dir && dirById(net, r.line, r.dir);
+      // un déplacement compatible avec les deux sens de circulation (boucle parcourue dans les deux sens) ne confirme
+      // pas le sens : seulement la position, d'où l'estimation part dans les deux sens
+      const confirmed = conf.length > 0 && new Set(conf.map((x) => x.dir.grp)).size === 1;
+      const dirKnown = confirmed || !!(given && given.at.has(r.stopId) && given.at.get(r.stopId) < given.stops.length - 1);
+      const all = conf.length ? conf.map((x) => Object.assign({}, x)) : directionsAt(net, r.line, r.stopId);
       let ways;
-      if (dirKnown) {
-        // sens connu : sameDir dans ce sens, le reste dans les autres sens (demi-tour) ; confirmé : tout dans ce sens
-        const other = confirmed ? [] : all.filter((x) => x.dir.grp !== known.grp);
+      if (confirmed) {
+        // sens confirmé par un déplacement : tout dans ce sens, depuis la position de l'arrêt dans le parcours (boucles) ;
+        // sur un tronc commun à deux branches, chaque branche selon sa part des courses
+        const tot = conf.reduce((t, x) => t + x.share, 0);
+        ways = conf.map((x) => ({ dir: x.dir, seq: x.seq, part: tot > 0 ? x.share / tot : 1 / conf.length, main: true }));
+      } else if (dirKnown) {
+        // sens signalé : sameDir dans ce sens, le reste dans les sens opposés (demi-tour)
+        const other = all.filter((x) => x.dir.grp !== given.grp);
         const tot = other.reduce((t, x) => t + x.share, 0);
-        ways = [{ dir: known, seq: known.at.get(r.stopId), part: other.length ? m.sameDir : 1 }]
-          .concat(other.map((x) => Object.assign(x, { part: (1 - m.sameDir) * (tot > 0 ? x.share / tot : 1 / other.length) })));
+        ways = [{ dir: given, seq: given.at.get(r.stopId), part: other.length ? m.sameDir : 1, main: true }]
+          .concat(other.map((x) => ({ dir: x.dir, seq: x.seq, part: (1 - m.sameDir) * (tot > 0 ? x.share / tot : 1 / other.length), main: false })));
       } else {
         // sens inconnu : moitié pour chaque sens de circulation, puis selon la part des courses de chaque branche
         ways = all;
@@ -445,9 +466,9 @@
       if (!ways.length) continue;
       const rate = rateFor(rates, r.line, cfg), mu = rate * age;
       const mine = [];
-      for (const { dir, seq, part } of ways) {
+      for (const { dir, seq, part, main } of ways) {
         const share = w * part;
-        const trail = { line: r.line, dir: dir.id, main: dirKnown && dir === known, dirKnown, confirmed,
+        const trail = { line: r.line, dir: dir.id, main: !!main, dirKnown, confirmed,
           from: r.stopId, at: r.at, stops: [r.stopId], p: [share], rate };
         let pk = Math.exp(-mu);                        // P(k = 0)
         for (let k = 1; k <= m.ahead && seq + k < dir.stops.length; k++) {
