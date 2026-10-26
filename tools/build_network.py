@@ -224,6 +224,9 @@ def pick_patterns(weights: dict[tuple, float]) -> list[tuple[tuple, float]]:
         kept += [p for p in main[t] if not any(o != p and is_sub(p, o) for o in main[t])]
     credit = {k: 0.0 for k in kept}
     for p in pats:
+        if p in credit:                     # parcours gardé : ses propres courses
+            credit[p] += weights[p]
+            continue
         owners = [k for k in kept if is_sub(p, k)]
         if owners:
             credit[max(owners, key=lambda k: (weights[k], len(k), k))] += weights[p]

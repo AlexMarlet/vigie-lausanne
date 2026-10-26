@@ -279,7 +279,7 @@
     for (const d of l.dirs) {
       const i = d.at.get(stopId);
       if (i == null || i >= d.stops.length - 1 || d.to === stopId) continue;
-      const share = d.share > 0 ? d.share : 1;
+      const share = d.share != null ? d.share : 1;
       if (byTo.has(d.to)) { byTo.get(d.to).share += share; continue; }
       const way = { dir: d, seq: i, share };
       byTo.set(d.to, way); out.push(way);
@@ -376,7 +376,12 @@
         ways = directionsAt(net, r.line, r.stopId);
         const groups = new Map();
         for (const x of ways) groups.set(x.dir.grp, (groups.get(x.dir.grp) || 0) + x.share);
-        for (const x of ways) x.part = (1 / groups.size) * (x.share / groups.get(x.dir.grp));
+        const n = new Map();
+        for (const x of ways) n.set(x.dir.grp, (n.get(x.dir.grp) || 0) + 1);
+        for (const x of ways) {
+          const g = groups.get(x.dir.grp);
+          x.part = (1 / groups.size) * (g > 0 ? x.share / g : 1 / n.get(x.dir.grp));
+        }
       }
       if (!ways.length) continue;
       const rate = rateFor(rates, r.line, cfg), mu = rate * age;

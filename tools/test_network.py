@@ -155,6 +155,8 @@ check([g[0] for g in got] == [A_Z] and abs(got[0][1] - 1) < 1e-9, "course partie
 got = P({A_Z: 30, A_M: 60})
 check(sorted(g[0] for g in got) == sorted([A_Z, A_M]), "terminus intermédiaire majoritaire (60 %) : proposé, avec le parcours complet")
 check([g[0] for g in P({A_Z: 70, A_M: 30})] == [A_Z], "courses partielles minoritaires : comptées dans le parcours complet")
+got = dict(P({A_Z: 55, A_M: 40, tuple("abc"): 5}))
+check(abs(got[A_Z] - 0.60) < 1e-9 and abs(got[A_M] - 0.40) < 1e-9, "terminus intermédiaire proposé : il garde ses propres courses")
 check([g[0] for g in P({A_Z: 16, A_ZD: 2})] == [A_Z], "dépôt sur 2 courses sur 18 : pas un sens")
 check(sorted(g[0] for g in P({A_Z: 50, A_ZD: 50})) == sorted([A_Z, A_ZD]), "rallonge régulière (50 %) : les deux terminus")
 check(sorted(g[0] for g in P({A_Z: 49, A_ZD: 51})) == sorted([A_Z, A_ZD]), "terminus intermédiaire à 49 % : proposé aussi")
