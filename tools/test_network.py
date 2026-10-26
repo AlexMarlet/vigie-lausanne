@@ -123,7 +123,7 @@ check(m2["type"] == "metro" and lines["9"]["type"] == "bus", "types de ligne")
 check(sorted(d["to"] for d in m2["dirs"]) == ["croisettes", "ouchy"], "M2 : deux sens, vers Croisettes et vers Ouchy")
 up = next(d for d in m2["dirs"] if d["to"] == "croisettes")
 check(up["stops"] == ["ouchy", "jordils", "flon", "riponne", "croisettes"], "M2 : ordre des arrêts")
-check(up["label"] == "Croisettes" and up["id"] == "croisettes", "M2 : sens nommé d'après le terminus")
+check(up["label"] == "Epalinges, Croisettes" and up["id"] == "croisettes", "M2 : sens nommé d'après le terminus (avec la commune)")
 check(up["min"][0] == 0 and up["min"][1] == 1.3 and up["min"][2] == 2.9, f"M2 : temps cumulés, médiane ({up['min']})")
 nine = {d["to"]: d for d in lines["9"]["dirs"]}
 check(sorted(nine) == ["galicien", "lutry", "pully"], f"bus 9 : sens principal, branche et retour ({sorted(nine)})")
@@ -141,6 +141,10 @@ check(stops["riponne"]["name"] == "Riponne-M. Béjart", "arrêt lausannois : nom
 check("renens-gare" not in stops and "genève" not in stops and "geneve" not in stops,
       "arrêts desservis seulement hors période ou par un autre opérateur : absents")
 check(stops["pully"]["name"] == "Pully, Gare", "minuscule initiale corrigée (gare -> Gare)")
+
+check(bn.line_id("m1") == "M1" and bn.line_id("N3") == "N3", "noms de ligne : m1 -> M1, N3 inchangé")
+check(bn.split_name("Chavannes-R., UNIL-Mouline", set()) == ("Chavannes", "UNIL-Mouline")
+      and bn.split_name("Ecublens VD, EPFL", set()) == ("Ecublens", "EPFL"), "communes : abréviations et canton retirés")
 
 # année d'horaire (changement le 2e dimanche de décembre)
 check(fetch_gtfs.timetable_year(dt.date(2026, 10, 26)) == 2026, "horaire 2026 en octobre 2026")

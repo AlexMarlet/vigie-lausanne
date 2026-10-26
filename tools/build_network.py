@@ -41,6 +41,10 @@ MERGE_M = 300             # fusion de deux zones d'arrêt de même nom à moins 
 LEGACY_M = 350            # un arrêt historique est retrouvé à moins de 350 m
 CANTONS = r"\s+(?:VD|GE|FR|VS|NE|JU|BE)$"
 COLORS = {"M1": "#2B6CB0", "M2": "#7A4FC0", "M3": "#2F8F6B", "t1": "#C2410C"}
+# noms de communes abrégés dans l'horaire officiel -> nom usuel (affichage et identifiants)
+TOWNS = {"Chavannes-R.": "Chavannes", "Le Mont-sur-L.": "Le Mont", "Le Mont-sur-Lausanne": "Le Mont",
+         "Belmont-sur-L.": "Belmont", "Cheseaux-sur-L.": "Cheseaux", "Romanel-sur-L.": "Romanel",
+         "Romanel-sur-Lausanne": "Romanel"}
 
 
 # ------------------------------------------------------------------ outils
@@ -104,12 +108,23 @@ def split_name(name: str, towns: set[str]) -> tuple[str, str]:
     """« Lausanne, Riponne-M. Béjart » -> (« Lausanne », « Riponne-M. Béjart »)."""
     if "," in name:
         town, short = (p.strip() for p in name.split(",", 1))
-        return re.sub(CANTONS, "", town), short
+        town = re.sub(CANTONS, "", town)
+        return TOWNS.get(town, town), short
     clean = re.sub(CANTONS, "", name.strip())
     for t in sorted(towns, key=len, reverse=True):
         if clean.startswith(t + "-") and len(clean) > len(t) + 1:
-            return t, clean[len(t) + 1:]
-    return clean, clean
+            return TOWNS.get(t, t), clean[len(t) + 1:]
+    return TOWNS.get(clean, clean), clean
+
+
+def line_id(short: str) -> str:
+    """Nom de ligne tel qu'affiché par les tl : « m1 » -> « M1 »."""
+    m = re.fullmatch(r"[mM](\d)", short.strip())
+    return f"M{m.group(1)}" if m else short.strip()
+
+
+def display_name(town: str, short: str) -> str:
+    return short if norm(town) in ("lausanne", norm(short)) else f"{town}, {short}"
 
 
 def cap(s: str) -> str:
@@ -214,6 +229,7 @@ def build(zpath: pathlib.Path, start: dt.date, days: int, legacy: list[dict]) ->
             short = (r[col["route_long_name"]] if "route_long_name" in col else "").strip()
         if not short:
             continue
+        short = line_id(short)
         routes[r[col["route_id"]]] = (short, r[col["route_type"]] if "route_type" in col else "",
                                       (r[col["route_color"]] if "route_color" in col else "").strip())
 
@@ -366,7 +382,7 @@ def build(zpath: pathlib.Path, start: dt.date, days: int, legacy: list[dict]) ->
             ln["times"][pattern].append(stamps)
 
     lines_out, served = [], collections.defaultdict(set)
-    short_of = {ids[i]: m["short"] for i, m in enumerate(merged)}
+    name_of = {ids[i]: display_name(m["town"], m["short"]) for i, m in enumerate(merged)}
     for short in sorted(per_line, key=line_sort_key):
         ln = per_line[short]
         dirs = []
@@ -378,13 +394,12 @@ def build(zpath: pathlib.Path, start: dt.date, days: int, legacy: list[dict]) ->
                     gaps = [(s[k] - s[k - 1]) / 60 for s in samples if s[k] >= s[k - 1]]
                     mins.append(round(mins[-1] + (statistics.median(gaps) if gaps else 1.5), 1))
                 to = pattern[-1]
-                label = short_of[to]
+                d = {"id": to if to not in {d["id"] for d in dirs} else f"{to}-{len(dirs) + 1}", "to": to,
+                     "label": name_of[to], "stops": list(pattern), "min": mins, "share": round(share, 2)}
                 if pattern[0] == to:            # ligne circulaire : la destination affichée sur le véhicule
                     sign = ln["headsigns"][pattern].most_common(1)[0][0]
-                    label = cap(split_name(sign, towns)[1]) if sign else label
-                did = to if to not in {d["id"] for d in dirs} else f"{to}-{len(dirs) + 1}"
-                dirs.append({"id": did, "to": to, "label": label, "stops": list(pattern), "min": mins,
-                             "share": round(share, 2)})
+                    d["label"], d["loop"] = (cap(split_name(sign, towns)[1]) if sign else d["label"]), True
+                dirs.append(d)
         if not dirs:
             continue
         # tous les arrêts desservis par la ligne, y compris par des courses peu fréquentes
@@ -402,8 +417,7 @@ def build(zpath: pathlib.Path, start: dt.date, days: int, legacy: list[dict]) ->
         lines = sorted(served.get(sid, ()), key=lambda l: line_order.get(l, 999))
         if not lines:
             continue
-        name = m["short"] if norm(m["town"]) == "lausanne" or norm(m["town"]) == norm(m["short"]) else f"{m['town']}, {m['short']}"
-        stops_out.append({"id": sid, "name": name, "short": m["short"], "town": m["town"],
+        stops_out.append({"id": sid, "name": display_name(m["town"], m["short"]), "short": m["short"], "town": m["town"],
                           "lat": m["lat"], "lon": m["lon"], "lines": lines, "official": m["official"], "uic": m["uic"]})
     stops_out.sort(key=lambda s: s["id"])
     legacy_ids = {o["id"] for o in legacy if "lat" in o}
