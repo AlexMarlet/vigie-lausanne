@@ -428,7 +428,7 @@ def build(zpath: pathlib.Path, start: dt.date, days: int, legacy: list[dict]) ->
                 while did in {x["id"] for x in dirs}:      # deux branches vers le même terminus
                     did, n = f"{to}-{n}", n + 1
                 d = {"id": did, "to": to, "label": name_of[to], "grp": direction, "stops": list(pattern), "min": mins,
-                     "share": round(share, 2)}
+                     "share": max(0.1, round(share, 1))}      # arrondi : pas de commit pour quelques courses de plus
                 if pattern[0] == to:            # ligne circulaire : la destination affichée sur le véhicule
                     sign = clean(ln["headsigns"][pattern].most_common(1)[0][0])
                     d["label"], d["loop"] = (cap(split_name(sign, towns)[1]) if sign else d["label"]), True
@@ -480,8 +480,8 @@ def write(net: dict, path: pathlib.Path, feed: str) -> None:
 
 
 def essential(net: dict) -> dict:
-    """Ce que l'app utilise : sans la source, ni les temps et parts de courses (qui varient d'une semaine à l'autre)."""
-    lines = [{**l, "dirs": [{k: v for k, v in d.items() if k not in ("min", "share")} for d in l["dirs"]]} for l in net["lines"]]
+    """Ce que l'app utilise : sans la source ni les temps de parcours (qui varient d'une semaine à l'autre)."""
+    lines = [{**l, "dirs": [{k: v for k, v in d.items() if k != "min"} for d in l["dirs"]]} for l in net["lines"]]
     return {"lines": lines, "stops": net["stops"]}
 
 
