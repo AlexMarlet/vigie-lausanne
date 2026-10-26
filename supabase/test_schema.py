@@ -64,6 +64,8 @@ with psycopg.connect(DSN, autocommit=True) as c:
     cols = {r[0] for r in c.execute("select column_name from information_schema.columns "
                                     "where table_schema = 'public' and table_name = 'signalements'")}
     check({"direction", "seq"} <= cols, "mise à jour : colonnes direction et seq ajoutées")
+    check(c.execute("select count(*) from pg_constraint where conname = 'signalements_line_check'").fetchone()[0] == 1,
+          "mise à jour : une seule contrainte sur le nom de ligne")
     c.execute("set role anon")
     c.execute("select public.signaler(p_kind => 'controle', p_stop_id => 'gare', p_device => %s, p_line => 'M2', "
               "p_sub => null, p_of_kind => null)", (DEV5,))
@@ -108,7 +110,9 @@ with psycopg.connect(DSN, autocommit=True) as c:
     check(fails(c, "delete from public.signalements"), "app : suppression refusée")
     check(fails(c, "select public.signaler('photo', 'gare', %s)", (DEV1,)), "app : type inconnu refusé")
     check(fails(c, "select public.signaler('controle', 'gare', 'pas-un-id')"), "app : identifiant d'appareil invalide refusé")
-    check(fails(c, "select public.signaler('controle', 'gare', %s, 'LIGNE99')", (DEV1,)), "app : ligne trop longue refusée")
+    check(fails(c, "select public.signaler('controle', 'gare', %s, 'LIGNE-TROP-LONGUE')", (DEV1,)), "app : ligne trop longue refusée")
+    c.execute("select public.signaler('controle', 'echallens-gare', %s, 'Bus-LEB')", (DEV4,))
+    check(True, "app : nom de ligne long accepté (Bus-LEB)")
 
     for _ in range(5):  # 1 déjà fait : 6 au total
         c.execute("select public.signaler('controle', 'gare', %s)", (DEV1,))

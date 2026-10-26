@@ -22,6 +22,9 @@ create table if not exists public.signalements (
 -- sens de circulation (identifiant de l'arrêt terminus) et rang de l'arrêt dans ce sens (0 = départ)
 alter table public.signalements add column if not exists direction text check (char_length(direction) between 1 and 80);
 alter table public.signalements add column if not exists seq smallint check (seq between 0 and 199);
+-- noms de ligne jusqu'à 12 caractères (« Bus-LEB », lignes de nuit…)
+alter table public.signalements drop constraint if exists signalements_line_check;
+alter table public.signalements add constraint signalements_line_check check (char_length(line) between 1 and 12);
 
 -- Anti-doublon des messages Telegram (les signalements de l'app ont ext_id vide : jamais en conflit).
 create unique index if not exists signalements_src_ext_id on public.signalements (src, ext_id);
