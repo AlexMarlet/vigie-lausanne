@@ -83,7 +83,7 @@ l'ordre des arrêts. Il est produit à partir de l'horaire officiel suisse au fo
 le dernier fichier, extrait les lignes tl circulant les 14 prochains jours, et ne fait un commit (puis un redéploiement)
 que si les arrêts ou les lignes ont changé.
 
-- Sens d'une ligne = un terminus des parcours réguliers (au moins 10 % des courses) ; les courses partielles comptent pour le parcours complet, une rallonge rare (dépôt, moins de 15 %) est ignorée, une branche devient un sens à part. Un arrêt liste les lignes qui y proposent un sens (sinon toutes celles qui y passent).
+- Sens d'une ligne = un terminus des parcours réguliers (au moins 10 % des courses). Les courses partielles comptent pour le parcours complet (un terminus intermédiaire n'est proposé que s'il reçoit au moins 35 % des courses), une rallonge rare (dépôt, moins de 15 %) est ignorée, une branche devient un sens à part. Un arrêt liste les lignes qui y proposent un sens (sinon toutes celles qui y passent).
 - `tools/arrets.json` garde les identifiants des arrêts historiques (retrouvés par position) et les alias du groupe (« st f », « poly »…). Pour ajouter un alias : une entrée `{"id": …, "alias": […]}`.
 - En local : `python3 tools/fetch_gtfs.py gtfs.zip && python3 tools/build_network.py gtfs.zip` (fichier d'environ 280 Mo).
 

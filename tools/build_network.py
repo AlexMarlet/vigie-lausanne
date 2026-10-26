@@ -38,6 +38,7 @@ ARRETS = ROOT / "tools" / "arrets.json"
 TL_AGENCY = re.compile(r"r[ée]gion lausannoise|^tl\b|\(tl\)", re.I)
 MIN_SHARE = 0.10          # part minimale des courses d'un sens pour qu'un parcours compte
 EXT_SHARE = 0.15          # une rallonge d'un parcours retenu (dépôt…) doit peser au moins 15 %
+SHORT_SHARE = 0.35        # un terminus de courses partielles n'est proposé que s'il en reçoit au moins 35 %
 MERGE_M = 300             # fusion de deux zones d'arrêt de même nom à moins de 300 m
 LEGACY_M = 350            # un arrêt historique est retrouvé à moins de 350 m
 CANTONS = r"\s+(?:VD|GE|FR|VS|NE|JU|BE)$"
@@ -187,13 +188,15 @@ def is_sub(short: tuple, long: tuple) -> bool:
 
 
 def pick_patterns(weights: dict[tuple, float]) -> list[tuple[tuple, float]]:
-    """Parcours réguliers d'un sens de circulation (indépendant de l'ordre de lecture).
-    Les terminus sont examinés du plus fréquent au moins fréquent (au moins MIN_SHARE des courses) :
-    - terminus d'une course partielle (ses parcours sont compris dans un parcours déjà retenu) : ignoré ;
-    - rallonge d'un parcours retenu (course de dépôt…) : retenue seulement si elle pèse au moins EXT_SHARE ;
-    - sinon ses parcours d'au moins MIN_SHARE sont retenus (deux branches vers le même terminus : deux parcours).
-    Un parcours compris dans un autre retenu disparaît ; chaque course compte pour le parcours retenu le plus
-    fréquent qui la contient (part renvoyée)."""
+    """Parcours réguliers d'un sens de circulation. Définitions sur l'ensemble des courses, donc indépendantes de
+    l'ordre de lecture. W(T) = part des courses qui finissent au terminus T ; parcours principaux de T = ceux d'au
+    moins MIN_SHARE des courses (sinon le plus fréquent). Un terminus est proposé si W(T) ≥ MIN_SHARE et si ce n'est
+    - ni le terminus de courses partielles minoritaires (moins de SHORT_SHARE) : tous ses parcours sont compris
+      dans ceux d'un terminus plus fréquent ;
+    - ni une rallonge rare (dépôt…) : moins de EXT_SHARE, et ses parcours prolongent ceux d'un terminus proposé
+      plus fréquent.
+    Deux parcours principaux d'un même terminus : le plus court disparaît s'il est compris dans l'autre, sinon ce
+    sont deux branches gardées. Chaque course compte pour le parcours gardé le plus fréquent qui la contient."""
     total = sum(weights.values())
     pats = [p for p in weights if len(p) >= 2]
     if not total or not pats:
@@ -202,23 +205,28 @@ def pick_patterns(weights: dict[tuple, float]) -> list[tuple[tuple, float]]:
     for p in pats:
         ends[p[-1]].append(p)
     w_end = {t: sum(weights[p] for p in ps) for t, ps in ends.items()}
-    kept: list[tuple] = []
-    for t in sorted(ends, key=lambda t: (-w_end[t], t)):
-        if w_end[t] < MIN_SHARE * total:
-            break
-        free = [p for p in ends[t] if not any(is_sub(p, k) for k in kept)]
-        if not free:                                    # course partielle d'un parcours retenu
-            continue
-        if w_end[t] < EXT_SHARE * total and all(any(k != p and is_sub(k, p) for k in kept) for p in free):
-            continue                                    # rallonge rare (dépôt…)
-        big = [p for p in free if weights[p] >= MIN_SHARE * total] or [max(free, key=lambda p: (weights[p], len(p), p))]
-        kept += big
-    kept = [k for k in kept if not any(o != k and is_sub(k, o) for o in kept)]
+    main = {t: [p for p in ps if weights[p] >= MIN_SHARE * total] or [max(ps, key=lambda p: (weights[p], len(p), p))]
+            for t, ps in ends.items()}
+    cand = [t for t in ends if w_end[t] >= MIN_SHARE * total]
+
+    def short_turn(t):
+        return w_end[t] < SHORT_SHARE * total and all(
+            any(w_end[u] > w_end[t] and is_sub(p, q) for u in cand if u != t for q in main[u]) for p in main[t])
+    offered_first = [t for t in cand if not short_turn(t)]
+
+    def rare_extension(t):
+        return w_end[t] < EXT_SHARE * total and all(
+            any(w_end[u] > w_end[t] and q != p and is_sub(q, p) for u in offered_first if u != t for q in main[u])
+            for p in main[t])
+    offered = [t for t in offered_first if not rare_extension(t)]
+    kept = []
+    for t in offered:
+        kept += [p for p in main[t] if not any(o != p and is_sub(p, o) for o in main[t])]
     credit = {k: 0.0 for k in kept}
     for p in pats:
         owners = [k for k in kept if is_sub(p, k)]
         if owners:
-            credit[max(owners, key=lambda k: (weights.get(k, 0), len(k), k))] += weights[p]
+            credit[max(owners, key=lambda k: (weights[k], len(k), k))] += weights[p]
     return sorted(((k, credit[k] / total) for k in kept), key=lambda x: (-x[1], x[0]))
 
 
