@@ -60,6 +60,16 @@ create table if not exists vigie_private.archive (
   at        timestamptz not null
 );
 create index if not exists archive_ligne_at on vigie_private.archive (line, direction, at);
+-- archive créée par une version intermédiaire de ce script (clé sans numérotation automatique) : on l'ajoute
+do $$
+begin
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'vigie_private' and table_name = 'archive' and column_name = 'id' and is_identity = 'NO') then
+    alter table vigie_private.archive alter column id add generated always as identity;
+    perform setval(pg_get_serial_sequence('vigie_private.archive', 'id'),
+                   coalesce((select max(id) from vigie_private.archive), 0) + 1, false);
+  end if;
+end $$;
 
 -- ---------------------------------------------------------------- tendances apprises (publiques)
 -- Pour chaque ligne et chaque sens : couples de signalements de contrôle successifs (même ligne, même sens,

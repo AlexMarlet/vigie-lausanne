@@ -163,6 +163,18 @@ with psycopg.connect(DSN, autocommit=True) as c:
     check(row[:4] == ("gare", "M2", "croisettes", 4) and row[4] == 0, "archive : arrêt, ligne, sens gardés ; heure à la minute")
     check(c.execute("select vigie_private.archiver()").fetchone()[0] == 0, "archive : relancer ne déplace rien de plus")
 
+    # archive créée par une version intermédiaire du script (clé sans numérotation automatique)
+    c.execute("alter table vigie_private.archive alter column id drop identity")
+    c.execute("insert into vigie_private.archive (id, kind, stop_id, src, at) values (500, 'controle', 'x', 'app', now())")
+    c.execute(SCHEMA)
+    c.execute("set role service_role")
+    c.execute("insert into public.signalements (kind, stop_id, src, at) values ('controle', 'ours', 'app', now() - interval '50 hours')")
+    c.execute("reset role")
+    check(c.execute("select vigie_private.archiver()").fetchone()[0] == 1
+          and c.execute("select max(id) from vigie_private.archive").fetchone()[0] > 500,
+          "mise à jour d'une archive sans numérotation automatique : archivage repris")
+    c.execute("delete from vigie_private.archive where id = 500 or stop_id = 'ours'")
+
     # --- tendances (tâche horaire) : couples successifs même ligne / même sens
     c.execute("""
       insert into vigie_private.archive (kind, stop_id, line, direction, seq, src, at)
