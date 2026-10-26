@@ -129,5 +129,46 @@ const sp = core.project([C2], NET2, prior, now);
 assert(close(at(sp, "y"), at(sp, "b")), "sens inconnu : moitié par sens de circulation, quelles que soient les branches");
 const rd2 = core.resolveDirection(NET2, ["19"], "b", "c", null);
 assert(rd2 && rd2.dir === "d", "direction X qui repasse plus loin : trouvée");
+
+// ---- sens signalé, confirmations et déplacements (groupes de sens comme dans les vraies données)
+const NET3 = core.buildNetwork([{ id: "M2", dirs: [
+  { id: "croisettes", to: "croisettes", grp: "0", share: 1, stops: M2 },
+  { id: "ouchy", to: "ouchy", grp: "1", share: 1, stops: M2.slice().reverse() }] }]);
+const K = (o) => Object.assign({ kind: "controle", line: "M2", src: "app" }, o);
+const fresh = core.project([K({ stopId: "riponne", dir: "croisettes", by: "u1", at: now - 2 * min, id: "f1" })], NET3, prior, now);
+const w2 = 0.6 * Math.pow(0.5, 2 / 20), mu2 = 2 / 3, p1 = mu2 * Math.exp(-mu2);
+assert(close(at(fresh, "bessieres"), w2 * 0.85 * p1 * 0.85), "sens signalé : 85 % de l'estimation dans ce sens");
+assert(close(at(fresh, "flon"), w2 * 0.15 * p1 * 0.85), "sens signalé : 15 % dans l'autre sens (demi-tour)");
+const flon = fresh.stops.find((x) => x.stopId === "flon"), bes = fresh.stops.find((x) => x.stopId === "bessieres");
+assert(flon.rel < 0.5 && !flon.main && bes.main && close(bes.rel, 1), "l'autre sens reste pâle : pas d'anneau");
+
+const r1 = K({ stopId: "riponne", dir: "croisettes", by: "u1", at: now - 10 * min, id: "m1" });
+const r2 = K({ stopId: "chuv", by: "u2", at: now - 3 * min, id: "m2" });
+const links = core.linkMovements([r1, r2], NET3, now);
+assert(links.moved.get(r1) && links.moved.get(r1).next === r2 && links.confirmed.get(r2) === "croisettes",
+  "revus 3 arrêts plus loin 7 min après : déplacement, sens confirmé pour le nouveau signalement");
+const conf = core.project([r1, r2], NET3, prior, now);
+assert(conf.trails.length === 1 && conf.trails[0].from === "chuv" && conf.trails[0].dir === "croisettes",
+  "estimation : seulement depuis le dernier signalement, dans le sens confirmé");
+assert(at(conf, "fourmi") > 0 && at(conf, "ours") === 0, "sens confirmé : plus rien dans l'autre sens");
+const before = core.computeClusters([r1], now).find((c) => c.stopId === "riponne").confidence;
+const afterCl = core.computeClusters([r1, r2], now, undefined, links).find((c) => c.stopId === "riponne");
+assert(close(afterCl.confidence, before * 0.25) && afterCl.movedTo === "chuv", "point d'origine réduit : ils sont partis plus loin");
+const noDir = Object.assign({}, r1, { dir: null, id: "m3" });
+const l2 = core.linkMovements([noDir, r2], NET3, now);
+assert(l2.moved.has(noDir) && l2.confirmed.get(r2) === "croisettes", "origine sans sens : le sens vient du déplacement");
+const tooFast = K({ stopId: "sallaz", by: "u3", at: r1.at + min, id: "m4" });
+assert(!core.linkMovements([r1, tooFast], NET3, now).moved.size, "4 arrêts en 1 min : pas un déplacement");
+const otherWay = K({ stopId: "chuv", dir: "ouchy", by: "u4", at: now - 3 * min, id: "m5" });
+assert(!core.linkMovements([r1, otherWay], NET3, now).moved.size, "signalé dans l'autre sens : pas un déplacement");
+const behind = K({ stopId: "flon", by: "u5", at: now - 3 * min, id: "m6" });
+assert(!core.linkMovements([r1, behind], NET3, now).moved.size, "revus en arrière : pas un déplacement");
+const later = K({ stopId: "chuv", by: "u6", at: r1.at + 50 * min, id: "m7" });
+assert(!core.linkMovements([r1, later], NET3, now + 60 * min).moved.size, "50 min plus tard : trop tard pour relier");
+const back = K({ stopId: "riponne", by: "u7", at: now - 1 * min, id: "m8" });
+const l3 = core.linkMovements([r1, r2, back], NET3, now);
+const backCl = core.computeClusters([r1, r2, back], now, undefined, l3).find((c) => c.stopId === "riponne");
+assert(!l3.moved.has(back) && backCl.movedTo === null && backCl.confidence > afterCl.confidence,
+  "revus ici après le déplacement : nouveau signalement à plein poids, pas de « partis d'ici »");
 console.log(bad ? `${bad} échec(s)` : "tous les tests passent");
 process.exit(bad ? 1 : 0);

@@ -6,6 +6,7 @@
 <title>Confidentialité – Vigie Lausanne</title>
 <meta name="description" content="Quelles données Vigie enregistre, pourquoi et combien de temps.">
 <meta name="theme-color" content="#173E62">
+<script>try{var t=JSON.parse(localStorage.getItem("vigie.theme"));if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <!--@HEAD@-->
 <style>
 :root {
@@ -15,8 +16,9 @@
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #11181D; --ink: #E4ECF0; --ink-2: #9BABB5; --hair: #2E3A42; --accent: #8DBFEA; --surface: #1A242B; color-scheme: dark; }
+  :root:not([data-theme="light"]) { --bg: #11181D; --ink: #E4ECF0; --ink-2: #9BABB5; --hair: #2E3A42; --accent: #8DBFEA; --surface: #1A242B; color-scheme: dark; }
 }
+:root[data-theme="dark"] { --bg: #11181D; --ink: #E4ECF0; --ink-2: #9BABB5; --hair: #2E3A42; --accent: #8DBFEA; --surface: #1A242B; color-scheme: dark; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.55; }
 main { max-width: 640px; margin: 0 auto; padding: max(24px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px)); }
 a { color: var(--accent); font-weight: 700; }

@@ -14,7 +14,10 @@
  * Position estimée (contrôles signalés avec une ligne, voir project) :
  *   arrêts parcourus en a minutes   k ~ Poisson(λ × a)   λ = arrêts par minute sur la ligne (appris)
  *   restés sur la ligne et le sens   × keep^k            (sinon : autre ligne, demi-tour, fin du contrôle)
- *   présence à k arrêts plus loin    p = w × P(k) × keep^k
+ *   présence à k arrêts plus loin    p = w × part du sens × P(k) × keep^k
+ *   part du sens : signalé 85 % / autre 15 % ; confirmé par un signalement plus loin 100 % ; inconnu ½ – ½
+ *   revus plus loin sur la même ligne et dans le même sens (linkMovements) : l'estimation part du dernier
+ *   signalement, et le point d'origine perd 75 % de son poids
  */
 (function (root) {
   "use strict";
@@ -24,12 +27,15 @@
     perturbation: { half: 45, maxAge: 240 },
     base: { app: 0.6, telegram: 0.45, demo: 0.45 },
     clear: { app: 0.75, telegram: 0.65, demo: 0.65 },
+    moved: 0.75,      // contrôle revu plus loin sur la ligne : le signalement d'origine perd 75 % de son poids
     minShow: 0.08,
     levels: [[0.65, "forte"], [0.35, "moyenne"], [0, "faible"]],
     move: {
       pace: 3,        // min par arrêt avant tout apprentissage (hypothèse de départ)
       prior: 30,      // poids de cette hypothèse, en minutes d'observation : les données la remplacent peu à peu
       keep: 0.85,     // à chaque arrêt, probabilité qu'ils restent sur la même ligne et dans le même sens
+      sameDir: 0.85,  // sens signalé : 85 % de l'estimation dans ce sens, 15 % dans l'autre (demi-tour)
+      maxSpeed: 1.5,  // arrêts par minute au plus entre deux signalements pour y voir un déplacement
       horizon: 45,    // min : au-delà, plus d'estimation
       ahead: 12,      // arrêts au plus
       minShow: 0.02,  // présence estimée minimale pour prolonger le trajet jusqu'à un arrêt
@@ -193,8 +199,9 @@
     return "faible";
   }
 
-  function computeClusters(reports, now, cfg) {
+  function computeClusters(reports, now, cfg, links) {
     cfg = cfg || CFG;
+    const moved = (links && links.moved) || new Map();
     const groups = new Map(), clears = new Map();
     for (const r of reports) {
       if (!r || !r.stopId || !r.at) continue;
@@ -233,21 +240,27 @@
         const age = Math.max(0, (now - r.at) / 60000);
         let w = (cfg.base[r.src] != null ? cfg.base[r.src] : 0.5) * Math.pow(0.5, age / k.half);
         for (const c of cl) if (c.at > r.at) w *= 1 - (cfg.clear[c.src] != null ? cfg.clear[c.src] : 0.5);
+        const mv = moved.get(r);
+        if (mv) w *= 1 - cfg.moved;                    // revus plus loin : probablement partis d'ici
         notC *= 1 - w;
         lastAt = Math.max(lastAt, r.at);
         if (r.line) lines.add(r.line);
         if (r.sub) subs.add(r.sub);
         src[r.src] = (src[r.src] || 0) + 1;
-        used.push({ at: r.at, src: r.src, line: r.line || null, dir: r.dir || null, w });
+        used.push({ at: r.at, src: r.src, line: r.line || null, dir: r.dir || null, w, movedTo: mv ? mv.next.stopId : null, movedAt: mv ? mv.next.at : null });
       }
       const c = 1 - notC;
       if (c < cfg.minShow) continue;
       used.sort((a, b) => b.at - a.at);
       const lastClear = cl.reduce((m, x) => Math.max(m, x.at), 0);
+      // « partis d'ici » seulement si personne ne les a revus ici après ce déplacement
+      const stay = used.reduce((t, u) => (u.movedTo ? t : Math.max(t, u.at)), 0);
+      const gone = used.filter((u) => u.movedTo && u.movedAt > stay).sort((a, b) => b.movedAt - a.movedAt)[0];
       out.push({
         key, kind, stopId: rs[0].stopId, confidence: c, level: levelOf(c),
         count: latest.size, lastAt, lines: [...lines], subs: [...subs], src,
         reports: used, clearedAfterLast: lastClear > lastAt, lastClear,
+        movedTo: gone ? gone.movedTo : null, movedAt: gone ? gone.movedAt : null,
       });
     }
     out.sort((a, b) => b.confidence - a.confidence);
@@ -335,16 +348,55 @@
     return l ? l.rate : rates && rates.net ? rates.net.rate : 1 / m.pace;
   }
 
-  // ---------- position estimée des contrôleurs ----------
-  // Pour chaque signalement de contrôle avec ligne : présence probable aux arrêts suivants (voir en-tête).
-  // Renvoie
-  //   trails : un trajet par signalement et par sens, { line, dir, from, at, stops: [départ, …], p: [poids, p1, p2…],
-  //            peak : rang le plus probable, zone : [début, fin] des arrêts à au moins la moitié du maximum }
-  //   stops  : arrêts estimés, { stopId, p (1 − Π(1 − p) sur tous les trajets), rel (p / maximum de son trajet),
-  //            line, dir, dirGiven (sens signalé ou supposé), from, at, k, rate }
-  function project(reports, net, rates, now, cfg) {
+  // ---------- déplacements : contrôle revu plus loin sur la même ligne, dans le même sens ----------
+  // Pour chaque contrôle signalé avec sa ligne : le premier signalement suivant (même ligne, 1 à 45 min après) à un
+  // arrêt plus loin dans l'un de ses sens possibles (le sens signalé s'il y en a un), à une vitesse plausible
+  // (au plus maxSpeed arrêts par minute et ahead arrêts). Le premier est « dépassé » : ils en sont partis (point
+  // réduit, plus d'estimation depuis là) ; le second a un sens confirmé (l'estimation ne part plus que dans ce sens).
+  // Renvoie { moved: Map(signalement -> { next, dir }), confirmed: Map(signalement -> identifiant du sens) }.
+  function linkMovements(reports, net, now, cfg) {
     cfg = cfg || CFG;
     const m = cfg.move;
+    const moved = new Map(), confirmed = new Map();
+    const ctl = (reports || []).filter((r) => r && r.kind === "controle" && r.line && r.stopId && r.at && (now - r.at) / 60000 >= -5)
+      .sort((a, b) => a.at - b.at);
+    for (let i = 0; i < ctl.length; i++) {
+      const a = ctl[i];
+      const given = a.dir && dirById(net, a.line, a.dir);
+      const ways = given && given.at.has(a.stopId) ? [{ dir: given, seq: given.at.get(a.stopId) }] : directionsAt(net, a.line, a.stopId);
+      if (!ways.length) continue;
+      for (let j = i + 1; j < ctl.length; j++) {
+        const b = ctl[j], dt = (b.at - a.at) / 60000;
+        if (dt > m.horizon) break;
+        if (b.line !== a.line || b.stopId === a.stopId || dt < 1) continue;
+        const bDir = b.dir && dirById(net, b.line, b.dir);
+        let best = null;
+        for (const { dir, seq } of ways) {
+          if (bDir && bDir.to !== dir.to) continue;                       // l'autre a signalé un autre sens
+          const k = dir.stops.indexOf(b.stopId, seq + 1) - seq;
+          if (k >= 1 && k <= m.ahead && k <= m.maxSpeed * dt && (!best || k < best.k)) best = { dir, k };
+        }
+        if (!best) continue;
+        moved.set(a, { next: b, dir: best.dir.id });
+        if (!confirmed.has(b)) confirmed.set(b, bDir ? bDir.id : best.dir.id);
+        break;
+      }
+    }
+    return { moved, confirmed };
+  }
+
+  // ---------- position estimée des contrôleurs ----------
+  // Pour chaque signalement de contrôle avec ligne, et non dépassé : présence probable aux arrêts suivants (voir en-tête).
+  // Renvoie
+  //   trails : un trajet par signalement et par sens, { line, dir, main (sens signalé ou confirmé), from, at,
+  //            stops: [départ, …], p: [poids, p1, p2…], peak : rang le plus probable du trajet,
+  //            top : maximum de tous les trajets du signalement, zone : [début, fin] à au moins la moitié de peak }
+  //   stops  : arrêts estimés, { stopId, p (1 − Π(1 − p) sur tous les trajets), rel (p / top), line, dir, main,
+  //            dirKnown, confirmed, from, at, k, rate, trail }
+  function project(reports, net, rates, now, cfg, links) {
+    cfg = cfg || CFG;
+    const m = cfg.move;
+    links = links || linkMovements(reports, net, now, cfg);
     const clears = new Map();
     for (const r of reports) {
       // comme computeClusters : un « plus là » daté de plus de 5 min dans le futur (horloge fausse) est ignoré
@@ -365,19 +417,26 @@
     for (const r of latest.values()) {
       const age = Math.max(0, (now - r.at) / 60000);
       if (age > m.horizon || (now - r.at) / 60000 < -5) continue;
+      if (links.moved.has(r)) continue;            // revus plus loin : l'estimation part du dernier signalement
       // « plus là » à l'arrêt du signalement : ils en sont partis, l'estimation plus loin reste valable
       const w = (cfg.base[r.src] != null ? cfg.base[r.src] : 0.5) * Math.pow(0.5, age / cfg.controle.half);
-      let ways = [];
-      const given = r.dir && dirById(net, r.line, r.dir);
-      const dirGiven = !!(given && given.at.has(r.stopId) && given.at.get(r.stopId) < given.stops.length - 1);
-      if (dirGiven) ways = [{ dir: given, seq: given.at.get(r.stopId), share: 1, part: 1 }];
-      else {
+      const conf = links.confirmed.get(r);
+      const known = dirById(net, r.line, r.dir || conf);
+      const dirKnown = !!(known && known.at.has(r.stopId) && known.at.get(r.stopId) < known.stops.length - 1);
+      const confirmed = dirKnown && !!conf;
+      const all = directionsAt(net, r.line, r.stopId);
+      let ways;
+      if (dirKnown) {
+        // sens connu : sameDir dans ce sens, le reste dans les autres sens (demi-tour) ; confirmé : tout dans ce sens
+        const other = confirmed ? [] : all.filter((x) => x.dir.grp !== known.grp);
+        const tot = other.reduce((t, x) => t + x.share, 0);
+        ways = [{ dir: known, seq: known.at.get(r.stopId), part: other.length ? m.sameDir : 1 }]
+          .concat(other.map((x) => Object.assign(x, { part: (1 - m.sameDir) * (tot > 0 ? x.share / tot : 1 / other.length) })));
+      } else {
         // sens inconnu : moitié pour chaque sens de circulation, puis selon la part des courses de chaque branche
-        ways = directionsAt(net, r.line, r.stopId);
-        const groups = new Map();
-        for (const x of ways) groups.set(x.dir.grp, (groups.get(x.dir.grp) || 0) + x.share);
-        const n = new Map();
-        for (const x of ways) n.set(x.dir.grp, (n.get(x.dir.grp) || 0) + 1);
+        ways = all;
+        const groups = new Map(), n = new Map();
+        for (const x of ways) { groups.set(x.dir.grp, (groups.get(x.dir.grp) || 0) + x.share); n.set(x.dir.grp, (n.get(x.dir.grp) || 0) + 1); }
         for (const x of ways) {
           const g = groups.get(x.dir.grp);
           x.part = (1 / groups.size) * (g > 0 ? x.share / g : 1 / n.get(x.dir.grp));
@@ -385,9 +444,11 @@
       }
       if (!ways.length) continue;
       const rate = rateFor(rates, r.line, cfg), mu = rate * age;
+      const mine = [];
       for (const { dir, seq, part } of ways) {
         const share = w * part;
-        const trail = { line: r.line, dir: dir.id, dirGiven, from: r.stopId, at: r.at, stops: [r.stopId], p: [share] };
+        const trail = { line: r.line, dir: dir.id, main: dirKnown && dir === known, dirKnown, confirmed,
+          from: r.stopId, at: r.at, stops: [r.stopId], p: [share], rate };
         let pk = Math.exp(-mu);                        // P(k = 0)
         for (let k = 1; k <= m.ahead && seq + k < dir.stops.length; k++) {
           pk *= mu / k;                                 // P(k) = e^−μ μ^k / k!
@@ -395,7 +456,12 @@
           for (const c of clears.get(dir.stops[seq + k]) || []) if (c.at > r.at) p *= 1 - (cfg.clear[c.src] != null ? cfg.clear[c.src] : 0.5);
           trail.stops.push(dir.stops[seq + k]); trail.p.push(p);
         }
-        // trajet affiché jusqu'au dernier arrêt encore assez probable
+        mine.push(trail);
+      }
+      // anneaux et intensité : relatifs au maximum de tous les trajets de ce signalement (l'autre sens reste pâle)
+      const top = Math.max(0, ...mine.map((t) => Math.max(0, ...t.p.slice(1))));
+      if (!(top > 0)) continue;
+      for (const trail of mine) {
         let last = 0, peak = 0;
         trail.p.forEach((p, i) => { if (i && p >= m.minShow) last = i; if (i && (!peak || p > trail.p[peak])) peak = i; });
         if (!last) continue;
@@ -403,13 +469,16 @@
         let a = peak, b = peak;
         while (a > 1 && trail.p[a - 1] >= trail.p[peak] / 2) a--;
         while (b < last && trail.p[b + 1] >= trail.p[peak] / 2) b++;
-        Object.assign(trail, { peak, zone: [a, b], rate });
+        Object.assign(trail, { peak, zone: [a, b], top });
         const ti = trails.push(trail) - 1;
         for (let k = 1; k <= last; k++) {
           const stopId = trail.stops[k], p = trail.p[k];
           const s = acc.get(stopId) || { notP: 1, best: null };
           s.notP *= 1 - p;
-          if (!s.best || p > s.best.p) s.best = { p, rel: p / trail.p[peak], line: r.line, dir: dir.id, dirGiven, from: r.stopId, at: r.at, k, rate, trail: ti };
+          if (!s.best || p > s.best.p) {
+            s.best = { p, rel: p / top, line: r.line, dir: trail.dir, main: trail.main, dirKnown, confirmed,
+              from: r.stopId, at: r.at, k, rate, trail: ti };
+          }
           acc.set(stopId, s);
         }
       }
@@ -448,7 +517,7 @@
   function radiusFor(c) { return Math.round(9 + 15 * Math.max(0, Math.min(1, c))); }
 
   const api = { CFG, normalize, tokens, buildGazetteer, parseMessage, findLine, computeClusters, levelOf, colorFor, radiusFor,
-    buildNetwork, directionsAt, dirById, resolveDirection, learnRates, rateFor, project, paceText };
+    buildNetwork, directionsAt, dirById, resolveDirection, learnRates, rateFor, linkMovements, project, paceText };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.VigieCore = api;
 })(typeof self !== "undefined" ? self : this);

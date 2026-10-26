@@ -2,6 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="theme-color" content="#173E62">
 <meta name="description" content="Signalements en direct des contrôles et perturbations sur le réseau du Grand Lausanne.">
+<script>try{var t=JSON.parse(localStorage.getItem("vigie.theme"));if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <!--@HEAD@-->
 <style>
 /*@LEAFLET_CSS@*/
@@ -63,25 +64,29 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .ui > * { pointer-events: auto; }
 .ui > .spacer { pointer-events: none; }
 
-.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+.topbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand actions" "status status"; align-items: center; gap: 3px 10px;
           background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
           border: 1px solid var(--hair); border-radius: 16px; padding: 8px 8px 8px 14px; box-shadow: var(--shadow); }
-.brand { display: flex; flex-direction: column; min-width: 0; }
-.wordmark { font-family: var(--f-display); font-weight: 850; font-stretch: 118%; font-size: 21px; letter-spacing: .08em; line-height: 1; }
+.wordmark { grid-area: brand; font-family: var(--f-display); font-weight: 850; font-stretch: 118%; font-size: 21px; letter-spacing: .08em; line-height: 1; }
+.actions { grid-area: actions; display: flex; align-items: center; gap: 6px; }
+.icon-btn { width: 38px; height: 38px; flex: none; display: grid; place-items: center; border: 1px solid var(--hair); background: var(--surface); border-radius: 12px; padding: 0; }
+.icon-btn svg { width: 19px; height: 19px; }
 .wordmark b { color: var(--c-high); font-weight: inherit; }
-.status { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-2); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.live { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); flex: none; }
+.status { grid-area: status; display: flex; align-items: flex-start; gap: 7px; margin: 0; font-size: 12.5px; line-height: 1.35; color: var(--ink-2); overflow-wrap: anywhere; }
+.status b { color: var(--ink); font-weight: 700; }
+.live { width: 8px; height: 8px; margin-top: 4px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); flex: none; }
 .live.off { background: var(--ink-3); box-shadow: none; }
-.pill-btn { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--hair); background: var(--surface); border-radius: 12px; padding: 9px 12px; font-family: var(--f-display); font-weight: 650; font-size: 14px; }
+.pill-btn { display: inline-flex; align-items: center; gap: 7px; height: 38px; box-sizing: border-box; border: 1px solid var(--hair); background: var(--surface); border-radius: 12px; padding: 0 11px; font-family: var(--f-display); font-weight: 650; font-size: 14px; white-space: nowrap; }
 .pill-btn svg { width: 18px; height: 18px; }
 .count { min-width: 20px; padding: 1px 6px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 12px; text-align: center; font-variant-numeric: tabular-nums; }
 
-.filters { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--hair); background: var(--glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-        border-radius: 999px; padding: 7px 10px; font-size: 13.5px; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.filters { display: flex; gap: 6px; margin-top: 8px; }
+.chip { flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap;
+        border: 1px solid var(--hair); background: var(--glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        border-radius: 999px; padding: 7px clamp(6px, 2.2vw, 10px); font-size: clamp(11.5px, 3.45vw, 13.5px); font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+@media (max-width: 345px) { .chip .shape { display: none; } }
 .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
 .chip[aria-pressed="false"] { color: var(--ink-2); }
-.chip.demo[aria-pressed="true"] { background: var(--c-low); color: #2B2100; }
 .shape { width: 11px; height: 11px; display: inline-block; background: currentColor; flex: none; }
 .shape.circle { border-radius: 50%; }
 .shape.diamond { transform: rotate(45deg) scale(.85); border-radius: 2px; }
@@ -233,7 +238,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border-radius: 50%; box-shadow: 0 2px 8px rgba(0, 0, 0, .3); font-family: var(--f-display); font-weight: 850; font-size: 13px; color: var(--txt); }
 .mk.p .core { border-radius: 5px; transform: rotate(45deg) scale(.8); }
 .mk.p .core span { transform: rotate(-45deg); }
-.mk .halo { position: absolute; inset: -7px; border-radius: 50%; border: 2.5px solid var(--col); opacity: 0; }
+.mk .halo { position: absolute; inset: -7px; border-radius: 50%; border: 2.5px solid var(--col); opacity: 0; pointer-events: none; }
 .mk.fresh .halo { animation: pulse 1.9s ease-out infinite; }
 @keyframes pulse { 0% { transform: scale(.7); opacity: .9; } 100% { transform: scale(1.45); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
@@ -249,21 +254,21 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
   <div class="ui">
     <header class="topbar">
-      <div class="brand">
-        <span class="wordmark">VIGIE<b>.</b></span>
-        <span class="status"><span id="liveDot" class="live off"></span><span id="status">Grand Lausanne</span></span>
+      <span class="wordmark">VIGIE<b>.</b></span>
+      <div class="actions">
+        <button id="btnTheme" class="icon-btn" type="button" aria-label="Passer en mode sombre"></button>
+        <button id="btnFeed" class="pill-btn" type="button" aria-label="Ouvrir le fil des signalements">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4 3 11l6 2.5L18 7l-7 8 7 5z"/></svg>
+          <span>Fil</span><span id="feedCount" class="count">0</span>
+        </button>
       </div>
-      <button id="btnFeed" class="pill-btn" type="button" aria-label="Ouvrir le fil des signalements">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4 3 11l6 2.5L18 7l-7 8 7 5z"/></svg>
-        <span>Fil</span><span id="feedCount" class="count">0</span>
-      </button>
+      <p class="status"><span id="liveDot" class="live off"></span><span id="status">Grand Lausanne</span></p>
     </header>
 
     <nav class="filters" aria-label="Filtres">
       <button class="chip" type="button" data-filter="controle" aria-pressed="true"><i class="shape circle"></i>Contrôles</button>
       <button class="chip" type="button" data-filter="perturbation" aria-pressed="true"><i class="shape diamond"></i>Perturbations</button>
       <button class="chip" type="button" data-filter="estimation" aria-pressed="true"><i class="shape circle" style="background:none;border:2px dashed currentColor;box-sizing:border-box"></i>Estimations</button>
-      <button class="chip demo" type="button" id="chipDemo" aria-pressed="true">Démo</button>
     </nav>
 
     <div class="spacer"></div>
@@ -322,16 +327,19 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
   // ---------- petites aides ----------
   const $ = (s) => document.querySelector(s);
+  // typographie : espace insécable avant % : ; ! ? », après « et entre un nombre et le mot qui suit (« 20 min »,
+  // « 1 arrêt ») : jamais de « % », de « » » ou d'unité seuls en début de ligne
+  const fr = (t) => String(t).replace(/ ([%:;!?»])/g, " $1").replace(/« /g, "« ").replace(/(\d) (?=\p{L})/gu, "$1 ");
   const el = (tag, attrs, ...kids) => {
     const n = document.createElement(tag);
     if (attrs) for (const [k, v] of Object.entries(attrs)) {
       if (v == null || v === false) continue;
       if (k === "class") n.className = v;
-      else if (k === "text") n.textContent = v;
+      else if (k === "text") n.textContent = fr(v);
       else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
       else n.setAttribute(k, v === true ? "" : v);
     }
-    for (const k of kids.flat()) if (k != null && k !== false) n.append(k.nodeType ? k : document.createTextNode(String(k)));
+    for (const k of kids.flat()) if (k != null && k !== false) n.append(k.nodeType ? k : document.createTextNode(fr(k)));
     return n;
   };
   const esc = (t) => String(t).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
@@ -464,6 +472,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   };
   const FOND_PARAM = (location.search.match(/[?&]fond=([a-z]+)/) || [])[1];
   let fondName = FONDS[FOND_PARAM] ? FOND_PARAM : (FONDS[pref.get("fond", "")] ? pref.get("fond", "") : "simple");
+  let theme = ["light", "dark"].includes(pref.get("theme", "auto")) ? pref.get("theme", "auto") : "auto";
   let baseLayer = null, glLoading = null, fondSeq = 0;
   function isDark() {
     const t = document.documentElement.getAttribute("data-theme");
@@ -537,7 +546,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
     setFond(fondName);
     if (window.matchMedia) {                              // le fond suit le thème clair / sombre du téléphone
       const mq = matchMedia("(prefers-color-scheme: dark)");
-      if (mq.addEventListener) mq.addEventListener("change", () => { if (FONDS[fondName].dark) setFond(fondName); });
+      if (mq.addEventListener) mq.addEventListener("change", () => { if (theme === "auto") applyTheme("auto"); });
     }
   }
 
@@ -603,20 +612,22 @@ button { font: inherit; color: inherit; cursor: pointer; }
   // Trajet probable depuis chaque contrôle signalé avec sa ligne, et anneaux sur les arrêts de la zone la plus
   // probable (au moins la moitié du maximum du trajet). Calcul : C.project (vigie-core.js).
   const estLayer = L.layerGroup().addTo(map);
+  const rings = [];                                  // anneaux affichés : { stopId, r } (appuis à côté, voir nearTargets)
   function trendRows() { return state.ratesRows.length ? state.ratesRows : (state.demoOn ? DEMO_TRENDS : []); }
   function refreshRates() { state.rates = C.learnRates(trendRows()); }
-  function renderEstimates(now) {
-    estLayer.clearLayers();
+  function renderEstimates(now, links) {
+    estLayer.clearLayers(); rings.length = 0;
     state.proj = { stops: [], trails: [] };
     if (!state.filters.controle || !state.filters.estimation) return;
-    state.proj = C.project(allReports(), NET, state.rates, now);
+    state.proj = C.project(allReports(), NET, state.rates, now, undefined, links);
     const real = new Set(state.clusters.filter((c) => c.kind === "controle").map((c) => c.stopId));
     for (const t of state.proj.trails) {
-      const top = t.p[t.peak], strength = Math.min(1, 0.35 + top * 5);
+      // intensité relative au maximum du signalement : le sens signalé ressort, l'autre reste pâle
+      const strength = Math.min(1, 0.35 + t.top * 5);
       for (let i = 1; i < t.stops.length; i++) {
         const a = byId.get(t.stops[i - 1]), b = byId.get(t.stops[i]);
         if (!a || !b) continue;
-        const o = strength * Math.min(1, 0.2 + 0.8 * t.p[i] / top);
+        const o = strength * Math.min(1, 0.15 + 0.85 * t.p[i] / t.top);
         const seg = [[a.lat, a.lon], [b.lat, b.lon]];
         L.polyline(seg, { className: "trail-base", opacity: o * 0.14, interactive: false, renderer: R }).addTo(estLayer);
         L.polyline(seg, { className: "trail", opacity: o, interactive: false, renderer: R }).addTo(estLayer);
@@ -632,7 +643,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
           html: '<div class="gh" style="--col:' + C.colorFor(Math.min(1, e.p * 3)) + '"></div>' }),
         zIndexOffset: 500, keyboard: true, title: "Position estimée des contrôleurs · " + s.name,
       });
-      m.on("click", () => openEstimate(e.stopId));
+      m.on("click", () => onStopTap(e.stopId, () => openEstimate(e.stopId)));
+      rings.push({ stopId: e.stopId, r: d / 2 });
       m.addTo(estLayer);
     }
   }
@@ -658,7 +670,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
   function render() {
     const now = Date.now();
-    state.clusters = C.computeClusters(allReports(), now).filter((c) => byId.has(c.stopId));
+    // contrôles revus plus loin sur la même ligne et dans le même sens : point d'origine réduit, estimation relayée
+    const links = C.linkMovements(allReports(), NET, now);
+    state.clusters = C.computeClusters(allReports(), now, undefined, links).filter((c) => byId.has(c.stopId));
     const visible = state.clusters.filter((c) => state.filters[c.kind]);
     const keep = new Set();
     for (const cl of visible) {
@@ -668,23 +682,25 @@ button { font: inherit; color: inherit; cursor: pointer; }
       let m = clusterMarkers.get(cl.key);
       if (!m) {
         m = L.marker([s.lat, s.lon], { icon: iconFor(cl, now), zIndexOffset: 1000 + Math.round(cl.confidence * 1000), keyboard: true, title: (cl.kind === "controle" ? "Contrôleurs" : "Perturbation") + " · " + s.name });
-        m.on("click", () => openCluster(cl.key));
+        m.on("click", () => onStopTap(cl.stopId, () => openCluster(cl.key)));
         m._sig = k; m.addTo(clusterLayer); clusterMarkers.set(cl.key, m);
       } else if (m._sig !== k) {
         m.setIcon(iconFor(cl, now)); m.setZIndexOffset(1000 + Math.round(cl.confidence * 1000)); m._sig = k;
       }
     }
     for (const [key, m] of clusterMarkers) if (!keep.has(key)) { clusterLayer.removeLayer(m); clusterMarkers.delete(key); }
-    renderEstimates(now);
+    renderEstimates(now, links);
 
     const nC = visible.filter((c) => c.kind === "controle").length, nP = visible.filter((c) => c.kind === "perturbation").length;
     const parts = [];
     if (state.filters.controle) parts.push(nC + " contrôle" + (nC > 1 ? "s" : ""));
     if (state.filters.perturbation) parts.push(nP + " perturbation" + (nP > 1 ? "s" : ""));
-    const src = state.backend === "claude" ? "en direct" : state.backend === "supabase" ? "en direct" : "sur cet appareil";
-    const summary = !parts.length ? "Filtres désactivés" : (nC + nP === 0 ? "Aucun signalement en cours" : parts.join(" · "));
-    $("#status").textContent = summary + " · " + (state.demoOn ? "démo" : src);
-    $("#liveDot").classList.toggle("off", !(state.backend === "claude" || state.backend === "supabase"));
+    const live = state.backend === "claude" || state.backend === "supabase";
+    const mode = state.demoOn ? "Démo" : live ? "En direct" : MODE === "supabase" ? "Hors ligne" : "Sur cet appareil";
+    const summary = !parts.length ? "filtres désactivés" : (nC + nP === 0 ? "aucun signalement en cours" : parts.join(" · "));
+    $("#status").replaceChildren(el("b", { text: mode }), " · " + summary);
+    $("#liveDot").classList.toggle("off", !live);
+    document.documentElement.dataset.demo = state.demoOn ? "on" : "off";
     $("#feedCount").textContent = String(feedItems().length);
     if (state.sheet && state.sheet.refresh) state.sheet.refresh();
   }
@@ -699,6 +715,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
     sheetTitle.textContent = title;
     sheetBody.replaceChildren(build());
     sheetEl.hidden = false; sheetEl.classList.remove("closing");
+    sheetBody.scrollTop = 0;                           // une nouvelle fiche s'ouvre en haut, même après défilement d'une autre
     requestAnimationFrame(() => sheetTitle.focus({ preventScroll: true }));
   }
   function closeSheet() {
@@ -711,7 +728,55 @@ button { font: inherit; color: inherit; cursor: pointer; }
   }
   $("#sheetClose").addEventListener("click", closeSheet);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
-  map.on("click", () => { if (state.sheet && state.sheet.kind !== "report") closeSheet(); });
+  // Appui à côté des éléments de la carte : les dessins ne changent pas de taille, seule la zone qui réagit grandit.
+  // L'élément le plus proche du doigt (distance au bord du dessin), à portée (22 px du centre, 8 px du bord d'un gros
+  // point) : arrêt, point de signalement ou anneau d'estimation (qui recouvrent leur arrêt). Juste à côté d'un élément,
+  // il l'emporte ; sinon un appui sur le nom d'un arrêt choisit cet arrêt. Ailleurs, l'appui ferme la fiche ouverte.
+  const REACH = 22;
+  function nearTargets(pt) {
+    const out = [], over = new Map();               // arrêt → action du point / de l'anneau posé dessus
+    const add = (s, r, open) => {
+      const q = map.latLngToContainerPoint([s.lat, s.lon]), d = Math.hypot(q.x - pt.x, q.y - pt.y);
+      if (d <= Math.max(REACH, r + 8)) out.push({ gap: Math.max(0, d - r), stopId: s.id, open });
+    };
+    for (const cl of state.clusters) {
+      const s = byId.get(cl.stopId);
+      if (!s || !state.filters[cl.kind] || !clusterMarkers.has(cl.key)) continue;
+      const open = () => openCluster(cl.key);
+      if (!over.has(s.id)) over.set(s.id, open);
+      add(s, C.radiusFor(cl.confidence), open);
+    }
+    for (const g of rings) {
+      const s = byId.get(g.stopId), open = () => openEstimate(g.stopId);
+      if (!over.has(s.id)) over.set(s.id, open);
+      add(s, g.r, open);
+    }
+    const small = map.getZoom() < 13.5;            // petits arrêts masqués à ce zoom (voir .zlt135)
+    for (const s of STOPS) if (!over.has(s.id) && !(small && !s._metro && !s.major)) add(s, s._metro ? 5 : 4, null);
+    out.sort((a, b) => a.gap - b.gap);
+    return { list: out, over };
+  }
+  function labelAt(pt) {
+    const o = map.getContainer().getBoundingClientRect(), x = pt.x + o.left, y = pt.y + o.top;
+    let best = null, top = null;
+    for (const [id, m] of stopMarkers) {
+      const t = m.getTooltip(), c = t && t.getElement();
+      if (!c || !c.isConnected || !c.offsetParent) continue;      // étiquette absente ou masquée à ce zoom
+      const r = c.getBoundingClientRect();
+      if (x < r.left - 3 || x > r.right + 3 || y < r.top - 4 || y > r.bottom + 4) continue;
+      // étiquettes qui se chevauchent : celle dessinée par-dessus
+      if (!top || top.compareDocumentPosition(c) & Node.DOCUMENT_POSITION_FOLLOWING) { top = c; best = id; }
+    }
+    return best ? byId.get(best) : null;
+  }
+  map.on("click", (e) => {
+    const { list, over } = nearTargets(e.containerPoint);
+    let t = list[0] && list[0].gap <= 6 ? list[0] : null;
+    if (!t) { const s = labelAt(e.containerPoint); if (s) t = { stopId: s.id, open: over.get(s.id) || null }; }
+    t = t || list[0];
+    if (t) { onStopTap(t.stopId, t.open); return; }
+    if (state.sheet && state.sheet.kind !== "report") closeSheet();
+  });
 
   function focusStop(id) {
     const s = byId.get(id); if (!s) return;
@@ -754,9 +819,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
   // ---------- formulaire de signalement ----------
   const form = { kind: "controle", sub: null, stopId: null, line: null, dir: null };
-  function onStopTap(id) {
+  // appui sur un arrêt, ou sur le point ou l'anneau qui le recouvre (open) ; pendant le choix d'un arrêt dans le
+  // formulaire, l'appui choisit simplement cet arrêt
+  function onStopTap(id, open) {
     if (state.sheet && state.sheet.kind === "report") { setFormStop(id); return; }
-    openReport({ stopId: id });
+    if (open) open(); else openReport({ stopId: id });
   }
   let setFormStop = () => {};
 
@@ -952,20 +1019,22 @@ button { font: inherit; color: inherit; cursor: pointer; }
       if (cl.src.app) srcTxt.push(cl.src.app + " app");
       const facts = el("p", { class: "facts" }, el("strong", { text: cl.count + " signalement" + (cl.count > 1 ? "s" : "") }),
         " · le dernier " + ago(cl.lastAt, now) + (srcTxt.length ? " · " + srcTxt.join(", ") : ""));
-      box.append(title, conf, facts);
-      if (cl.lastClear) box.append(el("div", { class: "cleared" }, "Départ signalé " + ago(cl.lastClear, now) + " : les signalements plus anciens comptent moins."));
-      const tl = el("ul", { class: "tl", "aria-label": "Détail des signalements" });
-      for (const r of cl.reports.slice(0, 6)) {
-        tl.append(el("li", null, el("span", { class: "t", text: ago(r.at, now).replace("il y a ", "") }),
-          el("span", null, (r.src === "telegram" ? "Telegram" : "App") + (r.line ? " · " + lineDesc(r.line, r.dir) : "")),
-          el("span", { class: "w", title: "Poids actuel" }, el("i", { style: "width:" + Math.round(r.w * 100 / 0.6) + "%;background:" + C.colorFor(r.w / 0.6) }))));
-      }
-      box.append(el("div", null, el("p", { class: "label", text: "Poids de chaque signalement" }), tl));
+      // d'abord les actions, puis les explications
       const withLine = cl.reports.find((x) => x.line) || {};
       const row = el("div", { class: "row" },
         el("button", { type: "button", class: "secondary", onclick: async () => { if (await submit({ kind: cl.kind, sub: cl.subs[0] || null, stopId: cl.stopId, line: withLine.line || null, dir: withLine.dir || null })) render(); } }, isP ? "Toujours en cours" : "Toujours là"),
         el("button", { type: "button", class: "secondary", onclick: async () => { if (await submit({ kind: "fin", of: cl.kind, stopId: cl.stopId, line: null })) render(); } }, isP ? "C'est rétabli" : "Plus là"));
-      box.append(row, el("p", { class: "note", text: "La confiance baisse de moitié toutes les " + C.CFG[cl.kind].half + " min sans nouveau signalement." }));
+      box.append(title, conf, row, facts);
+      if (cl.movedTo) box.append(el("div", { class: "cleared" }, "Revus à " + stopName(cl.movedTo) + " " + ago(cl.movedAt, now) + ", plus loin sur la ligne : ils sont probablement partis d'ici."));
+      if (cl.lastClear) box.append(el("div", { class: "cleared" }, "Départ signalé " + ago(cl.lastClear, now) + " : les signalements plus anciens comptent moins."));
+      const tl = el("ul", { class: "tl", "aria-label": "Détail des signalements" });
+      for (const r of cl.reports.slice(0, 6)) {
+        tl.append(el("li", null, el("span", { class: "t", text: ago(r.at, now).replace("il y a ", "") }),
+          el("span", null, (r.src === "telegram" ? "Telegram" : "App") + (r.line ? " · " + lineDesc(r.line, r.dir) : "") + (r.movedTo ? " · revus plus loin" : "")),
+          el("span", { class: "w", title: "Poids actuel" }, el("i", { style: "width:" + Math.round(r.w * 100 / 0.6) + "%;background:" + C.colorFor(r.w / 0.6) }))));
+      }
+      box.append(el("div", null, el("p", { class: "label", text: "Poids de chaque signalement" }), tl));
+      box.append(el("p", { class: "note", text: "La confiance baisse de moitié toutes les " + C.CFG[cl.kind].half + " min sans nouveau signalement." }));
       return box;
     };
     openSheet("cluster", first.kind === "perturbation" ? "Perturbation" : "Contrôle", build, () => sheetBody.replaceChildren(build()));
@@ -991,19 +1060,26 @@ button { font: inherit; color: inherit; cursor: pointer; }
       const zone = t ? [t.stops[t.zone[0]], t.stops[t.zone[1]]].map(stopName) : [];
       const pct = Math.max(1, Math.round(e.p * 100));
       const col = C.colorFor(Math.min(1, e.p * 3));
+      const label = dirLabel(e.line, e.dir);
+      const why = !e.dirKnown ? "Sens non précisé : les deux sens sont envisagés, chacun pour moitié."
+        : !e.main ? "C'est l'autre sens que celui signalé : ils n'y seraient qu'en cas de demi-tour, d'où une faible probabilité."
+        : e.confirmed ? "Sens confirmé : ils ont été revus plus loin dans ce sens, l'estimation ne part plus dans l'autre."
+        : "Sens signalé : l'essentiel de l'estimation part dans ce sens, un peu dans l'autre en cas de demi-tour.";
+      // d'abord la probabilité et les actions, ensuite l'explication
       box.append(...[
         el("div", null,
           el("div", { class: "k-head" }, el("i", { class: "shape circle", style: "background:none;border:2px dashed " + col + ";box-sizing:border-box" }), "Position estimée des contrôleurs"),
-          el("div", { class: "k-stop", text: s.name }), el("span", { class: "badges" }, badge(e.line))),
+          el("div", { class: "k-stop", text: s.name }),
+          el("span", { class: "badges" }, badge(e.line), label ? el("span", { class: "tag", text: "→ " + label }) : null)),
         el("div", { class: "est" }, el("strong", { text: "≈ " + pct + " %" }),
           el("span", { class: "facts", text: "de chances qu'ils soient à cet arrêt en ce moment" })),
-        el("p", { class: "facts" }, "Signalés à ", el("strong", { text: stopName(e.from) }), " " + ago(e.at, now) + ", " + lineDesc(e.line, e.dirGiven ? e.dir : null) + (e.dirGiven ? "" : " (sens non précisé)") + ". ",
-          "Sur cette ligne, les contrôleurs avancent " + speedText(e.line) + "."),
-        zone.length ? el("p", { class: "facts" }, "Zone la plus probable maintenant : ", el("strong", { text: zone[0] === zone[1] ? zone[0] : zone[0] + " – " + zone[1] }), ".") : null,
-        el("p", { class: "note", text: "C'est une estimation : plus l'arrêt est loin et le signalement ancien, plus c'est incertain, car ils ont pu changer de ligne, faire demi-tour ou terminer leur contrôle." + (e.dirGiven ? "" : " Sens non précisé : les deux sens sont envisagés, chacun pour moitié.") }),
         el("div", { class: "row" },
           el("button", { type: "button", class: "secondary", onclick: async () => { if (await submit({ kind: "controle", stopId, line: e.line, dir: e.dir })) render(); } }, "Je les vois ici"),
           el("button", { type: "button", class: "secondary", onclick: async () => { if (await submit({ kind: "fin", of: "controle", stopId, line: null })) render(); } }, "Pas ici")),
+        el("p", { class: "facts" }, "Signalés à ", el("strong", { text: stopName(e.from) }), " " + ago(e.at, now) + " sur la ligne " + e.line + ". " + why),
+        el("p", { class: "facts", text: "Sur cette ligne, les contrôleurs avancent " + speedText(e.line) + "." }),
+        e.main && zone.length ? el("p", { class: "facts" }, "Zone la plus probable maintenant : ", el("strong", { text: zone[0] === zone[1] ? zone[0] : zone[0] + " – " + zone[1] }), ".") : null,
+        el("p", { class: "note", text: "C'est une estimation : plus l'arrêt est loin et le signalement ancien, plus c'est incertain, car ils ont pu changer de ligne, faire demi-tour ou terminer leur contrôle. « Je les vois ici » confirme le sens et fait repartir l'estimation de cet arrêt." }),
       ].filter(Boolean));
       return box;
     };
@@ -1084,7 +1160,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
         el("li", null, "La confiance ", el("strong", { text: "baisse de moitié toutes les 20 min" }), " (45 min pour une perturbation) ; un point disparaît après 2 h."),
         el("li", null, "« Plus là » réduit fortement les signalements antérieurs du même arrêt."),
         el("li", null, "Une même personne ne compte qu'une fois par arrêt."),
-        el("li", null, "Avec la ligne (et le sens), un ", el("strong", { text: "trajet pointillé" }), " montre où ils ont pu aller ; plus c'est loin, plus c'est incertain : ils ont pu changer de ligne, de sens ou arrêter.")));
+        el("li", null, "Avec la ligne, un ", el("strong", { text: "trajet pointillé" }), " montre où ils ont pu aller : surtout dans le ", el("strong", { text: "sens signalé" }), " (85 %), un peu dans l'autre en cas de demi-tour ; sans sens, des deux côtés. Plus c'est loin, plus c'est incertain."),
+        el("li", null, "Revus ", el("strong", { text: "plus loin sur la ligne" }), " (« Je les vois ici » ou nouveau signalement) : le point d'origine perd les trois quarts de sa force et l'estimation repart du nouvel arrêt, dans le sens de ce déplacement seulement.")));
       // tendances apprises sur tous les signalements depuis le lancement
       const rows = [...state.rates.lines].sort((a, b) => b[1].pairs - a[1].pairs);
       const demoTrends = !state.ratesRows.length && state.demoOn;
@@ -1099,6 +1176,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
       box.append(el("p", { class: "note", text: IN_CLAUDE
         ? "Aperçu : fond de carte simplifié. " + reseau
         : "Fond épuré : OpenFreeMap / OpenMapTiles ; plan des lignes : ÖPNVKarte (memomaps.de) ; données © contributeurs OpenStreetMap. " + reseau }));
+      if (SHOW_DEMO) {
+        const demo = el("button", { type: "button", class: "opt", id: "demoToggle", "aria-pressed": String(state.demoOn),
+          onclick: () => { setDemo(!state.demoOn); demo.setAttribute("aria-pressed", String(state.demoOn)); } }, "Données fictives");
+        box.append(el("div", null, el("p", { class: "label", text: "Démonstration" }), el("div", { class: "chips" }, demo),
+          el("p", { class: "hint", text: "Des signalements inventés pour voir comment l'app fonctionne." })));
+      }
       if (!IN_CLAUDE) {
         const fonds = el("div", { class: "chips", role: "group", "aria-label": "Fond de carte" });
         for (const key of ["simple", "reseau"]) {
@@ -1107,6 +1190,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
             FONDS[key].label));
         }
         box.append(el("div", null, el("p", { class: "label", text: "Fond de carte" }), fonds));
+        const themes = el("div", { class: "chips", role: "group", "aria-label": "Thème" });
+        for (const [key, txt] of [["auto", "Auto (téléphone)"], ["light", "Clair"], ["dark", "Sombre"]]) {
+          themes.append(el("button", { type: "button", class: "opt", "data-theme-choice": key, "aria-pressed": String(theme === key),
+            onclick: () => { applyTheme(key, true); themes.querySelectorAll(".opt").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.themeChoice === key))); } }, txt));
+        }
+        box.append(el("div", null, el("p", { class: "label", text: "Thème" }), themes));
         const links = el("div", { class: "links" });
         if (canInstall()) links.append(el("button", { type: "button", class: "link", onclick: install }, "Installer l'app"));
         links.append(el("a", { href: "confidentialite.html" }, "Confidentialité"));
@@ -1137,11 +1226,29 @@ button { font: inherit; color: inherit; cursor: pointer; }
       pref.set("filters", state.filters); render();
     });
   });
-  const chipDemo = $("#chipDemo");
-  chipDemo.hidden = !SHOW_DEMO;
-  const syncDemoChip = () => { chipDemo.setAttribute("aria-pressed", String(state.demoOn)); chipDemo.setAttribute("aria-label", state.demoOn ? "Démo activée : masquer les données fictives" : "Afficher la démo"); };
-  chipDemo.addEventListener("click", () => { state.demoOn = !state.demoOn; pref.set("demo", state.demoOn); syncDemoChip(); refreshRates(); render(); });
-  syncDemoChip();
+  function setDemo(on) { state.demoOn = !!on; pref.set("demo", state.demoOn); refreshRates(); render(); }
+
+  // ---------- thème clair / sombre ----------
+  // « auto » suit le téléphone ; le bouton du haut force clair ou sombre ; la légende permet de revenir en auto
+  const MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
+  const SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>';
+  function applyTheme(t, persist) {
+    const before = isDark();
+    theme = t === "light" || t === "dark" ? t : "auto";
+    if (theme === "auto") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", theme);
+    if (persist) pref.set("theme", theme);
+    const dark = isDark();
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", dark ? "#11181D" : "#173E62");
+    const b = $("#btnTheme");
+    b.innerHTML = dark ? SUN : MOON;
+    b.setAttribute("aria-label", dark ? "Passer en mode clair" : "Passer en mode sombre");
+    b.title = dark ? "Mode clair" : "Mode sombre";
+    if (!IN_CLAUDE && dark !== before && FONDS[fondName] && FONDS[fondName].dark) setFond(fondName);   // fond de carte assorti
+  }
+  $("#btnTheme").addEventListener("click", () => applyTheme(isDark() ? "light" : "dark", true));
+  applyTheme(theme);
 
   // ---------- installation (site uniquement) ----------
   const STANDALONE = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;

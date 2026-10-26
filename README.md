@@ -20,6 +20,12 @@ Vigie est une app web installable (PWA) : pas besoin de store.
 
 L'app s'ouvre ensuite en plein écran avec son icône, comme une app classique.
 
+## Utiliser l'app
+
+- **Signaler** : toucher un arrêt (ou son nom ; un appui jusqu'à 22 px du point suffit) ou le bouton Signaler, puis la ligne et le sens si on les connaît.
+- **Position estimée** : toucher un anneau pointillé, puis « Je les vois ici » (confirme et relance l'estimation depuis cet arrêt) ou « Pas ici ».
+- **Filtres** Contrôles / Perturbations / Estimations sous la barre du haut ; **thème** clair ou sombre avec le bouton lune / soleil (la légende permet de revenir au réglage du téléphone).
+
 ## Indice de confiance
 
 Pour chaque arrêt et chaque type (contrôle / perturbation) :
@@ -47,14 +53,24 @@ Pour un contrôle signalé à un arrêt avec sa ligne (et, mieux, son sens), il 
 ```
 arrêts parcourus depuis     k ~ Poisson(λ × a)        λ = arrêts par minute sur cette ligne
 restés sur la ligne/le sens × 0,85 par arrêt           sinon : autre ligne, demi-tour, fin du contrôle
-présence à k arrêts plus loin  p = w × P(k) × 0,85^k   w = poids du signalement (ci-dessus)
+présence à k arrêts plus loin  p = w × part × P(k) × 0,85^k   w = poids du signalement (ci-dessus)
 ```
 
-Sens inconnu : les deux sens de circulation comptent pour moitié (et, dans un sens qui a deux branches, chaque
-branche selon sa part des courses). Plusieurs signalements se combinent comme pour la confiance (1 − Π(1 − p)).
-Un « pas ici » / « plus là » à un arrêt estimé y divise l'estimation par 4 ; à l'arrêt du signalement, il ne
-l'arrête pas (ils en sont repartis). La carte trace le trajet probable et entoure les arrêts de la zone la plus
-probable (au moins la moitié du maximum). Plus d'estimation après 45 min.
+| Sens | `part` de l'estimation |
+|---|---|
+| signalé | 85 % dans ce sens, 15 % dans l'autre (demi-tour) |
+| confirmé (revus plus loin dans ce sens) | 100 % dans ce sens |
+| inconnu | moitié par sens de circulation ; dans un sens à deux branches, chaque branche selon sa part des courses |
+
+**Revus plus loin.** Un nouveau contrôle sur la même ligne, 1 à 45 min plus tard, plus loin dans un sens possible
+(dans le sens signalé s'il est connu ; au plus 12 arrêts et 1,5 arrêt/min), par exemple avec « Je les vois ici » sur
+une estimation, signifie qu'ils se sont déplacés : le signalement d'origine perd 75 % de son poids (point réduit) et
+ne projette plus rien ; l'estimation repart du nouvel arrêt, avec le sens confirmé (`linkMovements`).
+
+Plusieurs signalements se combinent comme pour la confiance (1 − Π(1 − p)). Un « pas ici » / « plus là » à un arrêt
+estimé y divise l'estimation par 4 ; à l'arrêt du signalement, il ne l'arrête pas (ils en sont repartis). La carte
+trace le trajet probable (plus pâle dans le sens le moins probable) et entoure les arrêts de la zone la plus probable
+(au moins la moitié du maximum de ce signalement, donc pas dans l'autre sens). Plus d'estimation après 45 min.
 
 **Apprentissage.** Chaque heure, la base (`vigie_private.apprendre()`) relit tous les signalements depuis le lancement :
 deux contrôles signalés à la suite sur la même ligne, dans le même sens, à 2–40 min d'écart et 0–10 arrêts plus loin,

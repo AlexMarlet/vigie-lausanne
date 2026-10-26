@@ -183,11 +183,11 @@ async def main(url):
         status = ""
         for _ in range(30):                       # jusqu'à 15 s pour joindre Supabase
             status = await page.evaluate("document.querySelector('#status')?.textContent || ''")
-            if "en direct" in status:
+            if "en direct" in status.lower():
                 break
             await page.wait_for_timeout(500)
-        check("en direct" in status, f"connectée à Supabase (« {status} »)")
-        check(await page.evaluate("document.querySelector('#chipDemo').hidden"), "démo masquée")
+        check("en direct" in status.lower(), f"connectée à Supabase (« {status} »)")
+        check(await page.evaluate("document.documentElement.dataset.demo") == "off", "démo masquée")
         fond = ""
         for _ in range(40):                       # jusqu'à 20 s pour afficher le fond de carte
             fond = await page.evaluate("document.documentElement.dataset.fond || ''")
