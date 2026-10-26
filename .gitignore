@@ -12,4 +12,5 @@ build/
 __pycache__/
 *.pyc
 GTFS_*.zip
+gtfs.zip*
 .DS_Store

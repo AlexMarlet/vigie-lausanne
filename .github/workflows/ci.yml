@@ -31,6 +31,8 @@ jobs:
       - run: npm ci
       - name: Moteur (parseur + indice de confiance)
         run: node core/test-core.js
+      - name: Extraction du réseau (GTFS de test)
+        run: python3 tools/test_network.py
       - name: Construction du site
         run: python3 tools/build_app.py
       - name: Liste d'arrêts du collecteur à jour

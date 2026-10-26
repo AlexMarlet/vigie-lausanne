@@ -1,0 +1,55 @@
+name: Réseau tl
+
+# Met à jour tools/reseau.json (arrêts, lignes, sens, temps de parcours) depuis l'horaire officiel suisse (GTFS),
+# chaque lundi, à la demande, ou quand le script change. S'il y a du nouveau : commit, puis redéploiement du site.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 4 * * 1"
+  push:
+    branches: [main]
+    paths:
+      - tools/build_network.py
+      - tools/fetch_gtfs.py
+      - tools/arrets.json
+      - .github/workflows/reseau.yml
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: reseau
+  cancel-in-progress: false
+
+jobs:
+  reseau:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Tests de l'extraction
+        run: python3 tools/test_network.py
+      - name: Télécharger le GTFS officiel
+        run: python3 tools/fetch_gtfs.py gtfs.zip
+      - name: Extraire le réseau tl
+        run: python3 tools/build_network.py gtfs.zip
+      - name: Enregistrer et redéployer si le réseau a changé
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- tools/reseau.json && git ls-files --error-unmatch tools/reseau.json >/dev/null 2>&1; then
+            echo "::notice title=Réseau tl::aucun changement"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/reseau.json
+          git commit -m "Réseau tl : horaire officiel $(cat gtfs.zip.name 2>/dev/null || date +%F)"
+          git pull --rebase origin main
+          git push origin HEAD:main
+          gh workflow run pages.yml --ref main
+          echo "::notice title=Réseau tl::réseau mis à jour, redéploiement lancé"
