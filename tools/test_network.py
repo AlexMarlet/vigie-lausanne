@@ -146,6 +146,20 @@ check(bn.line_id("m1") == "M1" and bn.line_id("N3") == "N3", "noms de ligne : m1
 check(bn.split_name("Chavannes-R., UNIL-Mouline", set()) == ("Chavannes", "UNIL-Mouline")
       and bn.split_name("Ecublens VD, EPFL", set()) == ("Ecublens", "EPFL"), "communes : abréviations et canton retirés")
 
+# choix des parcours, quel que soit l'ordre de lecture (cas relevés en relecture)
+P = bn.pick_patterns
+A_Z, B_Z, A_M = tuple("abcdefz"), tuple("bcdefz"), tuple("abcd")
+A_ZD = A_Z + ("depot",)
+got = P({A_Z: 40, B_Z: 60})
+check([g[0] for g in got] == [A_Z] and abs(got[0][1] - 1) < 1e-9, "course partielle plus fréquente vers le même terminus : parcours complet")
+check([g[0] for g in P({A_Z: 30, A_M: 60})] == [A_Z], "courte plus fréquente : comptée dans le parcours complet, pas un sens à part")
+check([g[0] for g in P({A_Z: 16, A_ZD: 2})] == [A_Z], "dépôt sur 2 courses sur 18 : pas un sens")
+check([g[0] for g in P({A_Z: 50, A_ZD: 50})] == [A_ZD], "rallonge régulière (50 %) : le parcours le plus long")
+P1, Q1 = tuple("pxyz"), tuple("qxyz")
+check(sorted(g[0] for g in P({P1: 63, Q1: 37})) == sorted([P1, Q1]), "deux branches vers le même terminus : gardées toutes les deux")
+check(len(P({tuple("axp"): 64, tuple("axq"): 36})) == 2, "deux branches vers deux terminus : deux sens")
+check([g[0] for g in P({A_Z: 95, tuple("abxz"): 5})] == [A_Z], "variante rare (5 %) : ignorée")
+
 # année d'horaire (changement le 2e dimanche de décembre)
 check(fetch_gtfs.timetable_year(dt.date(2026, 10, 26)) == 2026, "horaire 2026 en octobre 2026")
 check(fetch_gtfs.timetable_year(dt.date(2026, 12, 12)) == 2026, "horaire 2026 le samedi 12.12.2026")

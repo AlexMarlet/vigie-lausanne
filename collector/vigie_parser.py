@@ -178,13 +178,17 @@ def parse_message(text: str, gaz: Gazetteer) -> dict:
 
 # ---------- sens de circulation (comme resolveDirection dans core/vigie-core.js) ----------
 def directions_at(lines: dict, line: str, stop_id: str) -> list[tuple[str, int]]:
-    """Sens (identifiant du terminus, rang de l'arrêt) où l'on peut partir de cet arrêt sur cette ligne."""
-    out = []
+    """Sens (identifiant, rang de l'arrêt) où l'on peut partir de cet arrêt sur cette ligne : pas celui dont l'arrêt
+    est le terminus ; deux branches vers le même terminus : la première (la plus fréquente)."""
+    out, seen = [], set()
     for d in lines.get(line, {}).get("dirs", []):
-        if stop_id in d["stops"]:
-            i = d["stops"].index(stop_id)
-            if i < len(d["stops"]) - 1:
-                out.append((d["id"], i))
+        to = d.get("to") or d["stops"][-1]
+        if stop_id not in d["stops"] or to == stop_id or to in seen:
+            continue
+        i = d["stops"].index(stop_id)
+        if i < len(d["stops"]) - 1:
+            out.append((d["id"], i))
+            seen.add(to)
     return out
 
 

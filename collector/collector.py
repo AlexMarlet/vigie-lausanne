@@ -81,6 +81,7 @@ class Sink:
     def __init__(self, dry: bool):
         self.dry = dry
         self.http = httpx.AsyncClient(timeout=10)
+        self.no_direction = False      # base pas encore mise à jour (supabase/schema.sql) : sans sens ni rang
 
     async def push(self, row: dict) -> None:
         if self.dry:
@@ -93,7 +94,14 @@ class Sink:
         }
         if SUPABASE_KEY.startswith("eyJ"):    # ancienne clé service_role (JWT) : aussi en Bearer
             headers["Authorization"] = f"Bearer {SUPABASE_KEY}"
-        r = await self.http.post(f"{SUPABASE_URL}/rest/v1/signalements?on_conflict=src,ext_id", headers=headers, json=row)
+        url = f"{SUPABASE_URL}/rest/v1/signalements?on_conflict=src,ext_id"
+        if self.no_direction:
+            row = {k: v for k, v in row.items() if k not in ("direction", "seq")}
+        r = await self.http.post(url, headers=headers, json=row)
+        if r.status_code >= 300 and not self.no_direction and ("direction" in r.text or "'seq'" in r.text or "PGRST204" in r.text):
+            self.no_direction = True
+            log.warning("Base sans colonne direction : relance supabase/schema.sql. Envoi sans le sens en attendant.")
+            r = await self.http.post(url, headers=headers, json={k: v for k, v in row.items() if k not in ("direction", "seq")})
         if r.status_code >= 300:
             log.warning("Supabase %s : %s", r.status_code, r.text[:200])
 

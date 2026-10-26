@@ -50,13 +50,17 @@ restés sur la ligne/le sens × 0,85 par arrêt           sinon : autre ligne, d
 présence à k arrêts plus loin  p = w × P(k) × 0,85^k   w = poids du signalement (ci-dessus)
 ```
 
-Sens inconnu : les deux sens comptent pour moitié. Plusieurs signalements se combinent comme pour la confiance
-(1 − Π(1 − p)) ; un « pas ici » / « plus là » à un arrêt y divise l'estimation par 4. La carte trace le trajet probable
-et entoure les arrêts de la zone la plus probable (au moins la moitié du maximum). Plus d'estimation après 45 min.
+Sens inconnu : les deux sens de circulation comptent pour moitié (et, dans un sens qui a deux branches, chaque
+branche selon sa part des courses). Plusieurs signalements se combinent comme pour la confiance (1 − Π(1 − p)).
+Un « pas ici » / « plus là » à un arrêt estimé y divise l'estimation par 4 ; à l'arrêt du signalement, il ne
+l'arrête pas (ils en sont repartis). La carte trace le trajet probable et entoure les arrêts de la zone la plus
+probable (au moins la moitié du maximum). Plus d'estimation après 45 min.
 
 **Apprentissage.** Chaque heure, la base (`vigie_private.apprendre()`) relit tous les signalements depuis le lancement :
 deux contrôles signalés à la suite sur la même ligne, dans le même sens, à 2–40 min d'écart et 0–10 arrêts plus loin,
-donnent un couple (arrêts, minutes). La table publique `tendances` en garde les totaux par ligne et par sens. L'app en
+donnent un couple (arrêts, minutes). Garde-fous, puisque ces signalements sont publics : un couple plus rapide que
+1,5 arrêt/min est ignoré, et au plus 20 couples par ligne, sens et jour sont comptés ; l'app borne aussi la vitesse
+entre 1 et 15 min par arrêt. La table publique `tendances` en garde les totaux par ligne et par sens. L'app en
 tire la vitesse : a priori 1 arrêt / 3 min (poids : 30 min d'observation), puis
 `λ_réseau = (10 + Σarrêts) / (30 + Σminutes)` et `λ_ligne = (30 × λ_réseau + arrêts) / (30 + minutes)`.
 Une ligne peu observée suit donc la moyenne du réseau. La légende de l'app affiche ces vitesses.
@@ -79,7 +83,7 @@ l'ordre des arrêts. Il est produit à partir de l'horaire officiel suisse au fo
 le dernier fichier, extrait les lignes tl circulant les 14 prochains jours, et ne fait un commit (puis un redéploiement)
 que si les arrêts ou les lignes ont changé.
 
-- Sens d'une ligne = un terminus des parcours réguliers ; les courses partielles et de dépôt sont ignorées, une branche devient un sens à part.
+- Sens d'une ligne = un terminus des parcours réguliers (au moins 10 % des courses) ; les courses partielles comptent pour le parcours complet, une rallonge rare (dépôt, moins de 15 %) est ignorée, une branche devient un sens à part. Un arrêt liste les lignes qui y proposent un sens (sinon toutes celles qui y passent).
 - `tools/arrets.json` garde les identifiants des arrêts historiques (retrouvés par position) et les alias du groupe (« st f », « poly »…). Pour ajouter un alias : une entrée `{"id": …, "alias": […]}`.
 - En local : `python3 tools/fetch_gtfs.py gtfs.zip && python3 tools/build_network.py gtfs.zip` (fichier d'environ 280 Mo).
 
@@ -101,7 +105,7 @@ Sur le site en ligne, la démo reste accessible avec `?demo` à la fin de l'adre
 
 ### 1. Base de données (Supabase, offre gratuite)
 1. Créer un projet sur [supabase.com](https://supabase.com), région **Central Europe (Zurich)**.
-2. SQL Editor → New query : coller `supabase/schema.sql` → Run. Le script peut être relancé : il met à jour une base existante sans perdre de données.
+2. SQL Editor → New query : coller `supabase/schema.sql` → Run. Le script peut être relancé : il met à jour une base existante sans perdre de données, tâches planifiées comprises.
 3. Nouvelle requête : coller `supabase/purge.sql` → Run (chaque heure : archive anonyme après 48 h, calcul des tendances ; Supabase demande de confirmer la suppression, c'est voulu).
 4. Settings → API Keys : copier la clé **publishable** (`sb_publishable_…`). L'URL du projet est dans le bouton **Connect**.
 

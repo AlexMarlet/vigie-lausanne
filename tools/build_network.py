@@ -37,6 +37,7 @@ ARRETS = ROOT / "tools" / "arrets.json"
 
 TL_AGENCY = re.compile(r"r[ée]gion lausannoise|^tl\b|\(tl\)", re.I)
 MIN_SHARE = 0.10          # part minimale des courses d'un sens pour qu'un parcours compte
+EXT_SHARE = 0.15          # une rallonge d'un parcours retenu (dépôt…) doit peser au moins 15 %
 MERGE_M = 300             # fusion de deux zones d'arrêt de même nom à moins de 300 m
 LEGACY_M = 350            # un arrêt historique est retrouvé à moins de 350 m
 CANTONS = r"\s+(?:VD|GE|FR|VS|NE|JU|BE)$"
@@ -131,6 +132,11 @@ def cap(s: str) -> str:
     return s[:1].upper() + s[1:]
 
 
+def clean(s: str) -> str:
+    """Nom venu de l'horaire : sans caractères qui pourraient former du HTML dans la page."""
+    return re.sub(r"[<>&\"]", "", s).strip()
+
+
 # ------------------------------------------------------------------ calendrier
 def active_days(z: zipfile.ZipFile, services: set[str], start: dt.date, days: int) -> dict[str, int]:
     """Nombre de jours de circulation de chaque service pendant la période de référence."""
@@ -181,26 +187,39 @@ def is_sub(short: tuple, long: tuple) -> bool:
 
 
 def pick_patterns(weights: dict[tuple, float]) -> list[tuple[tuple, float]]:
-    """Parcours réguliers d'un sens, du plus fréquent au moins fréquent : une course partielle (comprise dans un
-    parcours déjà retenu) compte pour ce parcours ; un parcours qui pèse moins de MIN_SHARE des courses
-    (dépôt, course spéciale) est ignoré ; un seul parcours par terminus."""
+    """Parcours réguliers d'un sens de circulation (indépendant de l'ordre de lecture).
+    Les terminus sont examinés du plus fréquent au moins fréquent (au moins MIN_SHARE des courses) :
+    - terminus d'une course partielle (ses parcours sont compris dans un parcours déjà retenu) : ignoré ;
+    - rallonge d'un parcours retenu (course de dépôt…) : retenue seulement si elle pèse au moins EXT_SHARE ;
+    - sinon ses parcours d'au moins MIN_SHARE sont retenus (deux branches vers le même terminus : deux parcours).
+    Un parcours compris dans un autre retenu disparaît ; chaque course compte pour le parcours retenu le plus
+    fréquent qui la contient (part renvoyée)."""
     total = sum(weights.values())
-    kept: dict[tuple, float] = {}
-    for p in sorted((p for p in weights if len(p) >= 2), key=lambda p: (-weights[p], -len(p), p)):
+    pats = [p for p in weights if len(p) >= 2]
+    if not total or not pats:
+        return []
+    ends: dict[str, list[tuple]] = collections.defaultdict(list)
+    for p in pats:
+        ends[p[-1]].append(p)
+    w_end = {t: sum(weights[p] for p in ps) for t, ps in ends.items()}
+    kept: list[tuple] = []
+    for t in sorted(ends, key=lambda t: (-w_end[t], t)):
+        if w_end[t] < MIN_SHARE * total:
+            break
+        free = [p for p in ends[t] if not any(is_sub(p, k) for k in kept)]
+        if not free:                                    # course partielle d'un parcours retenu
+            continue
+        if w_end[t] < EXT_SHARE * total and all(any(k != p and is_sub(k, p) for k in kept) for p in free):
+            continue                                    # rallonge rare (dépôt…)
+        big = [p for p in free if weights[p] >= MIN_SHARE * total] or [max(free, key=lambda p: (weights[p], len(p), p))]
+        kept += big
+    kept = [k for k in kept if not any(o != k and is_sub(k, o) for o in kept)]
+    credit = {k: 0.0 for k in kept}
+    for p in pats:
         owners = [k for k in kept if is_sub(p, k)]
         if owners:
-            kept[max(owners, key=lambda k: kept[k])] += weights[p]
-        else:
-            kept[p] = weights[p]
-    out, termini = [], set()
-    for k in sorted(kept, key=lambda k: -kept[k]):
-        if not total or kept[k] / total < MIN_SHARE:
-            continue
-        if k[-1] in termini:            # même terminus par un autre chemin : on garde le principal
-            continue
-        termini.add(k[-1])
-        out.append((k, kept[k] / total))
-    return out
+            credit[max(owners, key=lambda k: (weights.get(k, 0), len(k), k))] += weights[p]
+    return sorted(((k, credit[k] / total) for k in kept), key=lambda x: (-x[1], x[0]))
 
 
 # ------------------------------------------------------------------ construction
@@ -229,7 +248,7 @@ def build(zpath: pathlib.Path, start: dt.date, days: int, legacy: list[dict]) ->
             short = (r[col["route_long_name"]] if "route_long_name" in col else "").strip()
         if not short:
             continue
-        short = line_id(short)
+        short = line_id(clean(short))
         routes[r[col["route_id"]]] = (short, r[col["route_type"]] if "route_type" in col else "",
                                       (r[col["route_color"]] if "route_color" in col else "").strip())
 
@@ -256,7 +275,7 @@ def build(zpath: pathlib.Path, start: dt.date, days: int, legacy: list[dict]) ->
             lat, lon = float(r[col["stop_lat"]]), float(r[col["stop_lon"]])
         except ValueError:
             lat = lon = float("nan")
-        stops_raw[r[col["stop_id"]]] = (r[col["stop_name"]].strip(), lat, lon,
+        stops_raw[r[col["stop_id"]]] = (clean(r[col["stop_name"]]), lat, lon,
                                         (r[col["parent_station"]] if "parent_station" in col else "").strip())
 
     def station(sid: str) -> str:
@@ -381,7 +400,7 @@ def build(zpath: pathlib.Path, start: dt.date, days: int, legacy: list[dict]) ->
         if all(t is not None for t in stamps):
             ln["times"][pattern].append(stamps)
 
-    lines_out, served = [], collections.defaultdict(set)
+    lines_out, served, rare = [], collections.defaultdict(set), collections.defaultdict(set)
     name_of = {ids[i]: display_name(m["town"], m["short"]) for i, m in enumerate(merged)}
     for short in sorted(per_line, key=line_sort_key):
         ln = per_line[short]
@@ -394,19 +413,26 @@ def build(zpath: pathlib.Path, start: dt.date, days: int, legacy: list[dict]) ->
                     gaps = [(s[k] - s[k - 1]) / 60 for s in samples if s[k] >= s[k - 1]]
                     mins.append(round(mins[-1] + (statistics.median(gaps) if gaps else 1.5), 1))
                 to = pattern[-1]
-                d = {"id": to if to not in {d["id"] for d in dirs} else f"{to}-{len(dirs) + 1}", "to": to,
-                     "label": name_of[to], "stops": list(pattern), "min": mins, "share": round(share, 2)}
+                did, n = to, 2
+                while did in {x["id"] for x in dirs}:      # deux branches vers le même terminus
+                    did, n = f"{to}-{n}", n + 1
+                d = {"id": did, "to": to, "label": name_of[to], "grp": direction, "stops": list(pattern), "min": mins,
+                     "share": round(share, 2)}
                 if pattern[0] == to:            # ligne circulaire : la destination affichée sur le véhicule
-                    sign = ln["headsigns"][pattern].most_common(1)[0][0]
+                    sign = clean(ln["headsigns"][pattern].most_common(1)[0][0])
                     d["label"], d["loop"] = (cap(split_name(sign, towns)[1]) if sign else d["label"]), True
                 dirs.append(d)
         if not dirs:
             continue
-        # tous les arrêts desservis par la ligne, y compris par des courses peu fréquentes
+        # arrêts desservis : par les parcours retenus (la ligne y a un sens à proposer) ; les arrêts desservis
+        # seulement par des courses rares (dépôt, déviation qui se termine) sont gardés à part
+        for d in dirs:
+            for st in d["stops"]:
+                served[st].add(short)
         for direction in ln["dirs"]:
             for pattern in ln["dirs"][direction]:
                 for st in pattern:
-                    served[st].add(short)
+                    rare[st].add(short)
         color = ("#" + ln["color"]) if re.fullmatch(r"[0-9A-Fa-f]{6}", ln["color"] or "") else COLORS.get(short)
         lines_out.append({"id": short, "type": ln["type"], "color": color, "dirs": dirs})
 
@@ -414,7 +440,7 @@ def build(zpath: pathlib.Path, start: dt.date, days: int, legacy: list[dict]) ->
     stops_out = []
     for i, m in enumerate(merged):
         sid = ids[i]
-        lines = sorted(served.get(sid, ()), key=lambda l: line_order.get(l, 999))
+        lines = sorted(served.get(sid) or rare.get(sid, ()), key=lambda l: line_order.get(l, 999))
         if not lines:
             continue
         stops_out.append({"id": sid, "name": display_name(m["town"], m["short"]), "short": m["short"], "town": m["town"],

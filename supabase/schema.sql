@@ -48,7 +48,7 @@ create index if not exists appareils_device_at on vigie_private.appareils (devic
 
 -- Archive anonyme : ni empreinte, ni identifiant de message, heure arrondie à la minute.
 create table if not exists vigie_private.archive (
-  id        bigint primary key,
+  id        bigint generated always as identity primary key,
   kind      text not null,
   sub       text,
   of_kind   text,
@@ -156,19 +156,21 @@ language sql
 security definer
 set search_path = ''
 as $$
+  -- une seule instruction : chaque ligne supprimée est archivée, ou rien ne change
   with moved as (
     delete from public.signalements where at < now() - interval '48 hours'
-    returning id, kind, sub, of_kind, stop_id, line, direction, seq, src, at
+    returning kind, sub, of_kind, stop_id, line, direction, seq, src, at
   ), kept as (
-    insert into vigie_private.archive (id, kind, sub, of_kind, stop_id, line, direction, seq, src, at)
-    select id, kind, sub, of_kind, stop_id, line, direction, seq, src, date_trunc('minute', at) from moved
-    on conflict (id) do nothing
+    insert into vigie_private.archive (kind, sub, of_kind, stop_id, line, direction, seq, src, at)
+    select kind, sub, of_kind, stop_id, line, direction, seq, src, date_trunc('minute', at) from moved
     returning 1
   )
   select count(*)::int from kept;
 $$;
 
 -- Tendances : recalculées sur tout l'historique (archive + signalements récents).
+-- Garde-fous contre des signalements fabriqués (sens et rang viennent de l'app) : un couple plus rapide que
+-- 1,5 arrêt par minute est ignoré, et au plus 20 couples par ligne, sens et jour sont comptés.
 create or replace function vigie_private.apprendre() returns int
 language plpgsql
 security definer
@@ -190,11 +192,20 @@ begin
            lead(seq) over w as seq2, lead(at) over w as at2
       from ctl
     window w as (partition by line, direction order by at)
+  ), paires as (
+    select line, direction, at, seq2 - seq as k, extract(epoch from at2 - at) / 60.0 as dt
+      from suite
+     where at2 > at + interval '2 minutes' and at2 <= at + interval '40 minutes'
+       and seq2 between seq and seq + 10
+  ), plausibles as (
+    select line, direction, k, dt,
+           row_number() over (partition by line, direction, (at at time zone 'Europe/Zurich')::date order by at) as rang
+      from paires
+     where k <= 1.5 * dt
   )
-  select line, direction, count(*), sum(seq2 - seq), round(sum(extract(epoch from at2 - at) / 60.0), 1)
-    from suite
-   where at2 > at + interval '2 minutes' and at2 <= at + interval '40 minutes'
-     and seq2 between seq and seq + 10
+  select line, direction, count(*), sum(k), round(sum(dt), 1)
+    from plausibles
+   where rang <= 20
    group by line, direction;
   get diagnostics n = row_count;
   return n;
@@ -202,3 +213,17 @@ end $$;
 
 revoke all on function vigie_private.archiver() from public, anon, authenticated;
 revoke all on function vigie_private.apprendre() from public, anon, authenticated;
+
+-- ---------------------------------------------------------------- tâches planifiées d'une base existante
+-- Si pg_cron est déjà installé (purge.sql exécuté une fois), les tâches suivent aussitôt cette version :
+-- l'ancienne tâche qui effaçait les signalements archive désormais. Sans pg_cron (première installation,
+-- tests), rien ne se passe ici : c'est purge.sql qui crée les tâches.
+do $$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    perform cron.schedule('vigie-purge-signalements', '17 * * * *', $job$select vigie_private.archiver()$job$);
+    perform cron.schedule('vigie-purge-appareils', '*/15 * * * *',
+      $job$delete from vigie_private.appareils where at < now() - interval '1 hour'$job$);
+    perform cron.schedule('vigie-apprendre', '23 * * * *', $job$select vigie_private.apprendre()$job$);
+  end if;
+end $$;

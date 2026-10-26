@@ -162,7 +162,7 @@ def load_network() -> tuple[list, list, dict]:
     lines = []
     for l in net["lines"]:
         dirs = [{"id": d["id"], "to": d["to"], "label": d["label"] if d.get("loop") else names.get(d["to"], d["label"]),
-                 "stops": d["stops"]} for d in l["dirs"]]
+                 "grp": d.get("grp", "0"), "share": d.get("share", 1), "stops": d["stops"]} for d in l["dirs"]]
         lines.append({"id": l["id"], "type": l["type"], "color": l.get("color"), "dirs": dirs})
     return stops, lines, net["source"]
 
@@ -200,9 +200,11 @@ def render_app(template: str, head: str, data: dict, colors: dict, config: dict,
     out = out.replace("<!--@HEAD@-->", head)
     out = out.replace("/*@LEAFLET_CSS@*/", read("web/vendor/leaflet-1.9.4.css"))
     out = out.replace("/*@CORE@*/", read("core/vigie-core.js"))
+    # « < » échappé : aucun nom venu des données ne peut fermer la balise <script>
+    as_js = lambda v, **kw: json.dumps(v, ensure_ascii=False, **kw).replace("<", "\\u003c")
     out = out.replace("/*@DATA@*/",
-                      "window.VIGIE_CONFIG = " + json.dumps(config, ensure_ascii=False) + ";\n"
-                      "window.VIGIE_DATA = " + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";")
+                      "window.VIGIE_CONFIG = " + as_js(config) + ";\n"
+                      "window.VIGIE_DATA = " + as_js(data, separators=(",", ":")) + ";")
     out = out.replace("/*@M1@*/", colors["M1"]).replace("/*@M2@*/", colors["M2"])
     out = out.replace("__LEAFLET_JS__", leaflet).replace("__SUPABASE_JS__", supabase)
     for marker, value in maplibre.items():

@@ -165,8 +165,8 @@ with psycopg.connect(DSN, autocommit=True) as c:
 
     # --- tendances (tâche horaire) : couples successifs même ligne / même sens
     c.execute("""
-      insert into vigie_private.archive (id, kind, stop_id, line, direction, seq, src, at)
-      select 9000 + n, k, 'x', l, d, s, 'app', now() - interval '3 days' + m * interval '1 minute'
+      insert into vigie_private.archive (kind, stop_id, line, direction, seq, src, at)
+      select k, 'x', l, d, s, 'app', timestamptz '2026-10-20 10:00:00+02' + m * interval '1 minute'
       from (values (1, 'controle', 'M2', 'croisettes', 3, 0),
                    (2, 'controle', 'M2', 'croisettes', 4, 3),     -- +1 arrêt en 3 min
                    (3, 'controle', 'M2', 'croisettes', 6, 10),    -- +2 arrêts en 7 min
@@ -175,18 +175,27 @@ with psycopg.connect(DSN, autocommit=True) as c:
                    (6, 'perturbation', 'M2', 'croisettes', 8, 4), -- pas un contrôle : ignoré
                    (7, 'controle', '9', 'lutry', 1, 0),
                    (8, 'controle', '9', 'lutry', 1, 5),           -- toujours au même arrêt 5 min plus tard
-                   (9, 'controle', '9', null, 3, 6))              -- sans sens : ignoré
+                   (9, 'controle', '9', null, 3, 6),              -- sans sens : ignoré
+                   (10, 'controle', '9', 'lutry', 1, 300),
+                   (11, 'controle', '9', 'lutry', 11, 303))       -- 10 arrêts en 3 min : impossible, ignoré
         as t(n, k, l, d, s, m)
+    """)
+    # 26 signalements le même jour sur le 18, un arrêt toutes les 3 min : 25 couples, 20 comptés
+    c.execute("""
+      insert into vigie_private.archive (kind, stop_id, line, direction, seq, src, at)
+      select 'controle', 'x', '18', 'clochatte', g, 'app', timestamptz '2026-10-21 08:00:00+02' + g * interval '3 minutes'
+      from generate_series(0, 25) g
     """)
     n = c.execute("select vigie_private.apprendre()").fetchone()[0]
     t = {(r[0], r[1]): r[2:] for r in c.execute("select line, direction, paires, arrets, minutes from public.tendances")}
-    check(n == 2 and set(t) == {("M2", "croisettes"), ("9", "lutry")}, f"tendances : une ligne par ligne et par sens ({sorted(t)})")
+    check(n == 3 and set(t) == {("M2", "croisettes"), ("9", "lutry"), ("18", "clochatte")}, f"tendances : une ligne par ligne et par sens ({sorted(t)})")
+    check(t.get(("18", "clochatte")) == (20, 20, 60), f"tendances : au plus 20 couples par ligne, sens et jour ({t.get(('18', 'clochatte'))})")
     check(t.get(("M2", "croisettes")) == (2, 3, 10), f"tendances M2 : 2 couples, 3 arrêts en 10 min ({t.get(('M2', 'croisettes'))})")
-    check(t.get(("9", "lutry")) == (1, 0, 5), "tendances 9 : arrêt immobile compté (0 arrêt en 5 min)")
+    check(t.get(("9", "lutry")) == (1, 0, 5), "tendances 9 : arrêt immobile compté, couple trop rapide ignoré")
     c.execute("select vigie_private.apprendre()")
-    check(c.execute("select count(*) from public.tendances").fetchone()[0] == 2, "tendances : recalcul sans doublon")
+    check(c.execute("select count(*) from public.tendances").fetchone()[0] == 3, "tendances : recalcul sans doublon")
     c.execute("set role anon")
-    check(len(c.execute("select * from public.tendances").fetchall()) == 2, "app : lit les tendances")
+    check(len(c.execute("select * from public.tendances").fetchall()) == 3, "app : lit les tendances")
     c.execute("reset role")
 
 print(f"\n{ok} OK, {bad} échec(s)")

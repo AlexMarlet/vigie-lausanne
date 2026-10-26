@@ -262,21 +262,27 @@
       const dirs = (l.dirs || []).map((d) => {
         const at = new Map();
         d.stops.forEach((s, i) => { if (!at.has(s)) at.set(s, i); });
-        return Object.assign({}, d, { at });
+        return Object.assign({}, d, { at, to: d.to || d.stops[d.stops.length - 1] });
       });
       byLine.set(l.id, Object.assign({}, l, { dirs }));
     }
     return { byLine };
   }
 
-  // sens où l'on peut partir de cet arrêt sur cette ligne (l'arrêt n'en est pas le terminus)
+  // sens où l'on peut partir de cet arrêt sur cette ligne : { dir, seq (rang de l'arrêt), share (part des courses) }.
+  // Pas le sens dont l'arrêt est le terminus (même s'il y passe avant, boucle finale) ; deux branches vers le même
+  // terminus qui passent toutes deux ici : un seul choix, la plus fréquente (les données sont triées ainsi).
   function directionsAt(net, line, stopId) {
     const l = net && net.byLine.get(line);
     if (!l) return [];
-    const out = [];
+    const out = [], byTo = new Map();
     for (const d of l.dirs) {
       const i = d.at.get(stopId);
-      if (i != null && i < d.stops.length - 1) out.push({ dir: d, seq: i });
+      if (i == null || i >= d.stops.length - 1 || d.to === stopId) continue;
+      const share = d.share > 0 ? d.share : 1;
+      if (byTo.has(d.to)) { byTo.get(d.to).share += share; continue; }
+      const way = { dir: d, seq: i, share };
+      byTo.set(d.to, way); out.push(way);
     }
     return out;
   }
@@ -292,8 +298,7 @@
     const found = [];
     for (const l of line ? [line] : (stopLines || [])) {
       for (const { dir, seq } of directionsAt(net, l, stopId)) {
-        const j = dir.at.get(dirStopId);
-        if (j != null && j > seq) found.push({ line: l, dir: dir.id, seq });
+        if (dir.stops.indexOf(dirStopId, seq + 1) !== -1) found.push({ line: l, dir: dir.id, seq });
       }
     }
     const lines = new Set(found.map((f) => f.line));
@@ -342,7 +347,8 @@
     const m = cfg.move;
     const clears = new Map();
     for (const r of reports) {
-      if (r && r.kind === "fin" && (r.of || "controle") === "controle" && r.stopId) {
+      // comme computeClusters : un « plus là » daté de plus de 5 min dans le futur (horloge fausse) est ignoré
+      if (r && r.kind === "fin" && (r.of || "controle") === "controle" && r.stopId && (now - r.at) / 60000 >= -5) {
         if (!clears.has(r.stopId)) clears.set(r.stopId, []);
         clears.get(r.stopId).push(r);
       }
@@ -359,22 +365,28 @@
     for (const r of latest.values()) {
       const age = Math.max(0, (now - r.at) / 60000);
       if (age > m.horizon || (now - r.at) / 60000 < -5) continue;
-      let w = (cfg.base[r.src] != null ? cfg.base[r.src] : 0.5) * Math.pow(0.5, age / cfg.controle.half);
-      for (const c of clears.get(r.stopId) || []) if (c.at > r.at) w *= 1 - (cfg.clear[c.src] != null ? cfg.clear[c.src] : 0.5);
+      // « plus là » à l'arrêt du signalement : ils en sont partis, l'estimation plus loin reste valable
+      const w = (cfg.base[r.src] != null ? cfg.base[r.src] : 0.5) * Math.pow(0.5, age / cfg.controle.half);
       let ways = [];
       const given = r.dir && dirById(net, r.line, r.dir);
-      const dirGiven = !!(given && given.at.has(r.stopId));
-      if (dirGiven) ways = [{ dir: given, seq: given.at.get(r.stopId) }];
-      else ways = directionsAt(net, r.line, r.stopId);
+      const dirGiven = !!(given && given.at.has(r.stopId) && given.at.get(r.stopId) < given.stops.length - 1);
+      if (dirGiven) ways = [{ dir: given, seq: given.at.get(r.stopId), share: 1, part: 1 }];
+      else {
+        // sens inconnu : moitié pour chaque sens de circulation, puis selon la part des courses de chaque branche
+        ways = directionsAt(net, r.line, r.stopId);
+        const groups = new Map();
+        for (const x of ways) groups.set(x.dir.grp, (groups.get(x.dir.grp) || 0) + x.share);
+        for (const x of ways) x.part = (1 / groups.size) * (x.share / groups.get(x.dir.grp));
+      }
       if (!ways.length) continue;
       const rate = rateFor(rates, r.line, cfg), mu = rate * age;
-      for (const { dir, seq } of ways) {
-        const share = w / ways.length;
+      for (const { dir, seq, part } of ways) {
+        const share = w * part;
         const trail = { line: r.line, dir: dir.id, dirGiven, from: r.stopId, at: r.at, stops: [r.stopId], p: [share] };
         let pk = Math.exp(-mu);                        // P(k = 0)
         for (let k = 1; k <= m.ahead && seq + k < dir.stops.length; k++) {
           pk *= mu / k;                                 // P(k) = e^−μ μ^k / k!
-          let p = share * pk * Math.pow(m.keep, k);
+          let p = dir.stops[seq + k] === r.stopId ? 0 : share * pk * Math.pow(m.keep, k);   // boucle : pas l'arrêt de départ
           for (const c of clears.get(dir.stops[seq + k]) || []) if (c.at > r.at) p *= 1 - (cfg.clear[c.src] != null ? cfg.clear[c.src] : 0.5);
           trail.stops.push(dir.stops[seq + k]); trail.p.push(p);
         }

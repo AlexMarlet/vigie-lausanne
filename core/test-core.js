@@ -105,5 +105,29 @@ const two = core.project([C1, Object.assign({}, C1, { by: "u3", id: "r2" })], NE
 assert(close(at(two, "bessieres"), 1 - Math.pow(1 - at(pr, "bessieres"), 2)), "deux personnes : 1 − Π(1 − p)");
 const same = core.project([C1, Object.assign({}, C1, { at: now - 7 * min, id: "r0" })], NET, prior, now);
 assert(close(at(same, "bessieres"), at(pr, "bessieres")), "même personne deux fois : une seule voix");
+
+// cas relevés en relecture
+const leftOrigin = core.project([C1, { kind: "fin", of: "controle", stopId: "riponne", src: "app", by: "u2", at: now - min }], NET, prior, now);
+assert(close(at(leftOrigin, "bessieres"), at(pr, "bessieres")), "« plus là » à l'arrêt de départ : l'estimation plus loin ne change pas");
+const future = core.project([C1, { kind: "fin", of: "controle", stopId: "ours", src: "app", by: "u2", at: now + 60 * min }], NET, prior, now);
+assert(close(future.trails[0].p[2], pr.trails[0].p[2]), "« plus là » daté dans le futur (horloge fausse) : ignoré");
+const NET2 = core.buildNetwork([
+  { id: "32", dirs: [
+    { id: "z", to: "z", grp: "0", share: 0.63, stops: ["a", "b", "x", "y", "z"] },
+    { id: "z-2", to: "z", grp: "0", share: 0.37, stops: ["q", "x", "y", "z"] },
+    { id: "a", to: "a", grp: "1", share: 1, stops: ["z", "y", "x", "b", "a"] }] },
+  { id: "19", dirs: [
+    { id: "c", to: "c", grp: "0", share: 1, stops: ["m", "c", "n", "o", "c"] },
+    { id: "m", to: "m", grp: "1", share: 1, stops: ["c", "o", "n", "m"] },
+    { id: "d", to: "d", grp: "2", share: 1, stops: ["c", "b", "c", "d"] }] },
+]);
+assert(ids(core.directionsAt(NET2, "32", "x")) === "a,z", "deux branches vers le même terminus : un seul choix sur le tronc commun");
+assert(ids(core.directionsAt(NET2, "32", "q")) === "z-2", "arrêt d'une seule branche : son sens");
+assert(ids(core.directionsAt(NET2, "19", "c")) === "d,m", "boucle finale : pas « → C » à l'arrêt C");
+const C2 = { kind: "controle", stopId: "x", line: "32", src: "app", by: "u9", at: now - 6 * min, id: "r9" };
+const sp = core.project([C2], NET2, prior, now);
+assert(close(at(sp, "y"), at(sp, "b")), "sens inconnu : moitié par sens de circulation, quelles que soient les branches");
+const rd2 = core.resolveDirection(NET2, ["19"], "b", "c", null);
+assert(rd2 && rd2.dir === "d", "direction X qui repasse plus loin : trouvée");
 console.log(bad ? `${bad} échec(s)` : "tous les tests passent");
 process.exit(bad ? 1 : 0);
