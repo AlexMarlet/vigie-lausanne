@@ -57,6 +57,11 @@ footer { margin-top: 36px; color: var(--ink-2); font-size: 14px; border-top: 1px
   <h2>À quoi sert l'identifiant d'appareil</h2>
   <p>Uniquement à limiter les abus (6 signalements au plus par tranche de 10 minutes). Il est gardé 1 heure dans un journal privé, jamais affiché ni partagé. Sur la carte, le public voit seulement une empreinte anonyme qui change à chaque arrêt et chaque jour, pour qu'une même personne ne compte qu'une fois.</p>
 
+  <h2>Messages du groupe Telegram</h2>
+  <p>Avec l'accord de ses admins, le bot de Vigie est membre du groupe Telegram de signalement. Il lit chaque message du groupe au moment où il arrive et en tire, s'il cite un arrêt, un signalement : le type (contrôle, perturbation, « partis »), l'arrêt, la ligne, le sens et l'heure du message. Une réponse comme « partis » ou « toujours là » à un signalement prend l'arrêt du message auquel elle répond.</p>
+  <p>Le bot n'enregistre <strong>ni le texte des messages, ni le nom, le pseudo ou l'identifiant de leur auteur</strong>, et il ne poste rien dans le groupe. Il garde deux empreintes chiffrées avec une clé secrète, impossibles à relier à un compte : celle du message (pour ne pas l'enregistrer deux fois) et une empreinte « personne + arrêt + jour », pour qu'une même personne ne compte qu'une fois par arrêt. Comme les signalements de l'app, ils sont anonymisés au bout de 48 heures.</p>
+  <p>Si tu écris au bot en privé, il te répond ce qu'il comprend de ton message, sans rien enregistrer.</p>
+
   <h2>Combien de temps</h2>
   <p>Un signalement reste visible 4 heures sur la carte. Au bout de 48 heures, il est anonymisé : l'empreinte est supprimée et l'heure arrondie à la minute. Il ne reste que le type, l'arrêt, la ligne, le sens et l'heure, sans aucun lien avec un appareil ou une personne.</p>
   <p>Ces signalements anonymes sont gardés pour apprendre comment les contrôles se déplacent (par exemple « environ 1 arrêt toutes les 3 minutes sur le M1 ») et améliorer la position estimée. Seules ces moyennes par ligne sont publiques.</p>
@@ -66,7 +71,8 @@ footer { margin-top: 36px; color: var(--ink-2); font-size: 14px; border-top: 1px
 
   <h2>Services utilisés</h2>
   <ul>
-    <li><strong>Supabase</strong> : base de données des signalements (serveur en Europe).</li>
+    <li><strong>Supabase</strong> : base de données des signalements (serveur en Europe) et fonction qui fait tourner le bot Telegram.</li>
+    <li><strong>Telegram</strong> : le groupe de signalement, dont le bot reçoit les messages.</li>
     <li><strong>GitHub Pages</strong> : hébergement du site.</li>
     <li><strong>OpenFreeMap</strong> (fond épuré) et <strong>memomaps.de</strong> (plan des lignes, si tu le choisis) : données du fond de carte. Comme pour toute page web, leurs serveurs voient l'adresse IP de ton appareil quand la carte se charge.</li>
   </ul>
@@ -74,7 +80,7 @@ footer { margin-top: 36px; color: var(--ink-2); font-size: 14px; border-top: 1px
 
   <!--@CONTACT@-->
 
-  <footer>Dernière mise à jour : 26 octobre 2026.</footer>
+  <footer>Dernière mise à jour : 27 octobre 2026.</footer>
 </main>
 </body>
 </html>

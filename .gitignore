@@ -14,3 +14,7 @@ __pycache__/
 GTFS_*.zip
 gtfs.zip*
 .DS_Store
+
+# bot Telegram : fichiers ajoutés au déploiement (tools/bot_bundle.mjs)
+supabase/functions/telegram/vigie-core.js
+supabase/functions/telegram/data.js

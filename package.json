@@ -5,7 +5,7 @@
   "description": "Carte communautaire des contrôles et perturbations sur le réseau de transports du Grand Lausanne.",
   "scripts": {
     "build": "python3 tools/build_app.py",
-    "test": "node core/test-core.js && python3 collector/test_parser.py",
+    "test": "node core/test-core.js && node core/test-bot.mjs && python3 collector/test_parser.py",
     "serve": "python3 -m http.server 8080 --directory dist"
   },
   "devDependencies": {

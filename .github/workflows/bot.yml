@@ -1,0 +1,72 @@
+name: Bot Telegram
+
+# Déploie le bot du groupe de signalement : fonction Supabase « telegram » + webhook Telegram (voir README).
+# Secrets du dépôt : TELEGRAM_BOT_TOKEN, SUPABASE_ACCESS_TOKEN, puis TG_CHAT_ID (donné par une 1re exécution).
+# Sans TELEGRAM_BOT_TOKEN, le workflow ne fait rien.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/functions/telegram/**"
+      - "core/vigie-core.js"
+      - "collector/stops.json"
+      - "collector/lignes.json"
+      - "tools/bot_*"
+      - ".github/workflows/bot.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bot-telegram
+  cancel-in-progress: false
+
+jobs:
+  bot:
+    runs-on: ubuntu-latest
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TG_CHAT_ID: ${{ secrets.TG_CHAT_ID || vars.TG_CHAT_ID }}
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Tests du bot
+        run: node core/test-bot.mjs
+
+      - name: Bot et groupe
+        id: check
+        run: python3 tools/bot_telegram.py check
+
+      - name: Préparer la fonction
+        if: steps.check.outputs.mode == 'deploy'
+        run: |
+          [ -n "$SUPABASE_ACCESS_TOKEN" ] || { echo "::error title=Supabase::ajoute le secret SUPABASE_ACCESS_TOKEN (voir README)"; exit 1; }
+          node tools/bot_bundle.mjs
+          REF=$(python3 -c "import sys; sys.path.insert(0, 'tools'); import bot_telegram as b; print(b.supabase_url().split('//')[1].split('.')[0])")
+          echo "REF=$REF" >> "$GITHUB_ENV"
+
+      - uses: supabase/setup-cli@v1
+        if: steps.check.outputs.mode == 'deploy'
+        with:
+          version: latest
+
+      - name: Déployer la fonction et ses secrets
+        if: steps.check.outputs.mode == 'deploy'
+        run: |
+          supabase secrets set --project-ref "$REF" TELEGRAM_BOT_TOKEN="$TELEGRAM_BOT_TOKEN" TG_CHAT_ID="$TG_CHAT_ID" > /dev/null
+          supabase functions deploy telegram --project-ref "$REF" --no-verify-jwt --use-api
+          echo "::notice title=Fonction::telegram déployée sur le projet $REF"
+
+      - name: Brancher Telegram et tester en ligne
+        if: steps.check.outputs.mode == 'deploy'
+        run: python3 tools/bot_telegram.py webhook

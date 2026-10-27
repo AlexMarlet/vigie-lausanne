@@ -54,4 +54,5 @@ jobs:
           git pull --rebase origin main
           git push origin HEAD:main
           gh workflow run pages.yml --ref main
+          gh workflow run bot.yml --ref main      # le bot Telegram reçoit la nouvelle liste d'arrêts (rien s'il n'est pas configuré)
           echo "::notice title=Réseau tl::réseau mis à jour, redéploiement lancé"

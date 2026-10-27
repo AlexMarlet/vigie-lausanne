@@ -31,6 +31,11 @@ jobs:
       - run: npm ci
       - name: Moteur (parseur + indice de confiance)
         run: node core/test-core.js
+      - name: Bot Telegram (logique, puis types de la fonction Supabase)
+        run: |
+          node core/test-bot.mjs
+          node tools/bot_bundle.mjs
+          npx --yes deno@2.9.6 check supabase/functions/telegram/index.ts
       - name: Extraction du réseau (GTFS de test)
         run: python3 tools/test_network.py
       - name: Construction du site

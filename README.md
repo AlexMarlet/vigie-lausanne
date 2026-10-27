@@ -90,9 +90,9 @@ Une ligne peu observée suit donc la moyenne du réseau. La légende de l'app af
 |---|---|
 | `web/` | L'app : gabarit HTML, service worker, manifest, icônes, page Confidentialité |
 | `core/` | Moteur partagé : parseur de messages, confiance, sens, position estimée, vitesse apprise ; tests |
-| `supabase/` | Schéma de la base (`schema.sql`), tâches horaires : archive anonyme et apprentissage (`purge.sql`), tests |
-| `tools/` | Réseau tl depuis l'horaire officiel (`fetch_gtfs.py`, `build_network.py` → `reseau.json`), arrêts historiques et alias (`arrets.json`), construction du site (`build_app.py`), vérifications |
-| `collector/` | Lecture d'un groupe Telegram (étape suivante du projet, non branchée) |
+| `supabase/` | Schéma de la base (`schema.sql`), tâches horaires : archive anonyme et apprentissage (`purge.sql`), tests ; bot Telegram (`functions/telegram/`) |
+| `tools/` | Réseau tl depuis l'horaire officiel (`fetch_gtfs.py`, `build_network.py` → `reseau.json`), arrêts historiques et alias (`arrets.json`), construction du site (`build_app.py`), installation du bot (`bot_telegram.py`, `bot_bundle.mjs`), vérifications |
+| `collector/` | Liste d'arrêts et de lignes partagée ; variante du bot avec un compte Telegram ordinaire (`collector.py`) |
 
 ## Réseau (horaire officiel)
 
@@ -142,11 +142,53 @@ Le build refuse de publier une clé secrète par erreur. `VIGIE_OFFLINE=1 npm ru
 
 À chaque déploiement, `tools/check_supabase.py` vérifie en lecture seule que la table et la fonction `signaler()` existent. Une fois le site publié, `tools/smoke_test.py` l'ouvre dans un Chrome mobile et contrôle la connexion à la base, le fonctionnement hors ligne, l'installabilité et l'absence d'erreur, sans rien écrire.
 
+## Bot Telegram
+
+Avec l'accord de ses admins, le bot lit le groupe Telegram de signalement et met ses messages sur la carte.
+
+**Fonctionnement.** Telegram envoie chaque message du groupe à la fonction Supabase `telegram` (webhook,
+`supabase/functions/telegram/`) :
+
+- le message est lu avec le même parseur que l'app : type (contrôle, perturbation, fin), arrêt, ligne, sens. Une réponse
+  « partis », « toujours là » ou « rétabli » à un signalement prend l'arrêt du message auquel elle répond (règles plus
+  strictes que le parseur : « merci », « ok » ou « c'est bon » en réponse ne comptent pas) ;
+- s'il cite un arrêt, il devient un signalement `telegram` (poids 0,45 contre 0,60 pour l'app) à l'heure du message. Ni le
+  texte ni l'auteur ne sont enregistrés : seulement une empreinte du message (anti-doublon) et une empreinte « personne +
+  arrêt + jour » (une seule voix), salées et non réversibles. Un message modifié met à jour son signalement ;
+- le bot ne poste rien dans le groupe. En privé, il explique ce qu'il fait et répond ce qu'il comprend d'un message, sans
+  rien enregistrer (pratique pour tester). Ajouté à un autre groupe, il en sort aussitôt.
+
+Si la fonction ne répond pas, Telegram garde les messages jusqu'à 24 h et les renvoie. Coût : une invocation par message
+(offre gratuite Supabase : 500 000 par mois). Le bot ne voit pas les messages envoyés avant son arrivée.
+
+**Installation** (une fois) :
+
+1. Dans Telegram, [@BotFather](https://t.me/BotFather) : `/newbot` (nom « Vigie Lausanne », identifiant finissant par
+   `bot`) → copier le **jeton**. Puis `/setprivacy` → ce bot → **Disable** : il lira tous les messages du groupe sans
+   être admin (à faire avant de l'ajouter au groupe, sinon il faut le retirer et le ré-ajouter).
+2. Supabase : [Access Tokens](https://supabase.com/dashboard/account/tokens) → *Generate new token*, de préférence limité
+   au projet Vigie avec les droits **Edge Functions** et **Edge Function Secrets** en lecture-écriture → copier.
+3. GitHub, dépôt → Settings → Secrets and variables → Actions → *New repository secret* : `TELEGRAM_BOT_TOKEN` (le jeton
+   du bot) et `SUPABASE_ACCESS_TOKEN`.
+4. Les admins ajoutent le bot au groupe, comme membre (ou comme admin sans aucun droit si le mode confidentialité est
+   resté actif).
+5. GitHub → Actions → **Bot Telegram** → *Run workflow*. Moins de 24 h après l'ajout, il affiche « Groupe trouvé : … →
+   TG_CHAT_ID = -100… ». Créer le secret `TG_CHAT_ID` avec ce nombre et relancer : le workflow déploie la fonction,
+   branche Telegram dessus et la teste en ligne (annotations du run).
+6. @BotFather → `/setjoingroups` → **Disable** : plus personne ne peut ajouter le bot à un autre groupe.
+
+Ensuite tout est automatique : une modification du bot, du parseur ou du réseau tl le redéploie. Journal (sans le texte
+des messages) : Supabase → Edge Functions → `telegram` → Logs.
+
+`collector/collector.py` fait la même lecture avec un compte Telegram ordinaire (Telethon, serveur allumé en
+permanence) : seulement pour un groupe où un bot n'est pas possible, et jamais en même temps que le bot.
+
 ## Tests
 
 | Commande | Vérifie |
 |---|---|
 | `node core/test-core.js` | parseur de messages (31 cas, sur les 457 arrêts), confiance, sens, position estimée, vitesse apprise |
+| `node core/test-bot.mjs` | bot Telegram : signalements tirés des messages, réponses « partis », empreintes, autres groupes, messages privés |
 | `python3 collector/test_parser.py` | la version Python du parseur donne les mêmes résultats |
 | `python3 tools/test_network.py` | extraction du réseau sur un petit GTFS fabriqué (sens, branches, courses partielles, fusion d'arrêts) |
 | `python3 supabase/test_schema.py` | mise à jour depuis l'ancien schéma, règles d'accès, anti-spam, sens, archive anonyme, apprentissage, sur un vrai PostgreSQL |
@@ -155,13 +197,13 @@ La CI (`.github/workflows/ci.yml`) les lance à chaque push, avec une base Postg
 
 ## Feuille de route
 
-- **Telegram** : `collector/` lit un groupe Telegram et injecte ses messages dans la carte (voir `collector/collector.py`). Non branché pour l'instant.
+- **Telegram** : bot prêt (voir « Bot Telegram »), à installer quand les admins du groupe l'acceptent.
 - **Play Store** : possible via une Trusted Web Activity (PWABuilder). Demande un compte développeur (25 $ une fois), un test fermé de 14 jours avec 12 testeurs pour un nouveau compte personnel, et un nom de domaine propre.
 - **App Store** : compte développeur à 99 $ par an, et Apple refuse les apps qui se contentent d'emballer un site (règle 4.2) : il faudrait des fonctions natives en plus.
 
 ## Données et cadre légal
 
-- Seuls le type, l'arrêt, la ligne, le sens et l'heure sont publics. L'identifiant d'appareil sert uniquement à l'anti-spam, reste dans un schéma privé et disparaît après 1 heure. Après 48 h, un signalement est anonymisé (sans empreinte, heure à la minute) et gardé pour apprendre la vitesse des contrôles ; seules les moyennes par ligne sont publiques. Détails : `web/confidentialite.html`.
+- Seuls le type, l'arrêt, la ligne, le sens et l'heure sont publics, pour l'app comme pour le groupe Telegram (dont le bot n'enregistre ni le texte ni l'auteur des messages). L'identifiant d'appareil sert uniquement à l'anti-spam, reste dans un schéma privé et disparaît après 1 heure. Après 48 h, un signalement est anonymisé (sans empreinte, heure à la minute) et gardé pour apprendre la vitesse des contrôles ; seules les moyennes par ligne sont publiques. Détails : `web/confidentialite.html`.
 - En Suisse, signaler des contrôleurs n'est pas interdit en soi, contrairement à la France. L'app refuse volontairement photos, descriptions et texte libre pour protéger les agents.
 - Fond de carte épuré par défaut : [OpenFreeMap](https://openfreemap.org) (styles Positron et Dark, gratuits, sans clé ni limite), © OpenMapTiles, données © contributeurs OpenStreetMap. Quelques couches sont masquées et recolorées dans `web/index.template.html` (`FOND_HIDE`, `FOND_PAINT`).
 - Plan des lignes en option (légende de l'app) : [ÖPNVKarte](https://öpnvkarte.de) (memomaps.de, CC BY-SA). memomaps demande d'héberger soi-même la carte en cas de fort trafic.
