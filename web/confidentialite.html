@@ -59,7 +59,7 @@ footer { margin-top: 36px; color: var(--ink-2); font-size: 14px; border-top: 1px
 
   <h2>Messages du groupe Telegram</h2>
   <p>Avec l'accord de ses admins, le bot de Vigie est membre du groupe Telegram de signalement. Il lit chaque message du groupe au moment où il arrive et en tire, s'il cite un arrêt, un signalement : le type (contrôle, perturbation, « partis »), l'arrêt, la ligne, le sens et l'heure du message. Une réponse comme « partis » ou « toujours là » à un signalement prend l'arrêt du message auquel elle répond.</p>
-  <p>Le bot n'enregistre <strong>ni le texte des messages, ni le nom, le pseudo ou l'identifiant de leur auteur</strong>, et il ne poste rien dans le groupe. Il garde deux empreintes chiffrées avec une clé secrète, impossibles à relier à un compte : celle du message (pour ne pas l'enregistrer deux fois) et une empreinte « personne + arrêt + jour », pour qu'une même personne ne compte qu'une fois par arrêt. Comme les signalements de l'app, ils sont anonymisés au bout de 48 heures.</p>
+  <p>Le bot n'enregistre <strong>ni le texte des messages, ni le nom, le pseudo ou l'identifiant de leur auteur</strong>, et il ne poste rien dans le groupe. Il garde deux empreintes chiffrées avec une clé secrète, qui ne permettent pas sans cette clé de remonter à un compte : celle du message (pour ne pas l'enregistrer deux fois) et une empreinte « personne + arrêt + jour », pour qu'une même personne ne compte qu'une fois par arrêt. Comme les signalements de l'app, ils sont anonymisés au bout de 48 heures.</p>
   <p>Si tu écris au bot en privé, il te répond ce qu'il comprend de ton message, sans rien enregistrer.</p>
 
   <h2>Combien de temps</h2>
