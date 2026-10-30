@@ -152,6 +152,9 @@ Avec l'accord de ses admins, le bot lit le groupe Telegram de signalement et met
 - le message est lu avec le même parseur que l'app : type (contrôle, perturbation, fin), arrêt, ligne, sens. Une réponse
   « partis », « toujours là » ou « rétabli » à un signalement prend l'arrêt du message auquel elle répond (règles plus
   strictes que le parseur : « merci », « ok » ou « c'est bon » en réponse ne comptent pas) ;
+- ligne et sens : toutes les lignes citées sont prises en compte (« ligne 6 et 7 et M2 »), seulement si elles passent à
+  l'arrêt ; le sens écrit (« direction Chailly ») choisit la ligne et corrige une ligne impossible (« M2 … EPFL » → M1) ;
+  « direction centre / Lausanne / ville » donne le sens qui rejoint le plus vite le centre ;
 - s'il cite un arrêt, il devient un signalement `telegram` (poids 0,45 contre 0,60 pour l'app) à l'heure du message. Ni le
   texte ni l'auteur ne sont enregistrés : seulement une empreinte du message (anti-doublon) et une empreinte « personne +
   arrêt + jour » (une seule voix), salées et non réversibles. Un message modifié met à jour son signalement ;

@@ -129,6 +129,9 @@ def check_group(token: str, me: dict, chat: str, reads_all: bool, test: bool) ->
         return
     status = member.get("status")
     note("notice", kind, f"« {info.get('title')} » · {count} membres · bot : {status}")
+    if test and status == "restricted" and member.get("can_send_messages") is False:
+        note("warning", kind, "le bot est en lecture seule dans ce groupe : il ne pourra pas répondre. Demande à l'admin de "
+             "l'autoriser à envoyer des messages (ou de le passer admin sans aucun droit)")
     if status not in ("administrator", "member", "restricted"):
         note(bad, kind, f"le bot n'est pas membre du groupe (statut : {status}) : demande aux admins de l'ajouter")
     elif status != "administrator" and not reads_all:
@@ -155,7 +158,10 @@ def check(token: str, chat: str, tests: set[str]) -> None:
             continue
         note("notice", "Groupe trouvé", f"« {g['title']} » (bot : {g['status']}) → crée le secret TG_CHAT_ID = {cid} si c'est "
              f"le groupe de signalement, ou TG_TEST_CHAT_ID = {cid} si c'est un groupe de test, puis relance ce workflow")
-    if not any(cid not in tests for cid in found):
+    if not any(cid not in tests for cid in found) and tests:
+        note("notice", "Groupe de signalement", "pas encore trouvé, normal tant que le bot n'y est pas : une fois qu'il y "
+             "est ajouté, relance ce workflow, l'identifiant s'affichera ici")
+    elif not any(cid not in tests for cid in found):
         recu = ", ".join(f"{n} {k}" for k, n in seen.items()) or "rien"
         note("warning", "Installation", f"aucun nouveau groupe trouvé (reçu de Telegram : {recu}) : le bot doit y avoir été "
              "ajouté il y a moins de 24 h, ou quelqu'un doit y écrire (moins de 24 h avant, ou pendant la minute où le "

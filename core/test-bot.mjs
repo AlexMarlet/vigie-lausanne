@@ -105,6 +105,28 @@ const pre = createBot({ C, stops, lignes, chatId: "", testIds: String(TEST), sal
 const main = await pre.handle(up(msg("controle Flon")));
 assert(main.rows.length === 0 && main.reply === null && main.log[0].includes(String(GROUP)), "groupe de test configuré, signalement pas encore : le bot reste muet ailleurs et note l'identifiant");
 
+// ---- ligne et sens mal écrits (messages réels du groupe)
+const priv0 = (text) => ({ update_id: 1, message: { message_id: 1, date: t0, chat: { id: 5, type: "private" }, from: { id: 5, is_bot: false }, text } });
+const L = async (text) => (await bot.handle(up(msg(text)))).rows[0];
+let r = await L("2 à ours ligne 6 et 7 et m2, côté direction chailly, en attente");
+assert(r.stop_id === "ours" && r.line === "7" && r.direction === "val-vert", "plusieurs lignes citées : le sens (Chailly) choisit la ligne 7");
+r = await L("Dans le 6 direction Lausanne centre, on est à ours");
+assert(r.line === "6" && r.direction === "maladiere", "« direction Lausanne centre » : le sens qui va vers le centre");
+r = await L("M2 direction Renens gare depuis EPFL");
+assert(r.stop_id === "epfl" && r.line === "M1" && r.direction === "renens", "ligne citée qui ne passe pas à l'arrêt : corrigée par le sens");
+r = await L("controle EPFL");
+assert(r.line === "M1" && r.direction === null, "arrêt d'une seule ligne : cette ligne");
+r = await L("contrôle à Ours ligne 6 et 7");
+assert(r.line === null && r.direction === null, "deux lignes possibles sans sens : ligne inconnue");
+r = await L("4 bleus à Ours");
+assert(r.line === null, "« 4 bleus » n'est pas une ligne");
+r = await L("contrôle M1 Malley direction Lausanne");
+assert(r.line === "M1" && r.direction === "flon", "« direction Lausanne » : vers le centre");
+r = await L("2 contrôleurs à Bel-Air direction ville");
+assert(r.direction === null, "déjà au centre : « direction ville » ne donne pas de sens");
+const sens = await bot.handle(priv0("2 à ours ligne 6 et 7 et m2, côté direction chailly"));
+assert(/ligne 7, direction Pully, Val-Vert \(par Chailly-Village\)/.test(sens.reply.text), "réponse : terminus et arrêt cité");
+
 // ---- messages privés : explication, ou test sans rien enregistrer
 const priv = (text) => ({ update_id: 1, message: { message_id: 1, date: t0, chat: { id: 5, type: "private" }, from: { id: 5, is_bot: false }, text } });
 const start = await bot.handle(priv("/start"));

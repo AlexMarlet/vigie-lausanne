@@ -40,6 +40,27 @@ const gone = (n) => RE_GONE.test(n) && !RE_NOT_GONE.test(n);
 const still = (n) => RE_STILL.test(n) && !/\b(pas|plus)\b/.test(n);
 
 const SUB = { retard: "retard", panne: "panne", deviation: "déviation", accident: "accident", bonde: "véhicule bondé" };
+
+// Ligne et sens : toutes les lignes citées (« ligne 6 et 7 et M2 », « dans le 9 », « 6 direction… »), gardées si elles
+// passent à l'arrêt ; le sens (« direction Chailly ») choisit parmi elles, puis parmi les lignes de l'arrêt (une ligne
+// citée qui ne passe pas à l'arrêt, comme « M2 … EPFL », est corrigée par le sens ou par la seule ligne de l'arrêt).
+// « direction centre / Lausanne / ville » : le sens où l'on atteint le plus vite un arrêt du centre.
+const COUNT = /^(controleurs?|controleuses?|agents?|mecs?|gars|types?|personnes?|bleus?|schtroumpfs?|minutes?|min|mn|fois|chf|francs?|ans|avril|h|heures?)$/;
+const CENTRE = ["flon", "stfrancois", "belair", "chauderon", "riponne", "bessieres", "gare", "tunnel"];
+const RE_CENTRE = /\b(?:direction|dir|vers|sens|cote)(?: le| la| de)? (?:lausanne centre|centre ville|centre|lausanne ville|ville|lausanne)\b/;
+const HOUR = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", hour: "2-digit", hourCycle: "h23" });
+function linesIn(norm) {
+  const out = [], add = (l) => { if (!out.includes(l)) out.push(l); };
+  for (const m of norm.matchAll(/\b(?:m|metro)\s?([123])\b/g)) add("M" + m[1]);
+  const t = norm.split(" ");
+  t.forEach((w, i) => {
+    if (!/^\d{1,2}$/.test(w) || +w === 0 || COUNT.test(t[i + 1] || "")) return;
+    const before = t.slice(Math.max(0, i - 2), i).join(" ");
+    if (/(?:^|\s)(?:ligne|lignes|bus|trolley|trolleybus|le|du|l|n|no|num|numero|et|ou)$/.test(before) ||
+        /^(?:direction|dir|vers|sens)$/.test(t[i + 1] || "")) add(String(+w));
+  });
+  return out;
+}
 const isGroup = (c) => c && (c.type === "group" || c.type === "supergroup");
 // message de test qui ressemble à un signalement sans arrêt reconnu : le bot le dit (sinon il reste muet)
 const RE_ATTEMPT = /\b(contr\w*|agents?|panne\w*|retard\w*|devi\w*|accident\w*|partis?|bloque\w*|perturb\w*|bonde\w*)\b/;
@@ -53,40 +74,70 @@ export function createBot({ C, stops, lignes, chatId, testIds, salt, site }) {
   const name = (id) => (gaz.byId.get(id) || {}).name || id;
 
   // Ce que dit un message : { p (résultat du parseur, avec arrêt si utilisable), reply (arrêt pris du message
-  // auquel il répond), why (« question » ou « arret » s'il n'y a rien à retenir) }
+  // auquel il répond), why (« question » ou « arret » s'il n'y a rien à retenir), way (ligne et sens retenus) }
   function interpret(msg) {
     const text = msg.text ?? msg.caption ?? "";
+    const date = new Date((msg.date || 0) * 1000);
     const p = C.parseMessage(text, gaz);
-    if (p.usable) return { p, reply: false };
+    if (p.usable) return { p, reply: false, way: resolve(p, text, date) };
     if (p.kind === "question") return { p, reply: false, why: "question" };
     const rep = msg.reply_to_message;
     const rt = rep && (rep.text ?? rep.caption);
     if (rt) {
       const base = C.parseMessage(rt, gaz);
       if (base.usable && base.kind !== "fin") {
-        const n = C.normalize(text);
-        if (base.kind === "controle" && gone(n)) return { p: Object.assign({}, base, { kind: "fin", of: "controle", sub: null }), reply: true };
-        if (base.kind === "perturbation" && RE_BACK.test(n)) return { p: Object.assign({}, base, { kind: "fin", of: "perturbation", sub: null }), reply: true };
-        if (still(n)) return { p: Object.assign({}, base), reply: true };
+        const n = C.normalize(text), way = resolve(base, rt, date);
+        if (base.kind === "controle" && gone(n)) return { p: Object.assign({}, base, { kind: "fin", of: "controle", sub: null }), reply: true, way };
+        if (base.kind === "perturbation" && RE_BACK.test(n)) return { p: Object.assign({}, base, { kind: "fin", of: "perturbation", sub: null }), reply: true, way };
+        if (still(n)) return { p: Object.assign({}, base), reply: true, way };
       }
     }
     return { p, reply: false, why: "arret" };
   }
 
-  function way(p) {
-    if (!p.dirStopId) return null;
-    const stop = gaz.byId.get(p.stopId) || {};
-    return C.resolveDirection(net, stop.lines || [], p.stopId, p.dirStopId, p.line);
+  // Ligne et sens d'un signalement (voir en haut) : { line, dir, seq }, chacun pouvant être null
+  function resolve(p, text, date) {
+    const at = (gaz.byId.get(p.stopId) || {}).lines || [];
+    if (!at.length) return { line: p.line || null, dir: null, seq: null };
+    const norm = C.normalize(text);
+    const said = linesIn(norm);
+    const cited = said.filter((l) => at.includes(l));
+    const h = Number(HOUR.format(date)), night = h >= 22 || h < 6;
+    const day = at.filter((l) => night || !/^N\d/.test(l));
+    const metro = said.some((l) => /^M\d$/.test(l)) ? day.filter((l) => /^M\d$/.test(l)) : [];
+    const centre = !p.dirStopId && RE_CENTRE.test(norm) && !CENTRE.includes(p.stopId);
+    if (p.dirStopId || centre) {
+      for (const lines of [cited, metro, day, at]) {
+        if (!lines.length) continue;
+        const w = centre ? towardCentre(lines, p.stopId) : C.resolveDirection(net, lines, p.stopId, p.dirStopId, null);
+        // via : ce qu'a écrit la personne, quand ce n'est pas le terminus (« direction Chailly » → « Val-Vert »)
+        if (w) return { line: w.line, dir: w.dir || null, seq: w.dir ? w.seq : null, via: centre ? "centre" : (w.dir && w.dir !== p.dirStopId ? p.dirStopId : null) };
+      }
+    }
+    const line = cited.length ? (cited.length === 1 ? cited[0] : null) : (day.length === 1 ? day[0] : null);
+    return { line, dir: null, seq: null };
+  }
+  // vers le centre : pour chaque ligne, le sens qui atteint le plus vite un arrêt du centre ; une seule ligne possible
+  function towardCentre(lines, stopId) {
+    const found = [];
+    for (const l of lines) {
+      let best = null;
+      for (const { dir, seq } of C.directionsAt(net, l, stopId)) {
+        const k = Math.min(...CENTRE.map((c) => dir.stops.indexOf(c, seq + 1)).filter((i) => i > 0).map((i) => i - seq));
+        if (Number.isFinite(k) && (!best || k < best.k)) best = { line: l, dir: dir.id, seq, k };
+      }
+      if (best) found.push(best);
+    }
+    return found.length === 1 ? found[0] : null;
   }
 
-  async function toRow(msg, p) {
-    const w = way(p);
+  async function toRow(msg, p, w) {
     const direction = (w && w.dir) || null;
     const who = msg.from && !msg.from.is_bot ? msg.from.id : null;
     const day = DAY.format(new Date(msg.date * 1000));
     return {
       kind: p.kind, sub: p.sub || null, of_kind: p.of || null, stop_id: p.stopId,
-      line: p.line || (w && w.line) || null, direction, seq: direction ? w.seq : null,
+      line: (w && w.line) || null, direction, seq: direction ? w.seq : null,
       src: "telegram",
       ext_id: (await sha256(`${salt}:${msg.chat.id}:${msg.message_id}`)).slice(0, 24),
       voter: who != null ? (await sha256(`${salt}:tg:${who}:${p.stopId}:${day}`)).slice(0, 32) : null,
@@ -94,12 +145,12 @@ export function createBot({ C, stops, lignes, chatId, testIds, salt, site }) {
     };
   }
 
-  function describe(p) {
+  function describe(p, w) {
     const what = p.kind === "controle" ? "contrôle"
       : p.kind === "perturbation" ? "perturbation" + (SUB[p.sub] ? " (" + SUB[p.sub] + ")" : "")
       : p.of === "perturbation" ? "fin de perturbation" : "fin de contrôle (ils sont partis)";
-    const w = way(p), line = p.line || (w && w.line);
-    return what + " à " + name(p.stopId) + (line ? ", ligne " + line : "") + (w && w.dir ? ", direction " + name(w.dir) : "");
+    const via = w && w.dir && w.via ? (w.via === "centre" ? " (vers le centre)" : " (par " + name(w.via) + ")") : "";
+    return what + " à " + name(p.stopId) + (w && w.line ? ", ligne " + w.line : "") + (w && w.dir ? ", direction " + name(w.dir) + via : "");
   }
 
   const INTRO = "Bonjour ! Je suis le bot de Vigie Lausanne, la carte des contrôles et perturbations sur le réseau tl : " + SITE + "\n\n" +
@@ -112,9 +163,9 @@ export function createBot({ C, stops, lignes, chatId, testIds, salt, site }) {
   function privateAnswer(msg) {
     const text = (msg.text ?? msg.caption ?? "").trim();
     if (!text || /^\/(start|aide|help)\b/i.test(text)) return INTRO;
-    const { p, reply, why } = interpret(msg);
+    const { p, reply, why, way } = interpret(msg);
     if (p.usable) {
-      return "Compris : " + describe(p) + (reply ? " (en réponse à un message qui citait cet arrêt)" : "") + ".\n\n" +
+      return "Compris : " + describe(p, way) + (reply ? " (en réponse à un message qui citait cet arrêt)" : "") + ".\n\n" +
         "Ici c'est un test : rien n'est enregistré. Dans le groupe, ce message irait sur la carte.";
     }
     if (why === "question") return "C'est une question : elle ne va pas sur la carte.";
@@ -130,9 +181,9 @@ export function createBot({ C, stops, lignes, chatId, testIds, salt, site }) {
       return "Groupe de test : je réponds ici ce que je comprends de chaque signalement, sans rien enregistrer. " +
         "Dans le groupe de signalement, je ne poste jamais rien. Carte : " + SITE;
     }
-    const { p, reply, why } = interpret(msg);
+    const { p, reply, why, way } = interpret(msg);
     if (p.usable) {
-      return "Compris : " + describe(p) + (reply ? " (en réponse à un message qui citait cet arrêt)" : "") + ". " +
+      return "Compris : " + describe(p, way) + (reply ? " (en réponse à un message qui citait cet arrêt)" : "") + ". " +
         "Groupe de test : rien n'est enregistré.";
     }
     if (why !== "question" && RE_ATTEMPT.test(C.normalize(text))) return NO_STOP;
@@ -179,9 +230,9 @@ export function createBot({ C, stops, lignes, chatId, testIds, salt, site }) {
     }
     // autres bots du groupe : ignorés (sauf un admin anonyme, qui écrit au nom du groupe)
     if (msg.from && msg.from.is_bot && !(msg.sender_chat && String(msg.sender_chat.id) === group)) return out;
-    const { p, reply } = interpret(msg);
+    const { p, reply, way } = interpret(msg);
     if (!p.usable) { out.log.push("message sans signalement"); return out; }
-    const row = await toRow(msg, p);
+    const row = await toRow(msg, p, way);
     out.rows.push(row);
     out.merge = edited;
     out.log.push(`${row.kind}${row.of_kind ? "/" + row.of_kind : ""} · ${row.stop_id} · ligne ${row.line || "-"}` +
