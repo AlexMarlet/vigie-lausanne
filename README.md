@@ -172,10 +172,18 @@ Si la fonction ne répond pas, Telegram garde les messages jusqu'à 24 h et les 
    du bot) et `SUPABASE_ACCESS_TOKEN`.
 4. Les admins ajoutent le bot au groupe, comme membre (ou comme admin sans aucun droit si le mode confidentialité est
    resté actif).
-5. GitHub → Actions → **Bot Telegram** → *Run workflow*. Moins de 24 h après l'ajout, il affiche « Groupe trouvé : … →
-   TG_CHAT_ID = -100… ». Créer le secret `TG_CHAT_ID` avec ce nombre et relancer : le workflow déploie la fonction,
-   branche Telegram dessus et la teste en ligne (annotations du run).
+5. GitHub → Actions → **Bot Telegram** → *Run workflow*. Il affiche « Groupe trouvé : … → TG_CHAT_ID = -100… » (d'après
+   l'ajout du bot, s'il date de moins de 24 h, ou un message écrit dans le groupe pendant la minute où il écoute). Créer
+   le secret `TG_CHAT_ID` avec ce nombre et relancer : le workflow déploie la fonction, branche Telegram dessus et la
+   teste en ligne (annotations du run).
 6. @BotFather → `/setjoingroups` → **Disable** : plus personne ne peut ajouter le bot à un autre groupe.
+
+**Groupe de test.** Si les admins essaient d'abord le bot dans un petit groupe : lancer le workflow, qui affiche ce groupe
+(« Groupe trouvé »), créer le secret `TG_TEST_CHAT_ID` avec son identifiant (plusieurs : séparés par des virgules) et
+relancer. Dans ce groupe, le bot répond à chaque signalement ce qu'il a compris, sans rien enregistrer. Tant que
+`TG_CHAT_ID` n'est pas défini, il reste muet dans les autres groupes (il ne les quitte pas) : une fois ajouté au groupe
+de signalement, relancer le workflow pour obtenir son identifiant (étape 5). Ne jamais mettre un groupe de test dans
+`TG_CHAT_ID` : ses messages iraient sur la carte, et le bot quitterait le vrai groupe dès son arrivée.
 
 Ensuite tout est automatique : une modification du bot, du parseur ou du réseau tl le redéploie. Journal (sans le texte
 des messages) : Supabase → Edge Functions → `telegram` → Logs.
@@ -188,7 +196,7 @@ permanence) : seulement pour un groupe où un bot n'est pas possible, et jamais 
 | Commande | Vérifie |
 |---|---|
 | `node core/test-core.js` | parseur de messages (31 cas, sur les 457 arrêts), confiance, sens, position estimée, vitesse apprise |
-| `node core/test-bot.mjs` | bot Telegram : signalements tirés des messages, réponses « partis », empreintes, autres groupes, messages privés |
+| `node core/test-bot.mjs` | bot Telegram : signalements tirés des messages, réponses « partis », empreintes, autres groupes, groupe de test, messages privés |
 | `python3 collector/test_parser.py` | la version Python du parseur donne les mêmes résultats |
 | `python3 tools/test_network.py` | extraction du réseau sur un petit GTFS fabriqué (sens, branches, courses partielles, fusion d'arrêts) |
 | `python3 supabase/test_schema.py` | mise à jour depuis l'ancien schéma, règles d'accès, anti-spam, sens, archive anonyme, apprentissage, sur un vrai PostgreSQL |

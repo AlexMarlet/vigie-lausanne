@@ -1,10 +1,11 @@
 """
 Vigie — installation du bot Telegram, appelée par .github/workflows/bot.yml (sans dépendance).
 
-    python3 tools/bot_telegram.py check     vérifie le bot ; sans TG_CHAT_ID : liste les groupes où il a été ajouté
+    python3 tools/bot_telegram.py check     vérifie le bot et ses groupes ; sans TG_CHAT_ID : trouve les groupes où il est
     python3 tools/bot_telegram.py webhook   branche Telegram sur la fonction Supabase et la teste en ligne
 
-Variables : TELEGRAM_BOT_TOKEN, TG_CHAT_ID (vide pendant l'installation), SUPABASE_URL (sinon vigie.config.json).
+Variables : TELEGRAM_BOT_TOKEN, TG_CHAT_ID (vide pendant l'installation), TG_TEST_CHAT_ID (groupes de test, séparés
+par des virgules), SUPABASE_URL (sinon vigie.config.json).
 Résultats : annotations GitHub (::notice / ::warning / ::error) et, pour check, mode=setup|deploy dans GITHUB_OUTPUT.
 TELEGRAM_API remplace https://api.telegram.org (tests).
 """
@@ -15,6 +16,7 @@ import hmac
 import json
 import os
 import pathlib
+import re
 import sys
 import time
 import urllib.error
@@ -70,17 +72,20 @@ def output(**kv) -> None:
                 f.write(f"{k}={v}\n")
 
 
-def check(token: str, chat: str) -> None:
-    me = tg(token, "getMe")
-    reads_all = bool(me.get("can_read_all_group_messages"))
-    note("notice", "Bot", f"@{me['username']} ({me['first_name']}) · mode confidentialité "
-         + ("désactivé : il lit tous les messages des groupes" if reads_all else "actif : il ne lira tous les messages que s'il est admin du groupe"))
-    if not chat:
-        output(mode="setup")
-        # installation : les ajouts du bot à un groupe (et les messages reçus) des dernières 24 h donnent l'identifiant
-        tg(token, "deleteWebhook", drop_pending_updates=False)
-        found: dict[str, dict] = {}
-        for u in tg(token, "getUpdates", timeout=0, limit=100, allowed_updates=["message", "my_chat_member"]):
+def discover(token: str, tests: set[str]) -> dict[str, dict]:
+    """Groupes où se trouve le bot, d'après ce que Telegram lui a envoyé (ajouts au groupe, messages) : les dernières
+    24 h, puis jusqu'à une minute d'écoute. Le webhook éventuel est coupé pendant ce temps (le workflow le rebranche)."""
+    tg(token, "deleteWebhook", drop_pending_updates=False)
+    found: dict[str, dict] = {}
+    offset = None
+    deadline = time.time() + 60
+    while True:
+        params = {"timeout": 0 if offset is None else 20, "limit": 100, "allowed_updates": ["message", "my_chat_member"]}
+        if offset is not None:
+            params["offset"] = offset
+        updates = tg(token, "getUpdates", **params)
+        for u in updates:
+            offset = max(offset or 0, u["update_id"] + 1)
             m = u.get("my_chat_member")
             c = (m or u.get("message") or {}).get("chat") or {}
             if c.get("type") not in ("group", "supergroup"):
@@ -88,27 +93,54 @@ def check(token: str, chat: str) -> None:
             g = found.setdefault(str(c["id"]), {"title": c.get("title", "?"), "status": "membre"})
             if m:
                 g["status"] = m.get("new_chat_member", {}).get("status", g["status"])
-        if not found:
-            note("warning", "Installation", "aucun groupe trouvé : le bot doit avoir été ajouté au groupe il y a moins de 24 h "
-                 "(sinon, le faire retirer et ré-ajouter), puis relance ce workflow")
-        for cid, g in found.items():
-            note("notice", "Groupe trouvé", f"« {g['title']} » (bot : {g['status']}) → crée le secret TG_CHAT_ID = {cid}, puis relance ce workflow")
-        return
-    output(mode="deploy")
+        if any(cid not in tests for cid in found) or time.time() > deadline:
+            return found
+        if offset is None:
+            offset = 0                 # rien en attente : on écoute (les mises à jour lues ici n'ont pas d'usage)
+
+
+def check_group(token: str, me: dict, chat: str, reads_all: bool, test: bool) -> None:
+    kind = "Groupe de test" if test else "Groupe"
+    bad = "warning" if test else "error"        # un groupe de test absent ne bloque pas le déploiement
     try:
         info = tg(token, "getChat", chat_id=chat)
         member = tg(token, "getChatMember", chat_id=chat, user_id=me["id"])
         count = tg(token, "getChatMemberCount", chat_id=chat)
     except RuntimeError as e:
-        note("error", "Groupe", f"{e} : le bot n'est pas (ou plus) dans le groupe {chat}, ou TG_CHAT_ID est faux")
+        var = "TG_TEST_CHAT_ID" if test else "TG_CHAT_ID"
+        note(bad, kind, f"{e} : le bot n'est pas (ou plus) dans le groupe {chat}, ou {var} est faux")
         return
     status = member.get("status")
-    note("notice", "Groupe", f"« {info.get('title')} » · {count} membres · bot : {status}")
+    note("notice", kind, f"« {info.get('title')} » · {count} membres · bot : {status}")
     if status not in ("administrator", "member", "restricted"):
-        note("error", "Groupe", f"le bot n'est pas membre du groupe (statut : {status}) : demande aux admins de l'ajouter")
+        note(bad, kind, f"le bot n'est pas membre du groupe (statut : {status}) : demande aux admins de l'ajouter")
     elif status != "administrator" and not reads_all:
-        note("error", "Lecture", "le bot ne reçoit que les commandes : dans @BotFather, /setprivacy → Disable, puis fais-le "
+        note(bad, "Lecture", "le bot ne reçoit que les commandes : dans @BotFather, /setprivacy → Disable, puis fais-le "
              "retirer et ré-ajouter au groupe ; ou demande aux admins de le passer admin (aucun droit nécessaire)")
+
+
+def check(token: str, chat: str, tests: set[str]) -> None:
+    me = tg(token, "getMe")
+    reads_all = bool(me.get("can_read_all_group_messages"))
+    note("notice", "Bot", f"@{me['username']} ({me['first_name']}) · mode confidentialité "
+         + ("désactivé : il lit tous les messages des groupes" if reads_all else "actif : il ne lira tous les messages que s'il est admin du groupe"))
+    # déploiement dès qu'il y a un groupe de signalement ou un groupe de test (où le bot répond sans rien enregistrer)
+    output(mode="deploy" if chat or tests else "setup")
+    for t in sorted(tests):
+        check_group(token, me, t, reads_all, test=True)
+    if chat:
+        check_group(token, me, chat, reads_all, test=False)
+        return
+    # installation : identifiant du groupe de signalement
+    found = discover(token, tests)
+    for cid, g in found.items():
+        if cid in tests:
+            continue
+        note("notice", "Groupe trouvé", f"« {g['title']} » (bot : {g['status']}) → crée le secret TG_CHAT_ID = {cid} si c'est "
+             f"le groupe de signalement, ou TG_TEST_CHAT_ID = {cid} si c'est un groupe de test, puis relance ce workflow")
+    if not any(cid not in tests for cid in found):
+        note("warning", "Installation", "aucun nouveau groupe trouvé : le bot doit y avoir été ajouté il y a moins de 24 h, ou "
+             "quelqu'un doit y écrire pendant que le workflow écoute (une minute) ; sinon, le faire retirer et ré-ajouter")
 
 
 def call_function(url: str, body: dict | None, secret: str | None) -> tuple[int, str]:
@@ -173,7 +205,8 @@ def main() -> None:
         return
     try:
         if sys.argv[1:] == ["check"]:
-            check(token, os.environ.get("TG_CHAT_ID", "").strip())
+            tests = {t for t in re.split(r"[\s,;]+", os.environ.get("TG_TEST_CHAT_ID", "")) if t}
+            check(token, os.environ.get("TG_CHAT_ID", "").strip(), tests)
         elif sys.argv[1:] == ["webhook"]:
             webhook(token)
         else:

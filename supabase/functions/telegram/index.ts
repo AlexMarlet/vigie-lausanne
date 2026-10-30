@@ -1,8 +1,9 @@
 // Vigie — bot Telegram, fonction Supabase (Deno). Telegram y envoie chaque message du groupe (webhook) ; la logique
 // est dans bot.mjs. Déployée par .github/workflows/bot.yml, qui ajoute vigie-core.js et data.js (tools/bot_bundle.mjs).
 //
-// Variables : TELEGRAM_BOT_TOKEN, TG_CHAT_ID (groupe de signalement ; vide pendant l'installation), VIGIE_SALT et
-// VIGIE_SITE (facultatifs). SUPABASE_URL et la clé secrète sont fournies par Supabase.
+// Variables : TELEGRAM_BOT_TOKEN, TG_CHAT_ID (groupe de signalement ; vide pendant l'installation), TG_TEST_CHAT_ID
+// (groupes de test, séparés par des virgules), VIGIE_SALT et VIGIE_SITE (facultatifs). SUPABASE_URL et la clé
+// secrète sont fournies par Supabase.
 import "./vigie-core.js";
 import { LIGNES, STOPS } from "./data.js";
 import { createBot, deriveSecrets } from "./bot.mjs";
@@ -25,7 +26,8 @@ const KEY = secretKey();
 
 const ready = TOKEN ? deriveSecrets(TOKEN, Deno.env.get("VIGIE_SALT") ?? "") : Promise.resolve(null);
 const botP = ready.then((s) => s && createBot({
-  C, stops: STOPS, lignes: LIGNES, chatId: Deno.env.get("TG_CHAT_ID") ?? "", salt: s.salt, site: Deno.env.get("VIGIE_SITE") ?? "",
+  C, stops: STOPS, lignes: LIGNES, chatId: Deno.env.get("TG_CHAT_ID") ?? "", testIds: Deno.env.get("TG_TEST_CHAT_ID") ?? "",
+  salt: s.salt, site: Deno.env.get("VIGIE_SITE") ?? "",
 }));
 
 function same(a: string, b: string): boolean {               // comparaison à temps constant

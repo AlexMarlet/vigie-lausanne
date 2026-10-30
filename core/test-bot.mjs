@@ -80,6 +80,31 @@ const setup = createBot({ C, stops, lignes, chatId: "", salt: "s" });
 const s1 = await setup.handle(up(msg("controle Flon")));
 assert(s1.rows.length === 0 && s1.reply === null && s1.log[0].includes(String(GROUP)), "installation : identifiant du groupe noté, rien d'enregistré");
 
+// ---- groupe de test (ex. « devgroup3 ») : le bot répond ce qu'il comprend, rien n'est enregistré
+const TEST = -100777;
+const inTest = (text, o = {}) => up(msg(text, Object.assign({ chat: { id: TEST, type: "supergroup", title: "devgroup3" } }, o)));
+for (const [label, b] of [["avant l'installation", createBot({ C, stops, lignes, chatId: "", testIds: String(TEST), salt: "s" })],
+                          ["avec le groupe de signalement", createBot({ C, stops, lignes, chatId: String(GROUP), testIds: `${TEST}, -100888`, salt: "s" })]]) {
+  const t1 = await b.handle(inTest("Contrôleurs à Flon M2 direction Croisettes"));
+  assert(t1.rows.length === 0 && t1.reply && t1.reply.method === "sendMessage" && t1.reply.chat_id === TEST &&
+    /Compris : contrôle à Lausanne-Flon, ligne M2, direction Croisettes/.test(t1.reply.text) && /rien n'est enregistré/.test(t1.reply.text) &&
+    t1.reply.reply_parameters.message_id === mid, `groupe de test (${label}) : réponse au message, rien d'enregistré`);
+  const t2 = await b.handle(inTest("salut, on teste le bot"));
+  assert(t2.reply === null && t2.rows.length === 0, `groupe de test (${label}) : bavardage, pas de réponse`);
+  const t3 = await b.handle(inTest("contrôleurs dans le bus"));
+  assert(t3.reply && /ne trouve pas d'arrêt/.test(t3.reply.text), `groupe de test (${label}) : signalement sans arrêt reconnu, le bot le dit`);
+  const t4 = await b.handle(inTest("partis", { reply_to_message: msg("controle a Chauderon") }));
+  assert(t4.reply && /fin de contrôle .* Chauderon/.test(t4.reply.text), `groupe de test (${label}) : réponse « partis » comprise`);
+  const t5 = await b.handle(inTest("/start@VigieLausanneBot"));
+  assert(t5.reply && /Groupe de test/.test(t5.reply.text), `groupe de test (${label}) : /start`);
+  assert((await b.handle(inTest("controle Flon", { from: { id: 9, is_bot: true } }))).reply === null, `groupe de test (${label}) : messages des bots ignorés`);
+  const t6 = await b.handle({ update_id: 1, my_chat_member: { chat: { id: TEST, type: "supergroup", title: "devgroup3" }, new_chat_member: { status: "member" } } });
+  assert(t6.reply === null, `groupe de test (${label}) : le bot y reste`);
+}
+const pre = createBot({ C, stops, lignes, chatId: "", testIds: String(TEST), salt: "s" });
+const main = await pre.handle(up(msg("controle Flon")));
+assert(main.rows.length === 0 && main.reply === null && main.log[0].includes(String(GROUP)), "groupe de test configuré, signalement pas encore : le bot reste muet ailleurs et note l'identifiant");
+
 // ---- messages privés : explication, ou test sans rien enregistrer
 const priv = (text) => ({ update_id: 1, message: { message_id: 1, date: t0, chat: { id: 5, type: "private" }, from: { id: 5, is_bot: false }, text } });
 const start = await bot.handle(priv("/start"));

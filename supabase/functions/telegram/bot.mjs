@@ -6,9 +6,11 @@
 //     lu avec le même parseur que l'app (core/vigie-core.js) ; une réponse « partis » ou « toujours là » à un
 //     signalement prend l'arrêt du message auquel elle répond ;
 //   - message privé → le bot explique ce qu'il fait, ou montre ce qu'il comprend d'un message (rien n'est enregistré) ;
+//   - groupe de test (TG_TEST_CHAT_ID, par ex. celui où les admins essaient le bot) → le bot répond dans le groupe ce
+//     qu'il comprend de chaque signalement, sans rien enregistrer ;
 //   - autre groupe → le bot en sort aussitôt (personne ne peut l'utiliser pour injecter de faux signalements) ;
-//   - pas encore de TG_CHAT_ID (installation) → le bot n'enregistre rien et note l'identifiant du groupe.
-// Rien n'est jamais posté dans le groupe. Ni le texte des messages ni leur auteur ne sont enregistrés : seulement une
+//   - pas encore de TG_CHAT_ID (installation) → le bot n'enregistre rien, reste muet et note l'identifiant du groupe.
+// Rien n'est jamais posté dans le groupe de signalement. Ni le texte des messages ni leur auteur ne sont enregistrés : seulement une
 // empreinte du message (anti-doublon) et une empreinte « personne + arrêt + jour » (une seule voix par personne et par
 // arrêt chaque jour, comme dans l'app), toutes deux salées, donc non réversibles.
 
@@ -39,11 +41,14 @@ const still = (n) => RE_STILL.test(n) && !/\b(pas|plus)\b/.test(n);
 
 const SUB = { retard: "retard", panne: "panne", deviation: "déviation", accident: "accident", bonde: "véhicule bondé" };
 const isGroup = (c) => c && (c.type === "group" || c.type === "supergroup");
+// message de test qui ressemble à un signalement sans arrêt reconnu : le bot le dit (sinon il reste muet)
+const RE_ATTEMPT = /\b(contr\w*|agents?|panne\w*|retard\w*|devi\w*|accident\w*|partis?|bloque\w*|perturb\w*|bonde\w*)\b/;
 
-export function createBot({ C, stops, lignes, chatId, salt, site }) {
+export function createBot({ C, stops, lignes, chatId, testIds, salt, site }) {
   const gaz = C.buildGazetteer(stops);
   const net = C.buildNetwork(lignes);
   const group = String(chatId || "").trim();
+  const tests = new Set(String(testIds || "").split(/[\s,;]+/).filter(Boolean));
   const SITE = (site || "https://vigie-lausanne.ch").replace(/\/$/, "");
   const name = (id) => (gaz.byId.get(id) || {}).name || id;
 
@@ -113,8 +118,25 @@ export function createBot({ C, stops, lignes, chatId, salt, site }) {
         "Ici c'est un test : rien n'est enregistré. Dans le groupe, ce message irait sur la carte.";
     }
     if (why === "question") return "C'est une question : elle ne va pas sur la carte.";
-    return "Je ne trouve pas d'arrêt dans ce message. Exemples : « Contrôleurs à Flon M2 direction Croisettes », " +
-      "« Panne ligne 9 à Chauderon », ou « partis » en réponse à un signalement.";
+    return NO_STOP;
+  }
+  const NO_STOP = "Je ne trouve pas d'arrêt dans ce message. Exemples : « Contrôleurs à Flon M2 direction Croisettes », " +
+    "« Panne ligne 9 à Chauderon », ou « partis » en réponse à un signalement.";
+
+  // Groupe de test : le bot répond à chaque signalement (et à ce qui y ressemble) ce qu'il comprend, rien n'est enregistré
+  function testAnswer(msg) {
+    const text = (msg.text ?? msg.caption ?? "").trim();
+    if (/^\/(start|aide|help)(@\w+)?\b/i.test(text)) {
+      return "Groupe de test : je réponds ici ce que je comprends de chaque signalement, sans rien enregistrer. " +
+        "Dans le groupe de signalement, je ne poste jamais rien. Carte : " + SITE;
+    }
+    const { p, reply, why } = interpret(msg);
+    if (p.usable) {
+      return "Compris : " + describe(p) + (reply ? " (en réponse à un message qui citait cet arrêt)" : "") + ". " +
+        "Groupe de test : rien n'est enregistré.";
+    }
+    if (why !== "question" && RE_ATTEMPT.test(C.normalize(text))) return NO_STOP;
+    return null;
   }
 
   // Une mise à jour Telegram → { rows (signalements à enregistrer), merge (message modifié : mettre à jour),
@@ -125,7 +147,8 @@ export function createBot({ C, stops, lignes, chatId, salt, site }) {
     if (mcm) {
       const c = mcm.chat, st = mcm.new_chat_member && mcm.new_chat_member.status;
       if (!isGroup(c)) return out;
-      if (!group) out.log.push(`installation : bot « ${st} » dans le groupe « ${c.title} », TG_CHAT_ID = ${c.id}`);
+      if (tests.has(String(c.id))) out.log.push(`groupe de test « ${c.title} » : le bot est maintenant « ${st} »`);
+      else if (!group) out.log.push(`installation : bot « ${st} » dans le groupe « ${c.title} », TG_CHAT_ID = ${c.id}`);
       else if (String(c.id) === group) out.log.push(`groupe de signalement : le bot est maintenant « ${st} »`);
       else if (st === "member" || st === "administrator") {
         out.reply = { method: "leaveChat", chat_id: c.id };
@@ -141,6 +164,13 @@ export function createBot({ C, stops, lignes, chatId, salt, site }) {
       return out;
     }
     if (!isGroup(msg.chat)) return out;
+    if (tests.has(String(msg.chat.id))) {
+      const text = edited || (msg.from && msg.from.is_bot) ? null : testAnswer(msg);
+      if (text) out.reply = { method: "sendMessage", chat_id: msg.chat.id, text, link_preview_options: { is_disabled: true },
+        reply_parameters: { message_id: msg.message_id, allow_sending_without_reply: true } };
+      out.log.push("groupe de test : " + (text ? "réponse envoyée" : "rien à répondre"));
+      return out;
+    }
     if (!group) { out.log.push(`installation : message du groupe « ${msg.chat.title} », TG_CHAT_ID = ${msg.chat.id}`); return out; }
     if (String(msg.chat.id) !== group) {
       out.reply = { method: "leaveChat", chat_id: msg.chat.id };

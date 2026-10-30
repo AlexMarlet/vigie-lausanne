@@ -1,8 +1,8 @@
 name: Bot Telegram
 
 # Déploie le bot du groupe de signalement : fonction Supabase « telegram » + webhook Telegram (voir README).
-# Secrets du dépôt : TELEGRAM_BOT_TOKEN, SUPABASE_ACCESS_TOKEN, puis TG_CHAT_ID (donné par une 1re exécution).
-# Sans TELEGRAM_BOT_TOKEN, le workflow ne fait rien.
+# Secrets du dépôt : TELEGRAM_BOT_TOKEN, SUPABASE_ACCESS_TOKEN, puis TG_CHAT_ID (donné par une 1re exécution) et,
+# si les admins essaient le bot dans un groupe de test, TG_TEST_CHAT_ID. Sans TELEGRAM_BOT_TOKEN, il ne fait rien.
 
 on:
   workflow_dispatch:
@@ -30,6 +30,7 @@ jobs:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       TG_CHAT_ID: ${{ secrets.TG_CHAT_ID || vars.TG_CHAT_ID }}
+      TG_TEST_CHAT_ID: ${{ secrets.TG_TEST_CHAT_ID || vars.TG_TEST_CHAT_ID }}
       SUPABASE_URL: ${{ vars.SUPABASE_URL }}
     steps:
       - uses: actions/checkout@v7
@@ -63,7 +64,12 @@ jobs:
       - name: Déployer la fonction et ses secrets
         if: steps.check.outputs.mode == 'deploy'
         run: |
-          supabase secrets set --project-ref "$REF" TELEGRAM_BOT_TOKEN="$TELEGRAM_BOT_TOKEN" TG_CHAT_ID="$TG_CHAT_ID" > /dev/null
+          a_definir=(TELEGRAM_BOT_TOKEN="$TELEGRAM_BOT_TOKEN"); a_retirer=()
+          for v in TG_CHAT_ID TG_TEST_CHAT_ID; do
+            if [ -n "${!v}" ]; then a_definir+=("$v=${!v}"); else a_retirer+=("$v"); fi
+          done
+          supabase secrets set --project-ref "$REF" "${a_definir[@]}" > /dev/null
+          [ ${#a_retirer[@]} -eq 0 ] || supabase secrets unset --project-ref "$REF" --yes "${a_retirer[@]}" > /dev/null 2>&1 || true
           supabase functions deploy telegram --project-ref "$REF" --no-verify-jwt --use-api
           echo "::notice title=Fonction::telegram déployée sur le projet $REF"
 
