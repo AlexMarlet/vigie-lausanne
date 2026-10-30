@@ -129,6 +129,9 @@ def check_group(token: str, me: dict, chat: str, reads_all: bool, test: bool) ->
         return
     status = member.get("status")
     note("notice", kind, f"« {info.get('title')} » · {count} membres · bot : {status}")
+    if test and count > 200:
+        note("warning", kind, f"{count} membres : le bot répond à chaque signalement dans un groupe de test. Si c'est le "
+             "groupe de signalement, retire cet identifiant de TG_TEST_CHAT_ID et mets-le dans TG_CHAT_ID")
     if test and status == "restricted" and member.get("can_send_messages") is False:
         note("warning", kind, "le bot est en lecture seule dans ce groupe : il ne pourra pas répondre. Demande à l'admin de "
              "l'autoriser à envoyer des messages (ou de le passer admin sans aucun droit)")
@@ -146,6 +149,10 @@ def check(token: str, chat: str, tests: set[str]) -> None:
          + ("désactivé : il lit tous les messages des groupes" if reads_all else "actif : il ne lira tous les messages que s'il est admin du groupe"))
     # déploiement dès qu'il y a un groupe de signalement ou un groupe de test (où le bot répond sans rien enregistrer)
     output(mode="deploy" if chat or tests else "setup")
+    if chat and chat in tests:
+        note("warning", "Groupe de test", "TG_CHAT_ID figure aussi dans TG_TEST_CHAT_ID : ce groupe est traité comme le groupe "
+             "de signalement (le bot y reste muet) ; retire-le de TG_TEST_CHAT_ID")
+        tests = tests - {chat}
     for t in sorted(tests):
         check_group(token, me, t, reads_all, test=True)
     if chat:

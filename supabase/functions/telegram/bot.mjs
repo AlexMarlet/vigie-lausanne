@@ -70,6 +70,7 @@ export function createBot({ C, stops, lignes, chatId, testIds, salt, site }) {
   const net = C.buildNetwork(lignes);
   const group = String(chatId || "").trim();
   const tests = new Set(String(testIds || "").split(/[\s,;]+/).filter(Boolean));
+  tests.delete(group);          // le groupe de signalement n'est jamais un groupe de test : le bot y reste muet
   const SITE = (site || "https://vigie-lausanne.ch").replace(/\/$/, "");
   const name = (id) => (gaz.byId.get(id) || {}).name || id;
 

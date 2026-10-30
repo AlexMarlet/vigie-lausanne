@@ -101,6 +101,9 @@ for (const [label, b] of [["avant l'installation", createBot({ C, stops, lignes,
   const t6 = await b.handle({ update_id: 1, my_chat_member: { chat: { id: TEST, type: "supergroup", title: "devgroup3" }, new_chat_member: { status: "member" } } });
   assert(t6.reply === null, `groupe de test (${label}) : le bot y reste`);
 }
+const both = createBot({ C, stops, lignes, chatId: String(GROUP), testIds: `${TEST},${GROUP}`, salt: "s" });
+const b1 = await both.handle(up(msg("Contrôleurs à Flon M2 direction Croisettes")));
+assert(b1.reply === null && b1.rows.length === 1, "groupe de signalement mis par erreur dans les groupes de test : le bot y reste muet et enregistre");
 const pre = createBot({ C, stops, lignes, chatId: "", testIds: String(TEST), salt: "s" });
 const main = await pre.handle(up(msg("controle Flon")));
 assert(main.rows.length === 0 && main.reply === null && main.log[0].includes(String(GROUP)), "groupe de test configuré, signalement pas encore : le bot reste muet ailleurs et note l'identifiant");
