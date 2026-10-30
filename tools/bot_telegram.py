@@ -72,29 +72,46 @@ def output(**kv) -> None:
                 f.write(f"{k}={v}\n")
 
 
-def discover(token: str, tests: set[str]) -> dict[str, dict]:
+def discover(token: str, tests: set[str]) -> tuple[dict[str, dict], dict[str, int]]:
     """Groupes où se trouve le bot, d'après ce que Telegram lui a envoyé (ajouts au groupe, messages) : les dernières
-    24 h, puis jusqu'à une minute d'écoute. Le webhook éventuel est coupé pendant ce temps (le workflow le rebranche)."""
+    24 h, puis jusqu'à une minute d'écoute. Le webhook éventuel est coupé pendant ce temps (le workflow le rebranche).
+    Renvoie aussi le nombre de mises à jour reçues par type de discussion (diagnostic)."""
+    hook = tg(token, "getWebhookInfo")
+    if hook.get("url"):
+        ours = hook["url"].endswith("/functions/v1/telegram")
+        note("notice" if ours else "warning", "Webhook",
+             ("webhook de la fonction coupé pendant la recherche" if ours else
+              f"un webhook était branché sur {urllib.parse.urlsplit(hook['url']).netloc} : un autre outil utilise ce bot et "
+              "recevait ses messages à la place du workflow ; il est coupé") + f" ({hook.get('pending_update_count', 0)} en attente)")
     tg(token, "deleteWebhook", drop_pending_updates=False)
     found: dict[str, dict] = {}
+    seen: dict[str, int] = {}
+    channels: set = set()
     offset = None
     deadline = time.time() + 60
     while True:
-        params = {"timeout": 0 if offset is None else 20, "limit": 100, "allowed_updates": ["message", "my_chat_member"]}
+        params = {"timeout": 0 if offset is None else 20, "limit": 100,
+                  "allowed_updates": ["message", "my_chat_member", "channel_post"]}
         if offset is not None:
             params["offset"] = offset
         updates = tg(token, "getUpdates", **params)
         for u in updates:
             offset = max(offset or 0, u["update_id"] + 1)
             m = u.get("my_chat_member")
-            c = (m or u.get("message") or {}).get("chat") or {}
+            c = (m or u.get("message") or u.get("channel_post") or {}).get("chat") or {}
+            kind = {"private": "message privé", "channel": "chaîne"}.get(c.get("type"), "groupe" if c else "autre")
+            seen[kind] = seen.get(kind, 0) + 1
+            if c.get("type") == "channel" and c.get("id") not in channels:
+                channels.add(c.get("id"))
+                note("warning", "Chaîne", f"« {c.get('title', '?')} » est une chaîne, pas un groupe : le bot n'y lit pas les "
+                     "signalements des membres. Il faut l'ajouter à un groupe")
             if c.get("type") not in ("group", "supergroup"):
                 continue
             g = found.setdefault(str(c["id"]), {"title": c.get("title", "?"), "status": "membre"})
             if m:
                 g["status"] = m.get("new_chat_member", {}).get("status", g["status"])
         if any(cid not in tests for cid in found) or time.time() > deadline:
-            return found
+            return found, seen
         if offset is None:
             offset = 0                 # rien en attente : on écoute (les mises à jour lues ici n'ont pas d'usage)
 
@@ -132,15 +149,17 @@ def check(token: str, chat: str, tests: set[str]) -> None:
         check_group(token, me, chat, reads_all, test=False)
         return
     # installation : identifiant du groupe de signalement
-    found = discover(token, tests)
+    found, seen = discover(token, tests)
     for cid, g in found.items():
         if cid in tests:
             continue
         note("notice", "Groupe trouvé", f"« {g['title']} » (bot : {g['status']}) → crée le secret TG_CHAT_ID = {cid} si c'est "
              f"le groupe de signalement, ou TG_TEST_CHAT_ID = {cid} si c'est un groupe de test, puis relance ce workflow")
     if not any(cid not in tests for cid in found):
-        note("warning", "Installation", "aucun nouveau groupe trouvé : le bot doit y avoir été ajouté il y a moins de 24 h, ou "
-             "quelqu'un doit y écrire pendant que le workflow écoute (une minute) ; sinon, le faire retirer et ré-ajouter")
+        recu = ", ".join(f"{n} {k}" for k, n in seen.items()) or "rien"
+        note("warning", "Installation", f"aucun nouveau groupe trouvé (reçu de Telegram : {recu}) : le bot doit y avoir été "
+             "ajouté il y a moins de 24 h, ou quelqu'un doit y écrire (moins de 24 h avant, ou pendant la minute où le "
+             "workflow écoute) ; vérifie aussi que c'est bien ce bot qui est dans le groupe")
 
 
 def call_function(url: str, body: dict | None, secret: str | None) -> tuple[int, str]:
