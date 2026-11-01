@@ -155,6 +155,9 @@ Avec l'accord de ses admins, le bot lit le groupe Telegram de signalement et met
 - ligne et sens : toutes les lignes citées sont prises en compte (« ligne 6 et 7 et M2 »), seulement si elles passent à
   l'arrêt ; le sens écrit (« direction Chailly ») choisit la ligne et corrige une ligne impossible (« M2 … EPFL » → M1) ;
   « direction centre / Lausanne / ville » donne le sens qui rejoint le plus vite le centre ;
+- les messages du bot de signalement anonyme du groupe (🚏 arrêt, ➡️ direction, 🚌 lignes) sont compris aussi. Telegram ne
+  transmet les messages d'un autre bot que si notre bot est **admin** du groupe (sans aucun droit) et a le mode
+  **bot-to-bot** activé dans @BotFather (en plus du mode confidentialité désactivé) ;
 - s'il cite un arrêt, il devient un signalement `telegram` (poids 0,45 contre 0,60 pour l'app) à l'heure du message. Ni le
   texte ni l'auteur ne sont enregistrés : seulement une empreinte du message (anti-doublon) et une empreinte « personne +
   arrêt + jour » (une seule voix), salées et non réversibles. Un message modifié met à jour son signalement ;
@@ -173,8 +176,9 @@ Si la fonction ne répond pas, Telegram garde les messages jusqu'à 24 h et les 
    au projet Vigie avec les droits **Edge Functions** et **Edge Function Secrets** en lecture-écriture → copier.
 3. GitHub, dépôt → Settings → Secrets and variables → Actions → *New repository secret* : `TELEGRAM_BOT_TOKEN` (le jeton
    du bot) et `SUPABASE_ACCESS_TOKEN`.
-4. Les admins ajoutent le bot au groupe, comme membre (ou comme admin sans aucun droit si le mode confidentialité est
-   resté actif).
+4. Les admins ajoutent le bot au groupe comme **admin sans aucun droit** (un simple membre suffit s'il n'y a pas de bot
+   de signalement anonyme dans le groupe), et l'exemptent du bot anti-spam s'il y en a un. Dans @BotFather, activer
+   aussi le mode bot-to-bot pour qu'il lise les messages du bot de signalement anonyme.
 5. GitHub → Actions → **Bot Telegram** → *Run workflow*. Il affiche « Groupe trouvé : … → TG_CHAT_ID = -100… » (d'après
    l'ajout du bot, s'il date de moins de 24 h, ou un message écrit dans le groupe pendant la minute où il écoute). Créer
    le secret `TG_CHAT_ID` avec ce nombre et relancer : le workflow déploie la fonction, branche Telegram dessus et la

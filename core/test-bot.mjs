@@ -62,7 +62,16 @@ assert((await reply("partis", msg("quelqu'un a vu des contrôleurs ?"))).length 
 const edit = await bot.handle(up(msg("controleurs a Bessieres"), true));
 assert(edit.rows.length === 1 && edit.merge, "message modifié : mise à jour du signalement");
 assert((await bot.handle(up(msg("salut tout le monde")))).rows.length === 0, "message sans arrêt : rien");
-assert((await bot.handle(up(msg("controle Flon", { from: { id: 7, is_bot: true } })))).rows.length === 0, "message d'un autre bot : ignoré");
+const TPL = (stop, dir, lines) => `👋 A l'arrêt\n\n🚏 ${stop}\n➡️ ${dir}\n🚌 ${lines}\n📝 \n\nArrêt, Direction, Lignes concernées, Remarques`;
+const anonBot = { id: 7, is_bot: true, first_name: "Signalement anonyme" };
+const tb = await bot.handle(up(msg(TPL("EPFL", "Renens", "👋 à l'arrêt"), { from: anonBot })));
+assert(tb.rows.length === 1 && tb.rows[0].stop_id === "epfl" && tb.rows[0].line === "M1" && tb.rows[0].direction === "renens" && tb.rows[0].voter === null,
+  "message du bot de signalement anonyme : EPFL, M1 direction Renens (sans voix personnelle)");
+const tl = (await bot.handle(up(msg(TPL("Chauderon", "Bel-Air", "9"), { from: anonBot })))).rows[0];
+assert(tl.stop_id === "chauderon" && tl.line === "9" && tl.direction, "modèle avec ligne : 🚌 9");
+const tl2 = (await bot.handle(up(msg(TPL("Ours", "Chailly", "6, 7 et M2"), { from: anonBot })))).rows[0];
+assert(tl2.line === "7" && tl2.direction === "val-vert", "modèle avec plusieurs lignes : le sens choisit");
+assert((await bot.handle(up(msg("controle Flon", { from: anonBot, reply_to_message: msg("x") })))).rows.length === 0, "réponse d'un bot à un message : ignorée");
 const anon = await bot.handle(up(msg("controle Flon", { from: { id: 1087968824, is_bot: true }, sender_chat: { id: GROUP, type: "supergroup" } })));
 assert(anon.rows.length === 1 && anon.rows[0].voter === null, "admin anonyme : pris en compte, sans voix personnelle");
 assert((await bot.handle(up(msg(null, { caption: "contrôleurs à Chauderon", photo: [{}] })))).rows[0]?.stop_id === "chauderon", "photo avec légende");
@@ -97,7 +106,11 @@ for (const [label, b] of [["avant l'installation", createBot({ C, stops, lignes,
   assert(t4.reply && /fin de contrôle .* Chauderon/.test(t4.reply.text), `groupe de test (${label}) : réponse « partis » comprise`);
   const t5 = await b.handle(inTest("/start@VigieLausanneBot"));
   assert(t5.reply && /Groupe de test/.test(t5.reply.text), `groupe de test (${label}) : /start`);
-  assert((await b.handle(inTest("controle Flon", { from: { id: 9, is_bot: true } }))).reply === null, `groupe de test (${label}) : messages des bots ignorés`);
+  const viaBot = await b.handle(inTest(TPL("EPFL", "Renens", "👋 à l'arrêt"), { from: { id: 9, is_bot: true } }));
+  assert(viaBot.reply && /EPFL, ligne M1, direction Renens-Gare/.test(viaBot.reply.text), `groupe de test (${label}) : message du bot anonyme compris`);
+  assert((await b.handle(inTest("salut", { from: { id: 9, is_bot: true } }))).reply === null &&
+    (await b.handle(inTest("controle Flon", { from: { id: 9, is_bot: true }, reply_to_message: msg("x") }))).reply === null,
+    `groupe de test (${label}) : pas de conversation avec les autres bots`);
   const t6 = await b.handle({ update_id: 1, my_chat_member: { chat: { id: TEST, type: "supergroup", title: "devgroup3" }, new_chat_member: { status: "member" } } });
   assert(t6.reply === null, `groupe de test (${label}) : le bot y reste`);
 }

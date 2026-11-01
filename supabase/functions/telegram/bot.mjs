@@ -49,15 +49,22 @@ const COUNT = /^(controleurs?|controleuses?|agents?|mecs?|gars|types?|personnes?
 const CENTRE = ["flon", "stfrancois", "belair", "chauderon", "riponne", "bessieres", "gare", "tunnel"];
 const RE_CENTRE = /\b(?:direction|dir|vers|sens|cote)(?: le| la| de)? (?:lausanne centre|centre ville|centre|lausanne ville|ville|lausanne)\b/;
 const HOUR = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", hour: "2-digit", hourCycle: "h23" });
+// 🚌 🚇 🚊 (messages du bot de signalement anonyme) : « lignes concernées », comme dans le parseur
+const LINE_EMOJI = /[\u{1F68C}\u{1F68D}\u{1F68E}\u{1F687}\u{1F688}\u{1F68A}\u{1F683}\u{1F68B}]\uFE0F?/gu;
 function linesIn(norm) {
   const out = [], add = (l) => { if (!out.includes(l)) out.push(l); };
   for (const m of norm.matchAll(/\b(?:m|metro)\s?([123])\b/g)) add("M" + m[1]);
   const t = norm.split(" ");
+  let prev = false;                                   // le mot précédent était une ligne : liste « 31, 33 », « 6 et 7 »
   t.forEach((w, i) => {
-    if (!/^\d{1,2}$/.test(w) || +w === 0 || COUNT.test(t[i + 1] || "")) return;
-    const before = t.slice(Math.max(0, i - 2), i).join(" ");
-    if (/(?:^|\s)(?:ligne|lignes|bus|trolley|trolleybus|le|du|l|n|no|num|numero|et|ou)$/.test(before) ||
-        /^(?:direction|dir|vers|sens)$/.test(t[i + 1] || "")) add(String(+w));
+    if (/^m[123]$/.test(w)) { prev = true; return; }
+    if (w === "et" || w === "ou") return;
+    if (/^\d{1,2}$/.test(w) && +w > 0 && !COUNT.test(t[i + 1] || "")) {
+      const before = t.slice(Math.max(0, i - 2), i).join(" ");
+      if (prev || /(?:^|\s)(?:ligne|lignes|bus|trolley|trolleybus|le|du|l|n|no|num|numero|et|ou)$/.test(before) ||
+          /^(?:direction|dir|vers|sens)$/.test(t[i + 1] || "")) { add(String(+w)); prev = true; return; }
+    }
+    prev = false;
   });
   return out;
 }
@@ -100,8 +107,9 @@ export function createBot({ C, stops, lignes, chatId, testIds, salt, site }) {
   function resolve(p, text, date) {
     const at = (gaz.byId.get(p.stopId) || {}).lines || [];
     if (!at.length) return { line: p.line || null, dir: null, seq: null };
-    const norm = C.normalize(text);
+    const norm = C.normalize(text.replace(LINE_EMOJI, " ligne "));
     const said = linesIn(norm);
+    if (p.line && !said.includes(p.line)) said.push(p.line);
     const cited = said.filter((l) => at.includes(l));
     const h = Number(HOUR.format(date)), night = h >= 22 || h < 6;
     const day = at.filter((l) => night || !/^N\d/.test(l));
@@ -176,7 +184,7 @@ export function createBot({ C, stops, lignes, chatId, testIds, salt, site }) {
     "« Panne ligne 9 à Chauderon », ou « partis » en réponse à un signalement.";
 
   // Groupe de test : le bot répond à chaque signalement (et à ce qui y ressemble) ce qu'il comprend, rien n'est enregistré
-  function testAnswer(msg) {
+  function testAnswer(msg, fromBot) {
     const text = (msg.text ?? msg.caption ?? "").trim();
     if (/^\/(start|aide|help)(@\w+)?\b/i.test(text)) {
       return "Groupe de test : je réponds ici ce que je comprends de chaque signalement, sans rien enregistrer. " +
@@ -187,7 +195,7 @@ export function createBot({ C, stops, lignes, chatId, testIds, salt, site }) {
       return "Compris : " + describe(p, way) + (reply ? " (en réponse à un message qui citait cet arrêt)" : "") + ". " +
         "Groupe de test : rien n'est enregistré.";
     }
-    if (why !== "question" && RE_ATTEMPT.test(C.normalize(text))) return NO_STOP;
+    if (!fromBot && why !== "question" && RE_ATTEMPT.test(C.normalize(text))) return NO_STOP;
     return null;
   }
 
@@ -217,7 +225,10 @@ export function createBot({ C, stops, lignes, chatId, testIds, salt, site }) {
     }
     if (!isGroup(msg.chat)) return out;
     if (tests.has(String(msg.chat.id))) {
-      const text = edited || (msg.from && msg.from.is_bot) ? null : testAnswer(msg);
+      // un autre bot (signalement anonyme) : réponse seulement à un signalement compris, jamais à une réponse (pas de
+      // conversation entre bots)
+      const fromBot = !!(msg.from && msg.from.is_bot);
+      const text = edited || (fromBot && msg.reply_to_message) ? null : testAnswer(msg, fromBot);
       if (text) out.reply = { method: "sendMessage", chat_id: msg.chat.id, text, link_preview_options: { is_disabled: true },
         reply_parameters: { message_id: msg.message_id, allow_sending_without_reply: true } };
       out.log.push("groupe de test : " + (text ? "réponse envoyée" : "rien à répondre"));
@@ -229,8 +240,9 @@ export function createBot({ C, stops, lignes, chatId, testIds, salt, site }) {
       out.log.push(`message d'un autre groupe (${msg.chat.id}) : le bot en sort`);
       return out;
     }
-    // autres bots du groupe : ignorés (sauf un admin anonyme, qui écrit au nom du groupe)
-    if (msg.from && msg.from.is_bot && !(msg.sender_chat && String(msg.sender_chat.id) === group)) return out;
+    // messages d'autres bots : ceux du bot de signalement anonyme comptent (sans voix personnelle) ; les réponses d'un
+    // bot à un message (commandes, accueil…) sont ignorées
+    if (msg.from && msg.from.is_bot && msg.reply_to_message) return out;
     const { p, reply, way } = interpret(msg);
     if (!p.usable) { out.log.push("message sans signalement"); return out; }
     const row = await toRow(msg, p, way);

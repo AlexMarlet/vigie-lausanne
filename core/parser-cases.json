@@ -245,5 +245,40 @@
    "stopId": null,
    "usable": false
   }
+ },
+ {
+  "msg": "👋 A l'arrêt\n\n🚏 EPFL\n➡️ Renens\n🚌 👋 à l'arrêt\n📝 \n\nArrêt, Direction, Lignes concernées, Remarques",
+  "exp": {
+   "kind": "controle",
+   "stopId": "epfl",
+   "dirStopId": "renens",
+   "line": null
+  }
+ },
+ {
+  "msg": "👋 A l'arrêt\n\n🚏 Chauderon\n➡️ Bel-Air\n🚌 9\n📝 \n\nArrêt, Direction, Lignes concernées, Remarques",
+  "exp": {
+   "kind": "controle",
+   "stopId": "chauderon",
+   "dirStopId": "belair",
+   "line": "9"
+  }
+ },
+ {
+  "msg": "👋 A l'arrêt\n\n🚏 Riponne\n➡️ Croisettes\n🚌 M2\n📝 \n\nArrêt, Direction, Lignes concernées, Remarques",
+  "exp": {
+   "kind": "controle",
+   "stopId": "riponne",
+   "dirStopId": "croisettes",
+   "line": "M2"
+  }
+ },
+ {
+  "msg": "Contrôle Flon ➡ Croisettes",
+  "exp": {
+   "kind": "controle",
+   "stopId": "flon",
+   "dirStopId": "croisettes"
+  }
  }
 ]

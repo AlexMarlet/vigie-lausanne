@@ -165,7 +165,8 @@
     const raw = String(text || "");
     const prepared = raw
       .replace(/\b\d{1,2}\s?[:h]\s?\d{2}\b/gi, " ")   // heures 10h30 / 10:30
-      .replace(/->|→|=>|>/g, " direction ");
+      .replace(/->|→|=>|>|[\u27A1\u2B95\u2794\u279C\u279D\u279E\u21D2\u27F6]\uFE0F?/g, " direction ")   // flèches, dont l'émoji ➡️
+      .replace(/[\u{1F68C}\u{1F68D}\u{1F68E}\u{1F687}\u{1F688}\u{1F68A}\u{1F683}\u{1F68B}]\uFE0F?/gu, " ligne ");   // 🚌 🚇 🚊 : lignes concernées
     const norm = normalize(prepared);
     const tok = tokens(prepared);
     const hits = findStops(tok, gaz);

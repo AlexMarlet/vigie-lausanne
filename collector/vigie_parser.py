@@ -144,7 +144,9 @@ def find_line(norm: str) -> str | None:
 def parse_message(text: str, gaz: Gazetteer) -> dict:
     raw = str(text or "")
     prepared = RE_TIME.sub(" ", raw)
-    prepared = re.sub(r"->|→|=>|>", " direction ", prepared)
+    # flèches, dont l'émoji ➡️ des messages du bot de signalement anonyme ; 🚌 🚇 🚊 : lignes concernées
+    prepared = re.sub("->|→|=>|>|[\u27A1\u2B95\u2794\u279C\u279D\u279E\u21D2\u27F6]\uFE0F?", " direction ", prepared)
+    prepared = re.sub("[\U0001F68C\U0001F68D\U0001F68E\U0001F687\U0001F688\U0001F68A\U0001F683\U0001F68B]\uFE0F?", " ligne ", prepared)
     norm = normalize(prepared)
     tok = tokens(prepared)
     hits = _find_stops(tok, gaz)
