@@ -1,8 +1,9 @@
 name: Bot Telegram
 
 # Déploie le bot du groupe de signalement : fonction Supabase « telegram » + webhook Telegram (voir README).
-# Secrets du dépôt : TELEGRAM_BOT_TOKEN, SUPABASE_ACCESS_TOKEN, puis TG_CHAT_ID (donné par une 1re exécution) et,
-# si les admins essaient le bot dans un groupe de test, TG_TEST_CHAT_ID. Sans TELEGRAM_BOT_TOKEN, il ne fait rien.
+# Secrets du dépôt : TELEGRAM_BOT_TOKEN, SUPABASE_ACCESS_TOKEN, puis TG_CHAT_ID et, si les admins essaient le bot dans un
+# groupe de test, TG_TEST_CHAT_ID : identifiant du groupe (-100…) ou lien d'un de ses messages (appui long sur un
+# message → Copier le lien). Sans TELEGRAM_BOT_TOKEN, il ne fait rien.
 
 on:
   workflow_dispatch:
@@ -59,18 +60,20 @@ jobs:
       - uses: supabase/setup-cli@v1
         if: steps.check.outputs.mode == 'deploy'
         with:
-          version: latest
+          version: 2.122.1      # version fixe : la 3.x demande une confirmation et change les options
 
       - name: Déployer la fonction et ses secrets
         if: steps.check.outputs.mode == 'deploy'
         run: |
+          # groupes vérifiés par « Bot et groupe » (un lien y devient l'identifiant) : VIGIE_TG_CHAT_ID, VIGIE_TG_TEST_CHAT_ID
           a_definir=(TELEGRAM_BOT_TOKEN="$TELEGRAM_BOT_TOKEN"); a_retirer=()
           for v in TG_CHAT_ID TG_TEST_CHAT_ID; do
-            if [ -n "${!v}" ]; then a_definir+=("$v=${!v}"); else a_retirer+=("$v"); fi
+            ok="VIGIE_$v"
+            if [ -n "${!ok:-}" ]; then a_definir+=("$v=${!ok}"); else a_retirer+=("$v"); fi
           done
-          supabase secrets set --project-ref "$REF" "${a_definir[@]}" > /dev/null
+          supabase secrets set --project-ref "$REF" --yes "${a_definir[@]}" > /dev/null
           [ ${#a_retirer[@]} -eq 0 ] || supabase secrets unset --project-ref "$REF" --yes "${a_retirer[@]}" > /dev/null 2>&1 || true
-          supabase functions deploy telegram --project-ref "$REF" --no-verify-jwt --use-api
+          supabase functions deploy telegram --project-ref "$REF" --no-verify-jwt --use-api --yes
           echo "::notice title=Fonction::telegram déployée sur le projet $REF"
 
       - name: Brancher Telegram et tester en ligne

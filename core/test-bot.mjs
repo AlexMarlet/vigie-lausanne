@@ -159,5 +159,31 @@ const py = execFileSync("python3", ["-c", "import sys; sys.path.insert(0, 'tools
 assert(/^[0-9a-f]{48}$/.test(sec.webhook) && sec.webhook === py, "secret du webhook identique en JS et en Python");
 assert(sec.salt !== sec.webhook && (await deriveSecrets("123456:ABC-test", "mon-sel")).salt === "mon-sel", "sel : dérivé du jeton, ou VIGIE_SALT");
 
+// ---- installation : TG_CHAT_ID donné en identifiant ou en lien d'un message du groupe (tools/bot_telegram.py)
+const refs = {
+  "-1003185301812": ["id", "-1003185301812"],
+  " -1003185301812\n": ["id", "-1003185301812"],
+  "1003185301812": ["id", "-1003185301812"],                                   // signe oublié
+  "3185301812": ["id", "-1003185301812"],                                      // numéro d'un lien t.me/c/…
+  "https://t.me/c/3185301812/4521": ["id", "-1003185301812"],                  // message d'un groupe privé
+  "t.me/c/3185301812/12/4521?thread=12": ["id", "-1003185301812"],             // … dans un sujet
+  "tg://privatepost?channel=3185301812&post=4521": ["id", "-1003185301812"],
+  "https://t.me/ControleursLausanne/88123": ["nom", "@ControleursLausanne"],   // message d'un groupe public
+  "https://t.me/ControleursLausanne/88123?single": ["nom", "@ControleursLausanne"],
+  "https://t.me/s/ControleursLausanne": ["nom", "@ControleursLausanne"],
+  "@ControleursLausanne": ["nom", "@ControleursLausanne"],
+  "ControleursLausanne": ["nom", "@ControleursLausanne"],
+  "https://t.me/+AbCdEf123": ["invitation", ""],
+  "https://t.me/joinchat/AbCdEf123": ["invitation", ""],
+  "Contrôleurs Lausanne": ["?", ""],
+  "https://t.me/c/abc": ["?", ""],
+  "https://example.com/x": ["?", ""],
+};
+const gotRefs = JSON.parse(execFileSync("python3", ["-c",
+  "import json, sys; sys.path.insert(0, 'tools'); import bot_telegram as b; print(json.dumps({v: b.chat_ref(v) for v in json.load(sys.stdin)}))"],
+  { cwd: new URL("..", import.meta.url).pathname, input: JSON.stringify(Object.keys(refs)) }).toString());
+for (const [v, want] of Object.entries(refs))
+  assert(JSON.stringify(gotRefs[v]) === JSON.stringify(want), `TG_CHAT_ID « ${v.trim()} » → ${want.join(" ") || "?"} (obtenu : ${gotRefs[v]})`);
+
 console.log(bad ? `bot : ${bad} échec(s), ${ok} OK` : `bot : ${ok} tests OK`);
 process.exit(bad ? 1 : 0);

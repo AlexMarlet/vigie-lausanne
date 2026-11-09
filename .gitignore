@@ -18,3 +18,6 @@ gtfs.zip*
 # bot Telegram : fichiers ajoutés au déploiement (tools/bot_bundle.mjs)
 supabase/functions/telegram/vigie-core.js
 supabase/functions/telegram/data.js
+
+# fichiers locaux de la CLI Supabase
+supabase/.temp/

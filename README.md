@@ -179,18 +179,21 @@ Si la fonction ne répond pas, Telegram garde les messages jusqu'à 24 h et les 
 4. Les admins ajoutent le bot au groupe comme **admin sans aucun droit** (un simple membre suffit s'il n'y a pas de bot
    de signalement anonyme dans le groupe), et l'exemptent du bot anti-spam s'il y en a un. Dans @BotFather, activer
    aussi le mode bot-to-bot pour qu'il lise les messages du bot de signalement anonyme.
-5. GitHub → Actions → **Bot Telegram** → *Run workflow*. Il affiche « Groupe trouvé : … → TG_CHAT_ID = -100… » (d'après
-   l'ajout du bot, s'il date de moins de 24 h, ou un message écrit dans le groupe pendant la minute où il écoute). Créer
-   le secret `TG_CHAT_ID` avec ce nombre et relancer : le workflow déploie la fonction, branche Telegram dessus et la
-   teste en ligne (annotations du run).
+5. Dans le groupe, appui long (ou clic droit) sur n'importe quel message → **Copier le lien**. GitHub → secret
+   `TG_CHAT_ID` = ce lien (ou l'identifiant `-100…` du groupe), puis Actions → **Bot Telegram** → *Run workflow* : il en
+   tire l'identifiant, vérifie le bot dans le groupe (« « … » · N membres · bot : administrator »), déploie la fonction,
+   branche Telegram dessus et la teste en ligne (annotations du run). Rien n'est déployé si le lien est faux ou si le
+   bot n'est pas dans ce groupe. Sans `TG_CHAT_ID`, le workflow liste les groupes où le bot vient d'arriver (« Groupe
+   trouvé : … → TG_CHAT_ID = -100… »), seulement tant que la fonction n'est pas branchée (sinon c'est elle qui reçoit
+   ces messages).
 6. @BotFather → `/setjoingroups` → **Disable** : plus personne ne peut ajouter le bot à un autre groupe.
 
-**Groupe de test.** Si les admins essaient d'abord le bot dans un petit groupe : lancer le workflow, qui affiche ce groupe
-(« Groupe trouvé »), créer le secret `TG_TEST_CHAT_ID` avec son identifiant (plusieurs : séparés par des virgules) et
-relancer. Dans ce groupe, le bot répond à chaque signalement ce qu'il a compris, sans rien enregistrer. Tant que
-`TG_CHAT_ID` n'est pas défini, il reste muet dans les autres groupes (il ne les quitte pas) : une fois ajouté au groupe
-de signalement, relancer le workflow pour obtenir son identifiant (étape 5). Ne jamais mettre un groupe de test dans
-`TG_CHAT_ID` : ses messages iraient sur la carte, et le bot quitterait le vrai groupe dès son arrivée.
+**Groupe de test.** Si les admins essaient d'abord le bot dans un petit groupe : créer le secret `TG_TEST_CHAT_ID` avec le
+lien d'un message de ce groupe ou son identifiant (plusieurs : séparés par des virgules) et lancer le workflow. Dans ce
+groupe, le bot répond à chaque signalement ce qu'il a compris, sans rien enregistrer. Tant que `TG_CHAT_ID` n'est pas
+défini, il reste muet dans les autres groupes (il ne les quitte pas) ; une fois ajouté au groupe de signalement : étape
+5. Ne jamais mettre un groupe de test dans `TG_CHAT_ID` : ses messages iraient sur la carte, et le bot quitterait le vrai
+groupe dès son arrivée (le workflow refuse un même groupe dans les deux secrets).
 
 Ensuite tout est automatique : une modification du bot, du parseur ou du réseau tl le redéploie. Journal (sans le texte
 des messages) : Supabase → Edge Functions → `telegram` → Logs.

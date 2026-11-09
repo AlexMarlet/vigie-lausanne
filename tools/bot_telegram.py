@@ -5,8 +5,10 @@ Vigie — installation du bot Telegram, appelée par .github/workflows/bot.yml (
     python3 tools/bot_telegram.py webhook   branche Telegram sur la fonction Supabase et la teste en ligne
 
 Variables : TELEGRAM_BOT_TOKEN, TG_CHAT_ID (vide pendant l'installation), TG_TEST_CHAT_ID (groupes de test, séparés
-par des virgules), SUPABASE_URL (sinon vigie.config.json).
-Résultats : annotations GitHub (::notice / ::warning / ::error) et, pour check, mode=setup|deploy dans GITHUB_OUTPUT.
+par des virgules), SUPABASE_URL (sinon vigie.config.json). Un groupe s'écrit avec son identifiant (-100…) ou le lien
+d'un de ses messages (appui long sur un message → Copier le lien) : check le traduit en identifiant.
+Résultats : annotations GitHub (::notice / ::warning / ::error) ; pour check, mode=off|setup|deploy dans GITHUB_OUTPUT et
+les identifiants vérifiés dans GITHUB_ENV (VIGIE_TG_CHAT_ID, VIGIE_TG_TEST_CHAT_ID), que le déploiement utilise.
 TELEGRAM_API remplace https://api.telegram.org (tests).
 """
 from __future__ import annotations
@@ -65,11 +67,77 @@ def tg(token: str, method: str, **params):
 
 
 def output(**kv) -> None:
-    path = os.environ.get("GITHUB_OUTPUT")
+    _append(os.environ.get("GITHUB_OUTPUT"), kv)
+
+
+def export(**kv) -> None:
+    """Variables d'environnement des étapes suivantes du workflow."""
+    _append(os.environ.get("GITHUB_ENV"), kv)
+
+
+def _append(path: str | None, kv: dict) -> None:
     if path:
         with open(path, "a", encoding="utf-8") as f:
             for k, v in kv.items():
                 f.write(f"{k}={v}\n")
+
+
+USERNAME = re.compile(r"[A-Za-z][A-Za-z0-9_]{3,31}")
+
+
+def chat_ref(value: str) -> tuple[str, str]:
+    """Groupe écrit dans TG_CHAT_ID / TG_TEST_CHAT_ID : son identifiant (-100…), le lien d'un de ses messages (appui long
+    sur un message → Copier le lien : t.me/c/<numéro>/… si le groupe est privé, t.me/<nom>/… s'il est public) ou son nom
+    public (@nom). Renvoie ("id", "-100…"), ("nom", "@nom"), ("invitation", "") ou ("?", "")."""
+    v = value.strip().strip("<>\"'").strip()
+    if re.fullmatch(r"-\d{5,}", v):
+        return "id", v
+    if re.fullmatch(r"\d{5,}", v):                  # sans le signe, ou numéro recopié d'un lien t.me/c/<numéro>/…
+        return "id", ("-" if len(v) > 11 and v.startswith("100") else "-100") + v
+    m = re.match(r"(?i)tg://(privatepost|resolve)\?(.*)", v)
+    if m:
+        q = urllib.parse.parse_qs(m.group(2))
+        channel, domain = q.get("channel", [""])[0], q.get("domain", [""])[0]
+        if m.group(1).lower() == "privatepost" and channel.isdigit():
+            return "id", "-100" + channel
+        return ("nom", "@" + domain) if USERNAME.fullmatch(domain) else ("?", "")
+    m = re.match(r"(?i)(?:https?://)?(?:www\.)?(?:t\.me|telegram\.me|telegram\.dog)/(.*)", v)
+    parts = [p for p in re.split(r"[?#]", m.group(1) if m else v)[0].split("/") if p]
+    if not parts:
+        return "?", ""
+    if parts[0].startswith("+") or parts[0].lower() == "joinchat":
+        return "invitation", ""
+    if parts[0] == "c":
+        return ("id", "-100" + parts[1]) if len(parts) > 1 and parts[1].isdigit() else ("?", "")
+    if parts[0] == "s" and len(parts) > 1:          # aperçu web t.me/s/<nom>
+        parts = parts[1:]
+    name = parts[0][1:] if parts[0].startswith("@") else parts[0]
+    if (m or len(parts) == 1) and USERNAME.fullmatch(name):
+        return "nom", "@" + name
+    return "?", ""
+
+
+def resolve(token: str, raw: str, var: str, test: bool) -> str:
+    """Identifiant du groupe désigné par raw (voir chat_ref), ou "" après une annotation (erreur, ou avertissement pour un
+    groupe de test). La valeur du secret n'est jamais affichée."""
+    bad = "warning" if test else "error"
+    kind, ref = chat_ref(raw)
+    if kind == "id":
+        return ref
+    if kind == "nom":
+        try:
+            return str(tg(token, "getChat", chat_id=ref)["id"])
+        except RuntimeError as e:
+            note(bad, var, f"{e} : Telegram ne connaît pas de groupe public à ce nom ; mets plutôt le lien d'un message du "
+                 "groupe (appui long sur un message → Copier le lien)")
+            return ""
+    if kind == "invitation":
+        note(bad, var, "c'est un lien d'invitation (t.me/+…), qui ne dit pas de quel groupe il s'agit : mets plutôt le lien "
+             "d'un message du groupe (appui long sur un message → Copier le lien)")
+    else:
+        note(bad, var, "ni un identifiant (-100…) ni un lien Telegram (t.me/…) : mets le lien d'un message du groupe (appui "
+             "long sur un message → Copier le lien)")
+    return ""
 
 
 def discover(token: str, tests: set[str]) -> tuple[dict[str, dict], dict[str, int]]:
@@ -140,19 +208,35 @@ def check_group(token: str, me: dict, chat: str, reads_all: bool, test: bool) ->
     elif status != "administrator" and not reads_all:
         note(bad, "Lecture", "le bot ne reçoit que les commandes : dans @BotFather, /setprivacy → Disable, puis fais-le "
              "retirer et ré-ajouter au groupe ; ou demande aux admins de le passer admin (aucun droit nécessaire)")
+    elif status != "administrator" and not test:
+        note("warning", "Lecture", "le bot lit les messages des membres, mais pas ceux d'un bot de signalement anonyme : "
+             "pour ceux-là, les admins doivent le passer admin (sans aucun droit) et le mode bot-to-bot doit être activé "
+             "dans @BotFather")
 
 
-def check(token: str, chat: str, tests: set[str]) -> None:
+def check(token: str, chat_raw: str, tests_raw: list[str]) -> None:
     me = tg(token, "getMe")
     reads_all = bool(me.get("can_read_all_group_messages"))
     note("notice", "Bot", f"@{me['username']} ({me['first_name']}) · mode confidentialité "
          + ("désactivé : il lit tous les messages des groupes" if reads_all else "actif : il ne lira tous les messages que s'il est admin du groupe"))
+    # groupes écrits en identifiant ou en lien → identifiants, que le déploiement donne à la fonction
+    chat = resolve(token, chat_raw, "TG_CHAT_ID", test=False) if chat_raw else ""
+    tests = {r for r in (resolve(token, t, "TG_TEST_CHAT_ID", test=True) for t in tests_raw) if r}
+    if chat_raw and not chat:
+        output(mode="off")
+        return
+    if chat and chat in tests:
+        # un groupe de test pris pour le groupe de signalement : le bot quitterait le vrai groupe dès son premier message
+        note("error", "Groupes", "TG_CHAT_ID et TG_TEST_CHAT_ID désignent le même groupe : le groupe de signalement va "
+             "seulement dans TG_CHAT_ID, les groupes de test dans TG_TEST_CHAT_ID. Rien n'a été déployé")
+        output(mode="off")
+        return
+    for cid in (chat, *tests):
+        if cid:
+            print(f"::add-mask::{cid}", flush=True)
+    export(VIGIE_TG_CHAT_ID=chat, VIGIE_TG_TEST_CHAT_ID=",".join(sorted(tests)))
     # déploiement dès qu'il y a un groupe de signalement ou un groupe de test (où le bot répond sans rien enregistrer)
     output(mode="deploy" if chat or tests else "setup")
-    if chat and chat in tests:
-        note("warning", "Groupe de test", "TG_CHAT_ID figure aussi dans TG_TEST_CHAT_ID : ce groupe est traité comme le groupe "
-             "de signalement (le bot y reste muet) ; retire-le de TG_TEST_CHAT_ID")
-        tests = tests - {chat}
     for t in sorted(tests):
         check_group(token, me, t, reads_all, test=True)
     if chat:
@@ -166,13 +250,16 @@ def check(token: str, chat: str, tests: set[str]) -> None:
         note("notice", "Groupe trouvé", f"« {g['title']} » (bot : {g['status']}) → crée le secret TG_CHAT_ID = {cid} si c'est "
              f"le groupe de signalement, ou TG_TEST_CHAT_ID = {cid} si c'est un groupe de test, puis relance ce workflow")
     if not any(cid not in tests for cid in found) and tests:
-        note("notice", "Groupe de signalement", "pas encore trouvé, normal tant que le bot n'y est pas : une fois qu'il y "
-             "est ajouté, relance ce workflow, l'identifiant s'affichera ici")
+        # la fonction, branchée pour le groupe de test, reçoit aussi l'arrivée du bot et les messages des autres groupes
+        note("notice", "Groupe de signalement", "pas vu pendant la minute d'écoute. Si le bot est déjà dans le groupe : "
+             "mets dans le secret TG_CHAT_ID le lien d'un message du groupe (appui long sur un message → Copier le "
+             "lien), puis relance ce workflow")
     elif not any(cid not in tests for cid in found):
         recu = ", ".join(f"{n} {k}" for k, n in seen.items()) or "rien"
         note("warning", "Installation", f"aucun nouveau groupe trouvé (reçu de Telegram : {recu}) : le bot doit y avoir été "
              "ajouté il y a moins de 24 h, ou quelqu'un doit y écrire (moins de 24 h avant, ou pendant la minute où le "
-             "workflow écoute) ; vérifie aussi que c'est bien ce bot qui est dans le groupe")
+             "workflow écoute) ; vérifie aussi que c'est bien ce bot qui est dans le groupe. Autre solution : mettre dans "
+             "le secret TG_CHAT_ID le lien d'un message du groupe (appui long sur un message → Copier le lien)")
 
 
 def call_function(url: str, body: dict | None, secret: str | None) -> tuple[int, str]:
@@ -237,7 +324,7 @@ def main() -> None:
         return
     try:
         if sys.argv[1:] == ["check"]:
-            tests = {t for t in re.split(r"[\s,;]+", os.environ.get("TG_TEST_CHAT_ID", "")) if t}
+            tests = sorted({t for t in re.split(r"[\s,;]+", os.environ.get("TG_TEST_CHAT_ID", "")) if t})
             check(token, os.environ.get("TG_CHAT_ID", "").strip(), tests)
         elif sys.argv[1:] == ["webhook"]:
             webhook(token)
