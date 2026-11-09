@@ -247,6 +247,10 @@ def check(token: str, chat_raw: str, tests_raw: list[str]) -> None:
     for cid, g in found.items():
         if cid in tests:
             continue
+        try:                                     # statut réel (un message ne dit pas si le bot est admin)
+            g["status"] = tg(token, "getChatMember", chat_id=cid, user_id=me["id"]).get("status") or g["status"]
+        except RuntimeError:
+            pass
         note("notice", "Groupe trouvé", f"« {g['title']} » (bot : {g['status']}) → crée le secret TG_CHAT_ID = {cid} si c'est "
              f"le groupe de signalement, ou TG_TEST_CHAT_ID = {cid} si c'est un groupe de test, puis relance ce workflow")
     if not any(cid not in tests for cid in found) and tests:
