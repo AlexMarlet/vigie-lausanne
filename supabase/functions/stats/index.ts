@@ -35,13 +35,13 @@ async function stats(sql: any) {
          from (${TOUT}) t group by 1, 2, 3 order by 1, 2, 3`),
     q(`select to_char(${LOCAL}, 'YYYY-MM-DD') as jour, src, kind, count(*)::int as n
          from (${TOUT}) t group by 1, 2, 3 order by 1`),
-    q(`select extract(isodow from ${LOCAL})::int as jour_semaine, extract(hour from ${LOCAL})::int as heure, count(*)::int as n
-         from (${TOUT}) t where kind = 'controle' group by 1, 2`),
-    q(`select stop_id, kind, count(*)::int as n, count(distinct ${LOCAL}::date)::int as jours, max(at) as dernier
-         from (${TOUT}) t where kind in ('controle', 'perturbation') group by 1, 2 order by 3 desc limit 400`),
-    q(`select coalesce(line, '') as line, kind, count(*)::int as n, count(direction)::int as avec_sens,
+    q(`select src, extract(isodow from ${LOCAL})::int as jour_semaine, extract(hour from ${LOCAL})::int as heure, count(*)::int as n
+         from (${TOUT}) t where kind = 'controle' group by 1, 2, 3`),
+    q(`select stop_id, src, kind, count(*)::int as n, count(distinct ${LOCAL}::date)::int as jours, max(at) as dernier
+         from (${TOUT}) t where kind in ('controle', 'perturbation') group by 1, 2, 3 order by 4 desc limit 800`),
+    q(`select coalesce(line, '') as line, src, kind, count(*)::int as n, count(direction)::int as avec_sens,
               count(seq)::int as avec_rang
-         from (${TOUT}) t where kind in ('controle', 'perturbation', 'fin') group by 1, 2 order by 3 desc`),
+         from (${TOUT}) t where kind in ('controle', 'perturbation', 'fin') group by 1, 2, 3 order by 4 desc`),
     q(`select coalesce(sub, '') as sub, count(*)::int as n from (${TOUT}) t where kind = 'perturbation' group by 1 order by 2 desc`),
     // couples de signalements successifs d'une même ligne et d'un même sens (60 min au plus) : ceux que
     // vigie_private.apprendre() retient (2 à 40 min, 0 à 10 arrêts plus loin, au plus 1,5 arrêt par minute) et les autres
@@ -55,7 +55,7 @@ async function stats(sql: any) {
     // durée d'un contrôle à un arrêt : du premier et du dernier signalement de contrôle (2 h avant au plus)
     // au « partis » signalé au même arrêt
     q(`with t as (${TOUT})
-       select f.stop_id, f.at,
+       select f.stop_id, f.src, f.at,
               round((extract(epoch from f.at - c.premier) / 60.0)::numeric, 1)::float as depuis_premier,
               round((extract(epoch from f.at - c.dernier) / 60.0)::numeric, 1)::float as depuis_dernier, c.n
          from t f
