@@ -96,14 +96,16 @@ Une ligne peu observée suit donc la moyenne du réseau. La légende de l'app af
 
 ## Réseau (horaire officiel)
 
-`tools/reseau.json` contient les 450+ arrêts et les 47 lignes tl (métro, bus, lignes de nuit) avec, pour chaque sens,
-l'ordre des arrêts. Il est produit à partir de l'horaire officiel suisse au format GTFS
+`tools/reseau.json` contient les 460+ arrêts et les 47 lignes : celles des tl (métro, bus, lignes de nuit) et le
+**LEB** (train Lausanne-Flon – Echallens – Bercher, « R20 » dans l'horaire), avec, pour chaque sens, l'ordre des arrêts.
+Il est produit à partir de l'horaire officiel suisse au format GTFS
 ([opentransportdata.swiss](https://opentransportdata.swiss)) par le workflow **Réseau tl**, chaque lundi : il télécharge
-le dernier fichier, extrait les lignes tl circulant les 14 prochains jours, et ne fait un commit (puis un redéploiement)
+le dernier fichier, extrait les lignes circulant les 14 prochains jours, et ne fait un commit (puis un redéploiement)
 que si les arrêts ou les lignes ont changé.
 
 - Sens d'une ligne = un terminus des parcours réguliers (au moins 10 % des courses). Les courses partielles comptent pour le parcours complet (un terminus intermédiaire n'est proposé que s'il reçoit au moins 35 % des courses), une rallonge rare (dépôt, moins de 15 %) est ignorée, une branche devient un sens à part. Un arrêt liste les lignes qui y proposent un sens (sinon toutes celles qui y passent).
 - `tools/arrets.json` garde les identifiants des arrêts historiques (retrouvés par position) et les alias du groupe (« st f », « poly »…). Pour ajouter un alias : une entrée `{"id": …, "alias": […]}`.
+- LEB : ses trains forment une seule ligne « LEB » (ses bus de remplacement sont ignorés) ; ses gares du Flon, de Chauderon et de Prilly-Chasseur rejoignent les arrêts de bus du même nom. Un message écrit « LEB » ou « R20 ». Deux arrêts du même nom (« Bel-Air » à Lausanne et la gare du LEB à Cheseaux) : la ligne citée choisit.
 - En local : `python3 tools/fetch_gtfs.py gtfs.zip && python3 tools/build_network.py gtfs.zip` (fichier d'environ 280 Mo).
 
 ## Développer en local

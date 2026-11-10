@@ -1,7 +1,7 @@
 """
 python3 tools/test_network.py — teste build_network.py sur un petit GTFS fabriqué pour l'occasion
 (métro à deux sens, bus avec courses partielles, branche, course de dépôt, service hors période, train d'un
-autre opérateur) et le choix de l'année d'horaire de fetch_gtfs.py.
+autre opérateur, train du LEB et son bus de remplacement) et le choix de l'année d'horaire de fetch_gtfs.py.
 """
 import datetime as dt
 import io
@@ -49,6 +49,12 @@ ZONES = [
     ("Parent17", "Renens VD, gare", (46.5372, 6.5788)),
     ("Parent18", "Prilly, gare", (46.5340, 6.6040)),
     ("Parent90", "Genève", (46.2101, 6.1424)),
+    # LEB : sa gare du Flon et de Chauderon rejoignent les arrêts existants, les autres sont nouvelles
+    ("Parent20", "Lausanne-Flon", at("flon", -0.0003, 0.0002)),
+    ("Parent21", "Lausanne-Chauderon", at("chauderon", 0.0002, 0.0003)),
+    ("Parent22", "Union-Prilly", (46.5337, 6.6187)),
+    ("Parent23", "Cheseaux", (46.5823, 6.6034)),
+    ("Parent24", "Echallens", (46.6406, 6.6347)),
 ]
 
 
@@ -56,9 +62,11 @@ def build_zip() -> pathlib.Path:
     files = {}
     files["agency.txt"] = ("agency_id,agency_name,agency_url,agency_timezone\n"
                            '"881","Transports publics de la Région lausannoise","https://t-l.ch","Europe/Zurich"\n'
-                           '"11","Schweizerische Bundesbahnen SBB","https://sbb.ch","Europe/Zurich"\n')
+                           '"11","Schweizerische Bundesbahnen SBB","https://sbb.ch","Europe/Zurich"\n'
+                           '"33","Lausanne-Echallens-Bercher","https://leb.ch","Europe/Zurich"\n')
     files["routes.txt"] = ("route_id,agency_id,route_short_name,route_long_name,route_desc,route_type\n"
-                           "r-m2,881,M2,,M,401\nr-9,881,9,,B,700\nr-ic,11,IC1,,IC,102\n")
+                           "r-m2,881,M2,,M,401\nr-9,881,9,,B,700\nr-ic,11,IC1,,IC,102\n"
+                           "r-leb,33,R,,R,106\nr-ev,33,EV,,EV,714\n")
     st = ["stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station"]
     for zid, name, (lat, lon) in ZONES:
         st.append(f'{zid},"{name}",{lat},{lon},1,')
@@ -103,6 +111,11 @@ def build_zip() -> pathlib.Path:
         trip(f"9old{k}", "r-9", "ancien", "0", [10, 18, 17], [200, 200])
     # train d'un autre opérateur
     trip("ic", "r-ic", "tous", "0", [3, 90], [3600])
+    # LEB : trains Flon – Echallens dans les deux sens, et un bus de remplacement (ignoré)
+    for k in range(6):
+        trip(f"lebu{k}", "r-leb", "tous", "0", [20, 21, 22, 23, 24], [120, 180, 300, 360])
+        trip(f"lebd{k}", "r-leb", "tous", "1", [24, 23, 22, 21, 20], [360, 300, 180, 120])
+    trip("ev", "r-ev", "tous", "0", [20, 11, 22], [300, 300])
     files["trips.txt"] = "\n".join(trips) + "\n"
     files["stop_times.txt"] = "\n".join(times) + "\n"
     path = pathlib.Path(tempfile.mkdtemp()) / "gtfs.zip"
@@ -116,8 +129,14 @@ net = bn.build(build_zip(), dt.date(2026, 10, 26), 14, list(LEGACY.values()))
 lines = {l["id"]: l for l in net["lines"]}
 stops = {s["id"]: s for s in net["stops"]}
 
-check(list(lines) == ["M2", "9"], "lignes tl seulement, M2 avant les bus (" + ", ".join(lines) + ")")
-check(net["source"]["agencies"] == ["Transports publics de la Région lausannoise"], "opérateur tl reconnu, CFF ignorés")
+check(list(lines) == ["M2", "LEB", "9"], "lignes tl et LEB seulement : métro, LEB, puis bus (" + ", ".join(lines) + ")")
+check(net["source"]["agencies"] == ["Lausanne-Echallens-Bercher", "Transports publics de la Région lausannoise"],
+      "opérateurs tl et LEB reconnus, CFF ignorés")
+leb = {d["to"]: d for d in lines["LEB"]["dirs"]}
+check(lines["LEB"]["type"] == "train" and lines["LEB"]["color"] == bn.COLORS["LEB"], "LEB : une ligne de train, sa couleur")
+check(sorted(leb) == ["echallens", "flon"] and leb["echallens"]["stops"] == ["flon", "chauderon", "union-prilly", "cheseaux", "echallens"],
+      f"LEB : deux sens, gares dans l'ordre ({leb.get('echallens', {}).get('stops')})")
+check("EV" not in lines and all(len(d["stops"]) == 5 for d in leb.values()), "LEB : bus de remplacement ignoré")
 m2 = lines["M2"]
 check(m2["type"] == "metro" and lines["9"]["type"] == "bus", "types de ligne")
 check(sorted(d["to"] for d in m2["dirs"]) == ["croisettes", "ouchy"], "M2 : deux sens, vers Croisettes et vers Ouchy")
@@ -132,7 +151,8 @@ check(nine["lutry"]["stops"] == ["galicien", "prelaz", "chauderon", "flon", "stf
 check(nine["lutry"]["share"] > nine["pully"]["share"] > 0.1, "bus 9 : courses partielles comptées dans le parcours complet")
 check("depot" in stops and "9" in stops["depot"]["lines"], "arrêt desservi seulement par la course de dépôt : bien listé")
 check(not any(d["to"] == "depot" for d in lines["9"]["dirs"]), "course de dépôt : pas un sens proposé")
-check("flon" in stops and stops["flon"]["lines"] == ["M2", "9"], "Flon métro + Flon bus fusionnés, lignes M2 et 9")
+check("flon" in stops and stops["flon"]["lines"] == ["M2", "LEB", "9"], "Flon métro, LEB et bus fusionnés : lignes M2, LEB et 9")
+check(stops["chauderon"]["lines"] == ["LEB", "9"], f"gare LEB de Chauderon et arrêt de bus fusionnés ({stops['chauderon']['lines']})")
 check(len(stops["flon"]["official"]) == 2, "les deux noms officiels du Flon sont gardés")
 check(all(i in stops for i in ("ouchy", "riponne", "croisettes", "prelaz", "chauderon", "stfrancois", "pully")),
       "identifiants historiques retrouvés par position")

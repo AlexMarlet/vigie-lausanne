@@ -176,10 +176,15 @@ def load_data(repo_url: str | None) -> tuple[dict, list]:
         if str(c["id"]) in labels:
             c["labelAt"] = labels[str(c["id"])]
         c["showLabel"] = c["name"] in coords.get("show_communes", [])
-    metro = {l["id"]: l["dirs"][0]["stops"] for l in lines if l["type"] == "metro" and l["dirs"]}
+    # lignes tracées sur la carte (métro et LEB) : le parcours le plus long, d'un terminus à l'autre
+    metro = {l["id"]: max((d["stops"] for d in l["dirs"]), key=len) for l in lines if l["type"] in ("metro", "train") and l["dirs"]}
+    colors = dict(coords["colors"])
+    for l in lines:
+        if l["id"] not in colors and l.get("color"):
+            colors[l["id"]] = l["color"]
     data = {"stops": stops, "lines": lines, "basemap": basemap, "metro": metro,
             "meta": {"repo": repo_url, "feed": source.get("feed", ""), "period": source.get("period", [])}}
-    return {"data": data, "colors": coords["colors"]}, stops
+    return {"data": data, "colors": colors}, stops
 
 
 def write_collector_stops(stops: list, lines: list) -> None:
@@ -189,7 +194,8 @@ def write_collector_stops(stops: list, lines: list) -> None:
     rows = [{k: s[k] for k in keep if k in s} for s in stops]
     (ROOT / "collector/stops.json").write_text(
         "[\n" + ",\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n]\n", encoding="utf-8")
-    compact = [{"id": l["id"], "dirs": [{"id": d["id"], "stops": d["stops"]} for d in l["dirs"]]} for l in lines]
+    compact = [{"id": l["id"], "dirs": [{"id": d["id"], "grp": d["grp"], "share": d["share"], "stops": d["stops"]}
+                                        for d in l["dirs"]]} for l in lines]
     (ROOT / "collector/lignes.json").write_text(
         "[\n" + ",\n".join(json.dumps(l, ensure_ascii=False, separators=(",", ":")) for l in compact) + "\n]\n", encoding="utf-8")
 
@@ -205,7 +211,7 @@ def render_app(template: str, head: str, data: dict, colors: dict, config: dict,
     out = out.replace("/*@DATA@*/",
                       "window.VIGIE_CONFIG = " + as_js(config) + ";\n"
                       "window.VIGIE_DATA = " + as_js(data, separators=(",", ":")) + ";")
-    out = out.replace("/*@M1@*/", colors["M1"]).replace("/*@M2@*/", colors["M2"])
+    out = out.replace("/*@M1@*/", colors["M1"]).replace("/*@M2@*/", colors["M2"]).replace("/*@LEB@*/", colors.get("LEB", "#2F855A"))
     out = out.replace("__LEAFLET_JS__", leaflet).replace("__SUPABASE_JS__", supabase)
     for marker, value in maplibre.items():
         out = out.replace(marker, value)

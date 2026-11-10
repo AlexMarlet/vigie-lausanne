@@ -280,5 +280,72 @@
    "stopId": "flon",
    "dirStopId": "croisettes"
   }
+ },
+ {
+  "msg": "Contrôleurs dans le LEB à Union-Prilly direction Echallens",
+  "exp": {
+   "kind": "controle",
+   "stopId": "union-prilly",
+   "dirStopId": "echallens",
+   "line": "LEB"
+  }
+ },
+ {
+  "msg": "LEB Cheseaux controle",
+  "exp": {
+   "kind": "controle",
+   "stopId": "cheseaux",
+   "line": "LEB"
+  }
+ },
+ {
+  "msg": "Contrôle LEB Bel-Air",
+  "exp": {
+   "kind": "controle",
+   "stopId": "bel-air-leb",
+   "line": "LEB"
+  }
+ },
+ {
+  "msg": "Contrôle à Bel-Air",
+  "exp": {
+   "kind": "controle",
+   "stopId": "belair",
+   "line": null
+  }
+ },
+ {
+  "msg": "contrôleurs R20 à Romanel",
+  "exp": {
+   "kind": "controle",
+   "stopId": "romanel-sur-lausanne",
+   "line": "LEB"
+  }
+ },
+ {
+  "msg": "Contrôle Sur Roche LEB direction Bercher",
+  "exp": {
+   "kind": "controle",
+   "stopId": "sur-roche",
+   "dirStopId": "bercher",
+   "line": "LEB"
+  }
+ },
+ {
+  "msg": "2 contrôleurs LEB à Jouxtens direction Flon",
+  "exp": {
+   "kind": "controle",
+   "stopId": "jouxtens-mezery",
+   "dirStopId": "flon",
+   "line": "LEB"
+  }
+ },
+ {
+  "msg": "Panne LEB à Echallens",
+  "exp": {
+   "kind": "perturbation",
+   "stopId": "echallens",
+   "line": "LEB"
+  }
  }
 ]

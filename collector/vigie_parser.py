@@ -31,6 +31,7 @@ RE_METRO = re.compile(r"\b(?:m|metro)\s?([123])\b")
 RE_LINE = re.compile(r"\b(?:ligne|lignes|bus|trolley|trolleybus|l|n|no|num|numero|le|du|dans le)\s?(\d{1,2})\b"
                      r"(?!\s(?:" + COUNT_WORDS + r")\b)")
 RE_LINE_DIR = re.compile(r"(?:^|\s)(\d{1,2})\s(?:direction|dir|vers)\b")
+RE_LEB = re.compile(r"\b(?:leb|r ?20)\b")   # train Lausanne-Echallens-Bercher (R20 dans l'horaire)
 
 RE_QUESTION = re.compile(r"\b(qqn|quelqu un|quelquun|y a t il|y a t|ya t il|est ce qu|savez|sait on|des nouvelles|vous avez vu|dispo)\b")
 RE_CLEAR = re.compile(r"\b(partis?|parties|descendus?|descendues?|sortis?|disparus?|plus de contr\w*|plus personne|plus rien|plus la|"
@@ -64,6 +65,7 @@ def tokens(s: str, keep_filler: bool = False) -> list[str]:
 class Gazetteer:
     def __init__(self, stops: list[dict]):
         self.exact: dict[str, str] = {}
+        self.same: dict[str, list[str]] = {}   # tous les arrêts d'un même nom (homonymes), dans l'ordre
         self.single: list[tuple[str, str]] = []
         self.by_id: dict[str, dict] = {}
         self.max_len = 1
@@ -77,6 +79,8 @@ class Gazetteer:
                     continue
                 key = " ".join(t)
                 self.exact.setdefault(key, s["id"])
+                if s["id"] not in self.same.setdefault(key, []):
+                    self.same[key].append(s["id"])
                 self.max_len = max(self.max_len, len(t))
                 if len(t) == 1 and len(t[0]) >= 5:
                     self.single.append((t[0], s["id"]))
@@ -105,9 +109,10 @@ def _find_stops(tok: list[str], gaz: Gazetteer) -> list[dict]:
         for i in range(0, len(tok) - n + 1):
             if any(used[i:i + n]):
                 continue
-            sid = gaz.exact.get(" ".join(tok[i:i + n]))
+            key = " ".join(tok[i:i + n])
+            sid = gaz.exact.get(key)
             if sid:
-                hits.append({"id": sid, "i": i, "n": n, "fuzzy": False})
+                hits.append({"id": sid, "i": i, "n": n, "fuzzy": False, "key": key})
                 for k in range(i, i + n):
                     used[k] = True
     for i, w in enumerate(tok):
@@ -132,6 +137,8 @@ def find_line(norm: str) -> str | None:
     m = RE_METRO.search(norm)
     if m:
         return "M" + m.group(1)
+    if RE_LEB.search(norm):
+        return "LEB"
     m = RE_LINE.search(norm)
     if m and int(m.group(1)) > 0:
         return str(int(m.group(1)))
@@ -150,9 +157,20 @@ def parse_message(text: str, gaz: Gazetteer) -> dict:
     norm = normalize(prepared)
     tok = tokens(prepared)
     hits = _find_stops(tok, gaz)
-    loc = next((h for h in hits if not h["is_direction"]), None)
-    dirh = next((h for h in hits if h["is_direction"]), None)
     line = find_line(norm)
+
+    # deux arrêts du même nom : celui que dessert la ligne citée (« LEB Bel-Air » : la gare du LEB)
+    def serves(sid):
+        return line in (gaz.by_id.get(sid, {}).get("lines") or [])
+
+    def on_line(h):
+        if not h or not line or not h.get("key") or serves(h["id"]):
+            return h
+        alt = next((sid for sid in gaz.same.get(h["key"], []) if serves(sid)), None)
+        return {**h, "id": alt} if alt else h
+
+    loc = on_line(next((h for h in hits if not h["is_direction"]), None))
+    dirh = on_line(next((h for h in hits if h["is_direction"]), None))
 
     kind, sub, of = "controle", None, None
     ends_with_q = re.search(r"\?[\s\W]*$", RE_EMOJI.sub("", raw)) is not None
@@ -200,13 +218,30 @@ def resolve_direction(lines: dict, stop_lines: list, stop_id: str, dir_stop_id: 
     if not stop_id or not dir_stop_id or stop_id == dir_stop_id:
         return None
     found = []
+    def end(d):
+        return d.get("to") or d["stops"][-1]
+
     for l in [line] if line else (stop_lines or []):
+        dirs = lines[l]["dirs"]
         for did, seq in directions_at(lines, l, stop_id):
-            stops = next(d["stops"] for d in lines[l]["dirs"] if d["id"] == did)
-            if dir_stop_id in stops[seq + 1:]:
-                found.append({"line": l, "dir": did, "seq": seq})
+            d = next(x for x in dirs if x["id"] == did)
+            if dir_stop_id in d["stops"][seq + 1:]:
+                # part des courses : celles des branches vers ce terminus qui passent ici (comme directionsAt)
+                share = sum(x.get("share", 1) for x in dirs
+                            if end(x) == end(d) and stop_id in x["stops"][:-1] and end(x) != stop_id)
+                found.append({"line": l, "dir": did, "seq": seq, "to": end(d), "grp": d.get("grp"), "share": share})
     if len({f["line"] for f in found}) != 1:
         return None
-    if len({f["dir"] for f in found}) == 1:
-        return found[0]
+
+    def out(f):
+        return {"line": f["line"], "dir": f["dir"], "seq": f["seq"]}
+    if len(found) == 1:
+        return out(found[0])
+    # plusieurs sens passent par X (courses partielles, branches) : celui qui y finit ; sinon, s'ils vont tous du
+    # même côté (même sens de circulation), le plus fréquent
+    ends = [f for f in found if f["to"] == dir_stop_id]
+    if len(ends) == 1:
+        return out(ends[0])
+    if all(f["grp"] is not None and f["grp"] == found[0]["grp"] for f in found):
+        return out(max(found, key=lambda f: f["share"]))
     return {"line": found[0]["line"], "dir": None, "seq": None}

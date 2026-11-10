@@ -130,6 +130,18 @@ r = await L("Dans le 6 direction Lausanne centre, on est à ours");
 assert(r.line === "6" && r.direction === "maladiere", "« direction Lausanne centre » : le sens qui va vers le centre");
 r = await L("M2 direction Renens gare depuis EPFL");
 assert(r.stop_id === "epfl" && r.line === "M1" && r.direction === "renens", "ligne citée qui ne passe pas à l'arrêt : corrigée par le sens");
+
+// ---- LEB (train Lausanne-Echallens-Bercher, R20 dans l'horaire)
+r = await L("Contrôleurs dans le LEB à Union-Prilly direction Echallens");
+assert(r.stop_id === "union-prilly" && r.line === "LEB" && r.direction === "echallens", "LEB : gare, ligne et sens (train qui finit à Echallens)");
+r = await L("Controle dans le LEB à Chauderon direction Cheseaux");
+assert(r.stop_id === "chauderon" && r.line === "LEB" && r.direction === "bercher", "LEB : sens par une gare intermédiaire, le plus fréquent (Bercher)");
+r = await L("contrôle à Chauderon direction Echallens");
+assert(r.line === "LEB" && r.direction === "echallens", "LEB : seule ligne qui va de Chauderon à Echallens, même sans « LEB »");
+r = await L("Contrôle LEB Bel-Air direction Flon");
+assert(r.stop_id === "bel-air-leb" && r.direction === "flon", "LEB : « Bel-Air » est la gare du LEB, pas Bel-Air à Lausanne");
+r = await L("👋 A l'arrêt\n\n🚏 Union-Prilly\n➡️ Bercher\n🚌 R20\n📝 \n\nArrêt, Direction, Lignes concernées, Remarques");
+assert(r.line === "LEB" && r.direction === "bercher", "LEB : modèle du bot anonyme, ligne écrite « R20 »");
 r = await L("controle EPFL");
 assert(r.line === "M1" && r.direction === null, "arrêt d'une seule ligne : cette ligne");
 r = await L("contrôle à Ours ligne 6 et 7");

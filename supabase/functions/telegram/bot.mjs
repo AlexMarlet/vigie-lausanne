@@ -54,10 +54,11 @@ const LINE_EMOJI = /[\u{1F68C}\u{1F68D}\u{1F68E}\u{1F687}\u{1F688}\u{1F68A}\u{1F
 function linesIn(norm) {
   const out = [], add = (l) => { if (!out.includes(l)) out.push(l); };
   for (const m of norm.matchAll(/\b(?:m|metro)\s?([123])\b/g)) add("M" + m[1]);
-  const t = norm.split(" ");
+  const t = norm.replace(/\br 20\b/g, "r20").split(" ");
   let prev = false;                                   // le mot précédent était une ligne : liste « 31, 33 », « 6 et 7 »
   t.forEach((w, i) => {
     if (/^m[123]$/.test(w)) { prev = true; return; }
+    if (w === "leb" || w === "r20") { add("LEB"); prev = true; return; }   // train Lausanne-Echallens-Bercher (R20)
     if (w === "et" || w === "ou") return;
     if (/^\d{1,2}$/.test(w) && +w > 0 && !COUNT.test(t[i + 1] || "")) {
       const before = t.slice(Math.max(0, i - 2), i).join(" ");

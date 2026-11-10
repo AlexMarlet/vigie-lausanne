@@ -49,6 +49,14 @@
 {"id": "14avril", "name": "Renens-14 Avril", "short": "14 Avril", "alias": ["14 avril", "renens 14 avril", "quatorze avril"], "lat": 46.53929, "lon": 6.580007},
 {"id": "crissier", "name": "Crissier, Place Centrale", "short": "Crissier", "alias": ["crissier", "crissier place centrale"], "lat": 46.549898, "lon": 6.579549},
 {"id": "croset", "name": "Ecublens, Croset", "short": "Croset", "alias": ["croset", "ecublens croset", "ecublens"], "lat": 46.534692, "lon": 6.56637},
-{"id": "lemont", "name": "Le Mont, Grand-Mont", "short": "Grand-Mont", "alias": ["le mont", "mont sur lausanne", "grand mont"], "lat": 46.563031, "lon": 6.633205}
+{"id": "lemont", "name": "Le Mont, Grand-Mont", "short": "Grand-Mont", "alias": ["le mont", "mont sur lausanne", "grand mont"], "lat": 46.563031, "lon": 6.633205},
+{"id": "union-prilly", "alias": ["union", "prilly union", "union prilly leb"]},
+{"id": "cery-fleur-de-lys", "alias": ["cery", "fleur de lys", "fleur de lis", "cery fleur de lis"]},
+{"id": "jouxtens-mezery", "alias": ["jouxtens", "mezery"]},
+{"id": "romanel-sur-lausanne", "alias": ["romanel", "gare romanel", "romanel gare"]},
+{"id": "vernand-camares", "alias": ["vernand", "camares"]},
+{"id": "bel-air-leb", "alias": ["bel air", "bel air cheseaux"]},
+{"id": "les-ripes", "alias": ["ripes"]},
+{"id": "echallens", "alias": ["gare echallens", "echallens gare"]}
 ]
 }

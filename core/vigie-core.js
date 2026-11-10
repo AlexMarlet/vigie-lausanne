@@ -62,6 +62,7 @@
   // ---------- répertoire d'arrêts ----------
   function buildGazetteer(stops) {
     const exact = new Map();   // "tok tok" -> stopId
+    const same = new Map();    // "tok tok" -> [stopId…] : tous les arrêts de ce nom (homonymes), dans l'ordre
     const single = [];          // alias à un seul mot, pour le flou
     const byId = new Map();
     let maxLen = 1;
@@ -74,11 +75,13 @@
         if (!t.length) continue;
         const key = t.join(" ");
         if (!exact.has(key)) exact.set(key, s.id);
+        if (!same.has(key)) same.set(key, []);
+        if (!same.get(key).includes(s.id)) same.get(key).push(s.id);
         maxLen = Math.max(maxLen, t.length);
         if (t.length === 1 && t[0].length >= 5) single.push([t[0], s.id]);
       }
     }
-    return { exact, single, byId, maxLen: Math.min(maxLen, 5) };
+    return { exact, same, single, byId, maxLen: Math.min(maxLen, 5) };
   }
 
   // mots courants qui ne doivent jamais être pris pour un arrêt mal orthographié
@@ -112,8 +115,8 @@
     for (let n = gaz.maxLen; n >= 1; n--) {
       for (let i = 0; i + n <= tok.length; i++) {
         if (used.slice(i, i + n).some(Boolean)) continue;
-        const id = gaz.exact.get(tok.slice(i, i + n).join(" "));
-        if (id) { hits.push({ id, i, n, fuzzy: false }); for (let k = i; k < i + n; k++) used[k] = true; }
+        const key = tok.slice(i, i + n).join(" "), id = gaz.exact.get(key);
+        if (id) { hits.push({ id, i, n, fuzzy: false, key }); for (let k = i; k < i + n; k++) used[k] = true; }
       }
     }
     for (let i = 0; i < tok.length; i++) {
@@ -140,6 +143,7 @@
   function findLine(norm) {
     let m = norm.match(/\b(?:m|metro)\s?([123])\b/);
     if (m) return "M" + m[1];
+    if (/\b(?:leb|r ?20)\b/.test(norm)) return "LEB";   // train Lausanne-Echallens-Bercher (R20 dans l'horaire)
     const re = new RegExp("\\b(?:ligne|lignes|bus|trolley|trolleybus|l|n|no|num|numero|le|du|dans le)\\s?(\\d{1,2})\\b(?!\\s(?:" + COUNT_WORDS + ")\\b)");
     m = norm.match(re);
     if (m && +m[1] > 0) return String(+m[1]);
@@ -170,9 +174,16 @@
     const norm = normalize(prepared);
     const tok = tokens(prepared);
     const hits = findStops(tok, gaz);
-    const loc = hits.find((h) => !h.isDirection) || null;
-    const dir = hits.find((h) => h.isDirection) || null;
     const line = findLine(norm);
+    // deux arrêts du même nom : celui que dessert la ligne citée (« LEB Bel-Air » : la gare du LEB, pas Bel-Air à Lausanne)
+    const serves = (id) => ((gaz.byId.get(id) || {}).lines || []).includes(line);
+    const onLine = (h) => {
+      if (!h || !line || !h.key || serves(h.id)) return h;
+      const alt = (gaz.same && gaz.same.get(h.key) || []).find(serves);
+      return alt ? Object.assign({}, h, { id: alt }) : h;
+    };
+    const loc = onLine(hits.find((h) => !h.isDirection) || null);
+    const dir = onLine(hits.find((h) => h.isDirection) || null);
 
     let kind = "controle", sub = null, of = null;
     const endsWithQ = /\?[\s\W]*$/u.test(raw.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, ""));
@@ -311,14 +322,20 @@
     if (!net || !stopId || !dirStopId || stopId === dirStopId) return null;
     const found = [];
     for (const l of line ? [line] : (stopLines || [])) {
-      for (const { dir, seq } of directionsAt(net, l, stopId)) {
-        if (dir.stops.indexOf(dirStopId, seq + 1) !== -1) found.push({ line: l, dir: dir.id, seq });
+      for (const { dir, seq, share } of directionsAt(net, l, stopId)) {
+        if (dir.stops.indexOf(dirStopId, seq + 1) !== -1) found.push({ line: l, dir: dir.id, seq, to: dir.to, grp: dir.grp, share });
       }
     }
     const lines = new Set(found.map((f) => f.line));
     if (lines.size !== 1) return null;
-    const dirs = new Set(found.map((f) => f.dir));
-    return dirs.size === 1 ? found[0] : { line: found[0].line, dir: null, seq: null };
+    const out = (f) => ({ line: f.line, dir: f.dir, seq: f.seq });
+    if (found.length === 1) return out(found[0]);
+    // plusieurs sens passent par X (courses partielles, branches) : celui qui y finit (« LEB direction Echallens ») ;
+    // sinon, s'ils vont tous du même côté (même sens de circulation), le plus fréquent
+    const ends = found.filter((f) => f.to === dirStopId);
+    if (ends.length === 1) return out(ends[0]);
+    if (found.every((f) => f.grp != null && f.grp === found[0].grp)) return out(found.reduce((a, b) => (b.share > a.share ? b : a)));
+    return { line: found[0].line, dir: null, seq: null };
   }
 
   // ---------- vitesse des contrôleurs, apprise ----------
