@@ -40,11 +40,6 @@ jobs:
           python3 tools/build_network.py gtfs.zip
           python3 tools/build_app.py --donnees
           git diff --stat
-      - uses: actions/upload-artifact@v7
-        with:
-          name: reseau-leb
-          path: |
-            tools/reseau.json
-            collector/stops.json
-            collector/lignes.json
-          retention-days: 1
+          echo "=== DIFF ==="
+          git diff -U0 -- tools/reseau.json collector/stops.json collector/lignes.json
+          echo "=== FIN ==="
