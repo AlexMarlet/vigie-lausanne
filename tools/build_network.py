@@ -1,5 +1,5 @@
 """
-Construit tools/reseau.json : le réseau tl (arrêts, lignes, sens, ordre des arrêts, temps de parcours)
+Construit tools/reseau.json : le réseau tl et le LEB (arrêts, lignes, sens, ordre des arrêts, temps de parcours)
 à partir de l'horaire officiel suisse au format GTFS (opentransportdata.swiss).
 
     python3 tools/fetch_gtfs.py gtfs.zip       # dernier GTFS (GitHub Actions le fait chaque semaine)
@@ -7,7 +7,8 @@ Construit tools/reseau.json : le réseau tl (arrêts, lignes, sens, ordre des ar
 
 Méthode
 - Lignes : celles des opérateurs tl (voir TL_AGENCY), circulant pendant la période de référence
-  (14 jours à partir d'aujourd'hui).
+  (14 jours à partir d'aujourd'hui), et les trains du chemin de fer Lausanne-Echallens-Bercher (LEB_AGENCY),
+  réunis en une ligne « LEB » quel que soit leur nom dans l'horaire (ses bus de remplacement sont ignorés).
 - Arrêts : les zones d'arrêt (parent_station) desservies ; une même zone sous deux noms officiels proches
   (« Lausanne-Flon » métro et « Lausanne, Flon » bus) est fusionnée.
 - Sens : pour chaque ligne, les parcours réguliers (≥ 10 % des courses de leur sens). Un parcours compris
@@ -36,13 +37,14 @@ OUT = ROOT / "tools" / "reseau.json"
 ARRETS = ROOT / "tools" / "arrets.json"
 
 TL_AGENCY = re.compile(r"r[ée]gion lausannoise|^tl\b|\(tl\)", re.I)
+LEB_AGENCY = re.compile(r"echallens|bercher|^leb\b", re.I)     # « Lausanne-Echallens-Bercher » dans l'horaire officiel
 MIN_SHARE = 0.10          # part minimale des courses d'un sens pour qu'un parcours compte
 EXT_SHARE = 0.15          # une rallonge d'un parcours retenu (dépôt…) doit peser au moins 15 %
 SHORT_SHARE = 0.35        # un terminus de courses partielles n'est proposé que s'il en reçoit au moins 35 %
 MERGE_M = 300             # fusion de deux zones d'arrêt de même nom à moins de 300 m
 LEGACY_M = 350            # un arrêt historique est retrouvé à moins de 350 m
 CANTONS = r"\s+(?:VD|GE|FR|VS|NE|JU|BE)$"
-COLORS = {"M1": "#2B6CB0", "M2": "#7A4FC0", "M3": "#2F8F6B", "t1": "#C2410C"}
+COLORS = {"M1": "#2B6CB0", "M2": "#7A4FC0", "M3": "#2F8F6B", "t1": "#C2410C", "LEB": "#2F855A"}
 # noms de communes abrégés dans l'horaire officiel -> nom usuel (affichage et identifiants)
 TOWNS = {"Chavannes-R.": "Chavannes", "Le Mont-sur-L.": "Le Mont", "Le Mont-sur-Lausanne": "Le Mont",
          "Belmont-sur-L.": "Belmont", "Cheseaux-sur-L.": "Cheseaux", "Romanel-sur-L.": "Romanel",
@@ -102,7 +104,7 @@ def line_type(route_type: str, short: str) -> str:
 def line_sort_key(short: str):
     m = re.fullmatch(r"([A-Za-z]*)(\d*)([A-Za-z]*)", short)
     prefix, num, suffix = (m.groups() if m else (short, "", ""))
-    group = 0 if prefix == "M" else 1 if prefix in ("", "t") and num else 2
+    group = 0 if prefix == "M" else 1 if short == "LEB" else 2 if prefix in ("", "t") and num else 3   # métro, LEB, bus
     return (group, prefix, int(num) if num else 0, suffix)
 
 
@@ -243,11 +245,11 @@ def build(zpath: pathlib.Path, start: dt.date, days: int, legacy: list[dict]) ->
     lausanne_like = []
     for r in it:
         name = r[col["agency_name"]]
-        if TL_AGENCY.search(name):
+        if TL_AGENCY.search(name) or LEB_AGENCY.search(name):
             agencies[r[col["agency_id"]]] = name
         if "lausann" in name.lower():
             lausanne_like.append(name)
-    if not agencies:
+    if not any(TL_AGENCY.search(a) for a in agencies.values()):
         raise SystemExit(f"aucun opérateur tl trouvé (opérateurs « lausann… » : {lausanne_like})")
     col, it = rows(z, "routes.txt")
     routes = {}
@@ -257,11 +259,15 @@ def build(zpath: pathlib.Path, start: dt.date, days: int, legacy: list[dict]) ->
         short = (r[col["route_short_name"]] if "route_short_name" in col else "").strip()
         if not short:
             short = (r[col["route_long_name"]] if "route_long_name" in col else "").strip()
+        rtype = r[col["route_type"]] if "route_type" in col else ""
+        if LEB_AGENCY.search(agencies[r[col["agency_id"]]]):
+            if line_type(rtype, short) == "bus":       # bus de remplacement : pas la ligne LEB
+                continue
+            short, rtype = "LEB", "2"
         if not short:
             continue
         short = line_id(clean(short))
-        routes[r[col["route_id"]]] = (short, r[col["route_type"]] if "route_type" in col else "",
-                                      (r[col["route_color"]] if "route_color" in col else "").strip())
+        routes[r[col["route_id"]]] = (short, rtype, (r[col["route_color"]] if "route_color" in col else "").strip())
 
     # courses de la période de référence
     col, it = rows(z, "trips.txt")

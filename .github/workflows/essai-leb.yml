@@ -1,0 +1,50 @@
+name: Essai LEB (temporaire)
+# Branche d'essai : construit le réseau avec le LEB sur l'horaire officiel, sans rien publier.
+on:
+  push:
+    branches: [essai-leb]
+permissions:
+  contents: read
+jobs:
+  essai:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python3 tools/test_network.py
+      - run: python3 tools/fetch_gtfs.py gtfs.zip
+      - name: Le LEB dans l'horaire officiel
+        run: |
+          python3 - <<'PY'
+          import collections, csv, io, zipfile
+          z = zipfile.ZipFile("gtfs.zip")
+          def rows(n):
+              return csv.DictReader(io.TextIOWrapper(z.open(n), encoding="utf-8-sig", newline=""))
+          ag = {r["agency_id"]: r["agency_name"] for r in rows("agency.txt")
+                if any(k in r["agency_name"].lower() for k in ("echallens", "bercher", "leb"))}
+          print("agences :", ag)
+          routes = {r["route_id"]: r for r in rows("routes.txt") if r["agency_id"] in ag}
+          for r in routes.values():
+              print("route :", {k: r.get(k) for k in ("route_id", "route_short_name", "route_long_name", "route_desc", "route_type", "route_color")})
+          trips = {}
+          for r in rows("trips.txt"):
+              if r["route_id"] in routes:
+                  trips[r["trip_id"]] = (r["route_id"], r.get("direction_id"), r.get("trip_headsign"))
+          print("courses par route :", dict(collections.Counter(v[0] for v in trips.values())))
+          print("destinations :", collections.Counter((v[1], v[2]) for v in trips.values()).most_common(12))
+          PY
+      - name: Réseau
+        run: |
+          python3 tools/build_network.py gtfs.zip
+          python3 tools/build_app.py --donnees
+          git diff --stat
+      - uses: actions/upload-artifact@v7
+        with:
+          name: reseau-leb
+          path: |
+            tools/reseau.json
+            collector/stops.json
+            collector/lignes.json
+          retention-days: 1
