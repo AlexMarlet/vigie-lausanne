@@ -203,6 +203,17 @@ des messages) : Supabase → Edge Functions → `telegram` → Logs.
 `collector/collector.py` fait la même lecture avec un compte Telegram ordinaire (Telethon, serveur allumé en
 permanence) : seulement pour un groupe où un bot n'est pas possible, et jamais en même temps que le bot.
 
+## Statistiques d'apprentissage
+
+La fonction Supabase `stats` (déployée avec le bot) lit tout l'historique, archive anonyme comprise, dans une
+transaction en lecture seule, et ne rend que des agrégats : volumes par jour et par heure, arrêts, lignes, couples de
+contrôles qui servent à apprendre la vitesse, tendances apprises, durée jusqu'au « partis », confirmations. Elle exige
+une clé tirée du jeton du bot (HMAC « vigie-stats ») ; sans elle, 401.
+
+Le workflow **Statistiques** (à la demande) l'appelle et chiffre le résultat pour un certificat donné (CMS, AES-256) :
+le journal, public, ne contient que le texte chiffré, lisible seulement avec la clé privée du destinataire. Mode
+d'emploi en tête de `.github/workflows/stats.yml`.
+
 ## Tests
 
 | Commande | Vérifie |
