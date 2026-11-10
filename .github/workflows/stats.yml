@@ -1,0 +1,50 @@
+name: Statistiques
+
+# Statistiques d'apprentissage (fonction Supabase « stats », lecture seule), chiffrées pour un destinataire : seul le
+# détenteur de la clé privée du certificat donné peut les lire. Le journal, public, ne montre que le texte chiffré.
+#   gh workflow run stats.yml -f certificat="$(openssl x509 -in moi.pem -outform DER | base64 -w0)"
+# puis : openssl cms -decrypt -in stats.p7m -inform PEM -inkey moi.key | gunzip > stats.json
+
+on:
+  workflow_dispatch:
+    inputs:
+      certificat:
+        description: "Certificat X.509 du destinataire (DER en base64, sur une ligne)"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stats
+  cancel-in-progress: false
+
+jobs:
+  stats:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Statistiques chiffrées
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CERTIFICAT: ${{ inputs.certificat }}
+        run: |
+          set -euo pipefail
+          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then echo "::error title=Statistiques::secret TELEGRAM_BOT_TOKEN absent"; exit 1; fi
+          url="$(python3 -c 'import json; print(json.load(open("vigie.config.json"))["supabaseUrl"].rstrip("/"))')/functions/v1/stats"
+          cle="$(python3 -c 'import hashlib, hmac, os; print(hmac.new(os.environ["TELEGRAM_BOT_TOKEN"].encode(), b"vigie-stats", hashlib.sha256).hexdigest()[:48])')"
+          echo "::add-mask::$cle"
+          printf '%s' "$CERTIFICAT" | base64 -d > dest.der
+          openssl x509 -inform DER -in dest.der -out dest.pem
+          code="$(curl -sS --max-time 60 -o stats.json -w '%{http_code}' -H "x-vigie-cle: $cle" "$url")"
+          if [ "$code" != "200" ]; then
+            echo "::error title=Statistiques::HTTP $code : $(head -c 300 stats.json | tr '\n' ' ')"
+            exit 1
+          fi
+          python3 -c 'import json; d = json.load(open("stats.json")); print("::notice title=Statistiques::" + ", ".join(f"{k} {len(v)}" for k, v in d.items() if isinstance(v, list)))'
+          gzip -9 -c stats.json > stats.json.gz
+          openssl cms -encrypt -binary -aes256 -in stats.json.gz -outform PEM -out stats.p7m dest.pem
+          rm -f stats.json stats.json.gz
+          echo "=== DEBUT ==="
+          cat stats.p7m
+          echo "=== FIN ==="

@@ -11,6 +11,7 @@ on:
     branches: [main]
     paths:
       - "supabase/functions/telegram/**"
+      - "supabase/functions/stats/**"
       - "core/vigie-core.js"
       - "collector/stops.json"
       - "collector/lignes.json"
@@ -74,7 +75,9 @@ jobs:
           supabase secrets set --project-ref "$REF" --yes "${a_definir[@]}" > /dev/null
           [ ${#a_retirer[@]} -eq 0 ] || supabase secrets unset --project-ref "$REF" --yes "${a_retirer[@]}" > /dev/null 2>&1 || true
           supabase functions deploy telegram --project-ref "$REF" --no-verify-jwt --use-api --yes
-          echo "::notice title=Fonction::telegram déployée sur le projet $REF"
+          # statistiques d'apprentissage, en lecture seule, protégées par une clé tirée du jeton du bot (voir stats.yml)
+          supabase functions deploy stats --project-ref "$REF" --no-verify-jwt --use-api --yes
+          echo "::notice title=Fonction::telegram et stats déployées sur le projet $REF"
 
       - name: Brancher Telegram et tester en ligne
         if: steps.check.outputs.mode == 'deploy'
