@@ -295,7 +295,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         Signaler
       </button>
-      <button id="btnCenter" class="round" type="button" aria-label="Recentrer sur le Grand Lausanne">
+      <button id="btnCenter" class="round" type="button" aria-label="Recentrer sur le Grand Lausanne ; un 2e appui montre tout le réseau" title="Recentrer (2e appui : tout le réseau)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
       </button>
     </div>
@@ -534,10 +534,23 @@ button { font: inherit; color: inherit; cursor: pointer; }
   }
 
   // ---------- carte ----------
+  // Emprise : tout le réseau (le LEB monte jusqu'à Bercher), avec de la marge pour les barres du haut et du bas
+  const EMPRISE = L.latLngBounds(STOPS.map((s) => [s.lat, s.lon]));
+  const BARS = { paddingTopLeft: [12, 120], paddingBottomRight: [12, 96] };   // place prise par les barres
   const map = L.map("map", {
     zoomControl: false, attributionControl: true, minZoom: 11, maxZoom: 18, zoomSnap: 0.5,
-    maxBounds: [[46.43, 6.40], [46.67, 6.88]], maxBoundsViscosity: 0.8,
+    maxBounds: [[Math.min(46.43, EMPRISE.getSouth() - 0.06), Math.min(6.40, EMPRISE.getWest() - 0.08)],
+                [Math.max(46.67, EMPRISE.getNorth() + 0.08), Math.max(6.88, EMPRISE.getEast() + 0.08)]],
+    maxBoundsViscosity: 0.8,
   });
+  // dézoom possible jusqu'à voir tout le réseau entre les barres, sur un petit écran comme sur un grand
+  function minZoomFit() {
+    map.options.minZoom = 0;                         // getBoundsZoom ne descend pas sous le minimum en cours
+    const z = map.getBoundsZoom(EMPRISE, false, L.point(24 + 24, 120 + 96 + 24));
+    map.setMinZoom(Math.max(8, Math.min(11, Math.floor(z * 2) / 2)));
+  }
+  minZoomFit();
+  map.on("resize", minZoomFit);
   map.attributionControl.setPrefix(false);
   const R = L.svg({ padding: 0.5 });
 
@@ -606,9 +619,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
   map.on("zoomend", zoomClasses);
   map.on("zoomend moveend", labels);
 
+  // Bouton « recentrer » : le Grand Lausanne ; un 2e appui, sans avoir bougé, montre tout le réseau (LEB jusqu'à Bercher)
+  let coreView = null;
   function fitAll(animate) {
-    // Grand Lausanne (le réseau va jusqu'à Echallens et Cossonay : on recentre sur le cœur)
-    map.fitBounds([[46.502, 6.555], [46.556, 6.705]], { paddingTopLeft: [12, 120], paddingBottomRight: [12, 96], animate: !!animate });
+    const here = coreView && Math.abs(map.getZoom() - coreView.z) < 0.01 && map.distance(map.getCenter(), coreView.c) < 50;
+    if (here) { coreView = null; map.fitBounds(EMPRISE, Object.assign({ animate: !!animate }, BARS)); return; }
+    map.once("moveend", () => { coreView = { c: map.getCenter(), z: map.getZoom() }; });   // avant : peut venir tout de suite
+    map.fitBounds([[46.502, 6.555], [46.556, 6.705]], Object.assign({ animate: !!animate }, BARS));
   }
   function homeView() {
     map.fitBounds([[46.506, 6.598], [46.544, 6.662]], { paddingTopLeft: [4, 120], paddingBottomRight: [4, 96], maxZoom: 14, animate: false });
