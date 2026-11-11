@@ -70,6 +70,7 @@ jobs:
       - name: Navigateur de test
         run: |
           pip install playwright==1.63.0
-          python -m playwright install --with-deps chromium
+          # dépendances système par apt ; si le miroir Ubuntu est en panne, le navigateur seul suffit sur ces machines
+          python -m playwright install --with-deps chromium || python -m playwright install chromium
       - name: Test du site en ligne (lecture seule)
         run: python3 tools/smoke_test.py "${{ needs.deploy.outputs.page_url }}"
