@@ -63,12 +63,13 @@ async function stats(sql: any) {
                         where c.kind = 'controle' and c.stop_id = f.stop_id
                           and c.at <= f.at and c.at > f.at - interval '120 minutes') c on c.n > 0
         where f.kind = 'fin' and coalesce(f.of_kind, 'controle') = 'controle' order by f.at`),
-    // un contrôle déjà signalé au même arrêt dans les 20 minutes précédentes = une confirmation
-    q(`with t as (${TOUT})
-       select src, count(*)::int as n,
-              count(*) filter (where exists (select 1 from t p where p.kind = 'controle' and p.stop_id = c.stop_id
-                                              and p.at < c.at and p.at >= c.at - interval '20 minutes'))::int as confirment
-         from t c where c.kind = 'controle' group by 1`),
+    // un contrôle déjà signalé au même arrêt dans les 20 minutes précédentes = une confirmation. lag() prend le
+    // signalement précédent, y compris un de la même minute : l'archive, à la minute près, ne sait plus lequel
+    // était le premier, et un « p.at < c.at » strict perdait ces confirmations au bout de 48 h
+    q(`with c as (select src, at, lag(at) over (partition by stop_id order by at) as avant
+                    from (${TOUT}) t where kind = 'controle')
+       select src, count(*)::int as n, count(*) filter (where avant >= at - interval '20 minutes')::int as confirment
+         from c group by 1`),
     q(`select date_trunc('hour', at) as heure, kind, count(*)::int as n from (${TOUT}) t
         where src = 'telegram' group by 1, 2 order by 1`),
   ]);
