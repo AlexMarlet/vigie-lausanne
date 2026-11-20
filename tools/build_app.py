@@ -55,6 +55,9 @@ VENDOR = {  # node_modules -> dist/vendor
     "maplibre-gl/dist/maplibre-gl.css": "maplibre-gl.css",
     "@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js": "leaflet-maplibre-gl.js",
 }
+# page privée du tableau d'apprentissage (web/apprentissage/ -> dist/apprentissage/), hors du cache de l'app
+DASHBOARD = "apprentissage"
+DASHBOARD_D3 = "d3/dist/d3.min.js"
 GOOGLE_FONTS = (
     '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
     '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
@@ -200,6 +203,33 @@ def write_collector_stops(stops: list, lines: list) -> None:
         "[\n" + ",\n".join(json.dumps(l, ensure_ascii=False, separators=(",", ":")) for l in compact) + "\n]\n", encoding="utf-8")
 
 
+def write_dashboard(dist: pathlib.Path, data: dict, config: dict, common_head: str) -> None:
+    """Page privée /apprentissage/ : ce que le modèle apprend, en direct (fonction Supabase « stats », clé privée).
+    Le réseau y est réduit à ce qu'il faut pour nommer et placer les arrêts : noms de l'app, positions, ordre des
+    arrêts de chaque sens et tracé de M1, M2 et LEB (le parcours le plus long, comme sur la carte de l'app)."""
+    out = dist / DASHBOARD
+    out.mkdir()
+    noms = {s["id"]: s["name"] for s in data["stops"]}
+    pos = {s["id"]: [s["lat"], s["lon"]] for s in data["stops"] if s.get("lat") is not None and s.get("lon") is not None}
+    sens = {l["id"]: {d["id"]: d["stops"] for d in l["dirs"]} for l in data["lines"]}
+    trace = [{"ligne": lid, "ordre": i, "arret": sid, "lat": pos[sid][0], "lon": pos[sid][1]}
+             for lid in ("M1", "M2", "LEB") for i, sid in enumerate(data["metro"].get(lid, [])) if sid in pos]
+    (out / "reseau.json").write_text(json.dumps({"noms": noms, "pos": pos, "sens": sens, "trace": trace},
+                                                ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    shutil.copy(NM / DASHBOARD_D3, out / "d3.min.js")
+    for name in ("tableau.js", "tableau.css"):
+        shutil.copy(WEB / DASHBOARD / name, out / name)
+    head = common_head.replace("url(fonts/", "url(../fonts/").replace('href="icons/', 'href="../icons/')
+    base = config.get("supabaseUrl", "")
+    connect = f"{base} {base.replace('https://', 'wss://', 1)}" if base.startswith("https://") else ""
+    page = (read(f"web/{DASHBOARD}/index.html").replace("<!--@HEAD@-->", head).replace("__CONNECT__", connect)
+            .replace("/*@CONFIG@*/", json.dumps(config, ensure_ascii=False).replace("<", "\\u003c")))
+    for marker in ("<!--@", "/*@", "__CONNECT__"):
+        if marker in page:
+            fail(f"{DASHBOARD}/index.html : marqueur non remplacé : {marker}")
+    (out / "index.html").write_text(page, encoding="utf-8")
+
+
 def render_app(template: str, head: str, data: dict, colors: dict, config: dict, leaflet: str, supabase: str,
                maplibre: dict) -> str:
     out = template
@@ -251,7 +281,7 @@ def main() -> None:
         print(f"{out.relative_to(ROOT)} : {len(page) // 1024} Ko · {len(stops)} arrêts")
         return
 
-    for src in list(FONTS) + list(VENDOR):
+    for src in list(FONTS) + list(VENDOR) + [DASHBOARD_D3]:
         if not (NM / src).exists():
             fail(f"node_modules/{src} introuvable : lance d'abord « npm ci ».")
 
@@ -307,9 +337,11 @@ def main() -> None:
         contact_html = "\n  ".join(parts)
     privacy = read("web/confidentialite.html").replace("<!--@HEAD@-->", common_head).replace("<!--@CONTACT@-->", contact_html)
     (dist / "confidentialite.html").write_text(privacy, encoding="utf-8")
+    write_dashboard(dist, bundle["data"], config, common_head)
 
-    # service worker : cache versionné par le contenu du site
-    files = sorted(p for p in dist.rglob("*") if p.is_file() and not p.name.endswith(".txt"))
+    # service worker : cache versionné par le contenu de l'app (la page privée du tableau n'y entre pas)
+    files = sorted(p for p in dist.rglob("*") if p.is_file() and not p.name.endswith(".txt")
+                   and p.relative_to(dist).parts[0] != DASHBOARD)
     digest = hashlib.sha256()
     for p in files:
         digest.update(p.relative_to(dist).as_posix().encode())

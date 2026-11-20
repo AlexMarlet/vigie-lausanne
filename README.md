@@ -88,9 +88,9 @@ Une ligne peu observée suit donc la moyenne du réseau. La légende de l'app af
 
 | Dossier | Contenu |
 |---|---|
-| `web/` | L'app : gabarit HTML, service worker, manifest, icônes, page Confidentialité |
+| `web/` | L'app : gabarit HTML, service worker, manifest, icônes, page Confidentialité ; page privée du tableau d'apprentissage (`apprentissage/`) |
 | `core/` | Moteur partagé : parseur de messages, confiance, sens, position estimée, vitesse apprise ; tests |
-| `supabase/` | Schéma de la base (`schema.sql`), tâches horaires : archive anonyme et apprentissage (`purge.sql`), tests ; bot Telegram (`functions/telegram/`) |
+| `supabase/` | Schéma de la base (`schema.sql`), tâches horaires : archive anonyme et apprentissage (`purge.sql`), tests ; bot Telegram (`functions/telegram/`), statistiques d'apprentissage (`functions/stats/`) |
 | `tools/` | Réseau tl depuis l'horaire officiel (`fetch_gtfs.py`, `build_network.py` → `reseau.json`), arrêts historiques et alias (`arrets.json`), construction du site (`build_app.py`), installation du bot (`bot_telegram.py`, `bot_bundle.mjs`), vérifications |
 | `collector/` | Liste d'arrêts et de lignes partagée ; variante du bot avec un compte Telegram ordinaire (`collector.py`) |
 
@@ -214,6 +214,25 @@ Le workflow **Statistiques** (à la demande) l'appelle et chiffre le résultat p
 le journal, public, ne contient que le texte chiffré, lisible seulement avec la clé privée du destinataire. Mode
 d'emploi en tête de `.github/workflows/stats.yml`.
 
+### Tableau d'apprentissage en direct (page privée)
+
+`https://vigie-lausanne.ch/apprentissage/` (`web/apprentissage/`) montre ce que le modèle apprend : vitesse des
+contrôleurs (réseau et lignes), couples de contrôles jugés retenus ou écartés, courbe d'apprentissage, heures et
+jours, arrêts, lignes, contenu des messages. La page lit la fonction `stats` depuis le navigateur (CORS limité au
+site) et se recalcule à chaque nouveau signalement (temps réel de la table `signalements`), au moins toutes les
+5 minutes tant qu'elle est ouverte ; la vitesse du modèle, elle, est recalculée chaque heure par la base.
+
+- **Accès** : la même clé que `stats`. Le lien personnel `…/apprentissage/#cle=…` la garde sur l'appareil
+  (localStorage) et l'efface aussitôt de la barre d'adresse ; le fragment `#…` n'est jamais envoyé au serveur.
+  Sans clé, la page n'affiche qu'un champ d'accès. Elle n'est ni liée depuis l'app, ni référencée (`noindex`), ni
+  mise en cache par le service worker de l'app.
+- **Obtenir le lien** : workflow **Tableau d'apprentissage** avec un certificat (mode d'emploi en tête de
+  `.github/workflows/tableau.yml`) ; le lien sort chiffré, comme les statistiques.
+- **Changer la clé** (lien diffusé par erreur) : remplacer `"vigie-stats"` par une nouvelle étiquette dans
+  `supabase/functions/stats/index.ts`, `stats.yml` et `tableau.yml`, puis redemander le lien.
+- **Vérification** : après chaque déploiement, le même workflow ouvre la page en ligne avec la vraie clé et vérifie
+  chargement, graphiques, mise en page et temps réel, sans rien écrire des statistiques dans le journal.
+
 ## Tests
 
 | Commande | Vérifie |
@@ -223,6 +242,7 @@ d'emploi en tête de `.github/workflows/stats.yml`.
 | `python3 collector/test_parser.py` | la version Python du parseur donne les mêmes résultats |
 | `python3 tools/test_network.py` | extraction du réseau sur un petit GTFS fabriqué (sens, branches, courses partielles, fusion d'arrêts) |
 | `python3 supabase/test_schema.py` | mise à jour depuis l'ancien schéma, règles d'accès, anti-spam, sens, archive anonyme, apprentissage, sur un vrai PostgreSQL |
+| `python3 tools/test_tableau.py` | page Apprentissage dans Chromium, données fictives : accès privé, lien personnel, chiffres et graphiques, mise en page du téléphone à l'ordinateur, mise à jour en temps réel, clé refusée (après `python3 tools/build_app.py`) |
 
 La CI (`.github/workflows/ci.yml`) les lance à chaque push, avec une base PostgreSQL 17 jetable.
 

@@ -2,12 +2,16 @@
 // Ce que le modèle a appris et sur quelles données : agrégats de l'historique (archive anonyme + signalements
 // récents), jamais un signalement isolé avec son empreinte ou son identifiant de message.
 // Accès : en-tête x-vigie-cle = HMAC-SHA256(TELEGRAM_BOT_TOKEN, "vigie-stats")[:48] (même calcul dans
-// .github/workflows/stats.yml) ; sinon 401. Déployée par .github/workflows/bot.yml.
+// .github/workflows/stats.yml et tableau.yml) ; sinon 401. Déployée par .github/workflows/bot.yml.
+// Lue aussi par la page privée du site, /apprentissage/ (web/apprentissage/), depuis le navigateur : réponses
+// CORS pour le site seulement, et un même résultat servi pendant 15 s à plusieurs onglets ou rafraîchissements.
 import postgres from "npm:postgres@3.4.9";
 
 const TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
 const DB = Deno.env.get("SUPABASE_DB_URL") ?? "";
 const ENC = new TextEncoder();
+const SITES = new Set(["https://vigie-lausanne.ch", "https://www.vigie-lausanne.ch"]);
+const MEMO_MS = 15_000;
 
 async function hmac(key: string, msg: string): Promise<string> {
   const k = await crypto.subtle.importKey("raw", ENC.encode(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -77,19 +81,41 @@ async function stats(sql: any) {
     confirmations, telegram };
 }
 
-Deno.serve(async (req) => {
-  if (!TOKEN || !DB) return new Response("non configuré", { status: 503 });
-  if (req.method !== "GET" && req.method !== "POST") return new Response(null, { status: 405 });
-  if (!same(req.headers.get("x-vigie-cle") ?? "", await want)) return new Response("non autorisé", { status: 401 });
+async function calcul(): Promise<string> {
   const sql = postgres(DB, { prepare: false, max: 1, idle_timeout: 5, connect_timeout: 15 });
   try {
     // deno-lint-ignore no-explicit-any
-    const out = await sql.begin("read only", (tx: any) => stats(tx));
-    return Response.json(out, { headers: { "cache-control": "no-store" } });
-  } catch (e) {
-    console.error("stats :", e);
-    return new Response("erreur : " + String((e as Error)?.message ?? e).slice(0, 300), { status: 500 });
+    return JSON.stringify(await sql.begin("read only", (tx: any) => stats(tx)));
   } finally {
     await sql.end({ timeout: 2 });
+  }
+}
+let memo: { at: number; body: Promise<string> } | null = null;
+
+// en-têtes CORS : seulement pour le site, qui envoie la clé dans x-vigie-cle (d'où la requête préalable OPTIONS)
+function cors(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin") ?? "";
+  if (!SITES.has(origin)) return { vary: "Origin" };
+  return { "access-control-allow-origin": origin, "access-control-allow-methods": "GET, POST, OPTIONS",
+    "access-control-allow-headers": "x-vigie-cle", "access-control-max-age": "86400", vary: "Origin" };
+}
+
+Deno.serve(async (req) => {
+  const h = cors(req);
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: h });
+  if (!TOKEN || !DB) return new Response("non configuré", { status: 503, headers: h });
+  if (req.method !== "GET" && req.method !== "POST") return new Response(null, { status: 405, headers: h });
+  if (!same(req.headers.get("x-vigie-cle") ?? "", await want)) return new Response("non autorisé", { status: 401, headers: h });
+  let m = memo;
+  if (!m || Date.now() - m.at > MEMO_MS) {
+    const body = calcul();
+    m = memo = { at: Date.now(), body };
+    body.catch(() => { if (memo?.body === body) memo = null; });   // une erreur n'est pas gardée
+  }
+  try {
+    return new Response(await m.body, { headers: { ...h, "content-type": "application/json", "cache-control": "no-store" } });
+  } catch (e) {
+    console.error("stats :", e);
+    return new Response("erreur : " + String((e as Error)?.message ?? e).slice(0, 300), { status: 500, headers: h });
   }
 });

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Apprentissage – Vigie Lausanne</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#173E62">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' __CONNECT__; base-uri 'none'; form-action 'none'; object-src 'none'">
+<!--@HEAD@-->
+<link rel="stylesheet" href="tableau.css">
+<script type="application/json" id="vigie-config">/*@CONFIG@*/</script>
+<script src="d3.min.js" defer></script>
+<script src="../vendor/supabase.js" defer></script>
+<script src="tableau.js" defer></script>
+</head>
+<body>
+<div class="page">
+  <nav class="haut"><a href="../">← Carte</a><span class="marque">VIGIE</span></nav>
+
+  <section class="porte" id="porte" hidden>
+    <h1>Apprentissage de Vigie</h1>
+    <p>Cette page montre ce que Vigie apprend des signalements, en direct. Elle est privée : ouvre-la avec ton lien personnel, ou colle ta clé d'accès.</p>
+    <form id="porte-form" class="porte-form" novalidate>
+      <label for="porte-cle">Clé d'accès</label>
+      <div class="porte-ligne">
+        <input id="porte-cle" name="cle" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text" required>
+        <button type="submit">Ouvrir</button>
+      </div>
+    </form>
+    <p class="porte-erreur" id="porte-erreur" role="alert" hidden></p>
+  </section>
+
+  <main class="vg" id="tableau" hidden>
+    <header class="vg-head" id="resume">
+      <h1>Apprentissage de Vigie</h1>
+      <p class="vg-takeaway">En <b data-draw="tg-heures">—</b> heures dans le groupe Telegram, le bot a compris <b data-draw="tg-messages">—</b> signalements. La vitesse des contrôleurs s'apprend de <b data-draw="res-paires">—</b> déplacements observés, qui comptent pour <b data-draw="res-part">—</b> de l'estimation ; le reste vient de l'hypothèse de départ.</p>
+      <p class="vg-meta etat" id="etat"><span class="etat-point" aria-hidden="true"></span><span id="etat-texte">Chargement…</span></p>
+    </header>
+
+    <section class="vg-section" id="entrees">
+      <h2>Ce qui arrive au modèle</h2>
+      <div class="vg-tiles">
+        <div class="vg-tile">
+          <div class="vg-tile-label">Signalements Telegram compris</div>
+          <div class="vg-tile-value" data-draw="tg-messages">—</div>
+          <div class="vg-tile-sub">depuis le <span data-draw="tg-debut">—</span></div>
+        </div>
+        <div class="vg-tile">
+          <div class="vg-tile-label">Contrôles signalés (Telegram)</div>
+          <div class="vg-tile-value" data-draw="tg-controles">—</div>
+          <div class="vg-tile-sub">et <span data-draw="tg-partis">—</span> « partis »</div>
+        </div>
+        <div class="vg-tile">
+          <div class="vg-tile-label">Signalements depuis l'app</div>
+          <div class="vg-tile-value" data-draw="app-messages">—</div>
+          <div class="vg-tile-sub">du <span data-draw="app-debut">—</span> au <span data-draw="app-fin">—</span></div>
+        </div>
+        <div class="vg-tile">
+          <div class="vg-tile-label">Dernier signalement</div>
+          <div class="vg-tile-value vg-tile-value-court" data-draw="dernier-heure">—</div>
+          <div class="vg-tile-sub" data-draw="dernier-jour">—</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="vg-section" id="vitesse">
+      <h2>Ce que le modèle apprend : la vitesse des contrôleurs</h2>
+      <p>Après un contrôle signalé sur une ligne, Vigie estime où les contrôleurs seront ensuite. Il lui faut leur vitesse, en arrêts par minute. Au départ, il suppose 1 arrêt toutes les 3 minutes. Quand deux contrôles se suivent sur la même ligne et dans le même sens (de 2 à 40 minutes d'écart, jusqu'à 10 arrêts plus loin, pas plus vite que 1,5 arrêt par minute), il retient ce déplacement. L'hypothèse de départ pèse autant que 30 minutes d'observation : plus les minutes observées s'accumulent, plus elles l'emportent.</p>
+      <div class="vg-tiles">
+        <div class="vg-tile">
+          <div class="vg-tile-label">Vitesse estimée, tout le réseau</div>
+          <div class="vg-tile-value"><span data-draw="res-pace">—</span> <span class="vg-unit">min par arrêt</span></div>
+          <div class="vg-tile-sub">hypothèse de départ : 3 min</div>
+        </div>
+        <div class="vg-tile">
+          <div class="vg-tile-label">Part des observations dans l'estimation</div>
+          <div class="vg-tile-value" data-draw="res-part">—</div>
+          <div class="vg-tile-sub"><span data-draw="res-minutes">—</span> min observées, contre 30 min d'hypothèse</div>
+        </div>
+        <div class="vg-tile">
+          <div class="vg-tile-label">Déplacements retenus</div>
+          <div class="vg-tile-value"><span data-draw="pj-retenus">—</span> <span class="vg-unit">sur <span data-draw="pj-total">—</span></span></div>
+          <div class="vg-tile-sub">couples de contrôles successifs, même ligne et même sens</div>
+        </div>
+      </div>
+      <div class="vg-tiles" data-draw="tuiles-lignes"></div>
+      <p class="vg-note">Le modèle recalcule sa vitesse chaque heure (dernier calcul : <span data-draw="calcule-le">—</span>). Les couples et la courbe ci-dessous sont jugés ici à chaque nouveau signalement, avec les mêmes règles.</p>
+
+      <figure class="vg-fig" id="fig-balance">
+        <h3>Hypothèse, mesure et estimation</h3>
+        <div class="vg-legend"><span><i class="vg-key vg-dot" data-draw="cle-estimation"></i>Estimation</span><span><i class="vg-key vg-ring" data-draw="cle-mesure"></i>Mesure brute</span><span><i class="vg-key vg-dash"></i>Hypothèse de départ</span></div>
+        <div class="vg-chart" data-draw="chart-balance"></div>
+        <p class="vg-cap">Minutes par arrêt. La mesure brute divise les minutes observées par les arrêts parcourus ; l'estimation d'une ligne se place entre celle du réseau et sa propre mesure, d'autant plus près de sa mesure que la ligne a été observée longtemps.</p>
+      </figure>
+
+      <figure class="vg-fig" id="fig-courbe">
+        <h3>L'estimation du réseau après chaque déplacement retenu</h3>
+        <div class="vg-chart" data-draw="chart-courbe"></div>
+      </figure>
+
+      <figure class="vg-fig" id="fig-paires">
+        <h3>Couples de contrôles observés</h3>
+        <div class="vg-scroll">
+          <table class="vg-table" aria-label="Couples de contrôles successifs et décision du modèle">
+            <thead>
+              <tr><th>Le</th><th>Ligne</th><th>Sens</th><th>Vu à</th><th>Puis à</th><th class="vg-num">Arrêts</th><th class="vg-num">Min</th><th>Décision</th></tr>
+            </thead>
+            <tbody data-draw="table-paires"></tbody>
+          </table>
+        </div>
+        <p class="vg-cap">« À rebours » : le second contrôle est en amont du premier dans le sens signalé (autre équipe, demi-tour ou sens mal compris). Le modèle l'écarte, comme les couples à moins de 2 minutes d'écart.</p>
+      </figure>
+    </section>
+
+    <section class="vg-section" id="quand">
+      <h2>Quand les contrôles sont signalés</h2>
+      <figure class="vg-fig" id="fig-heures">
+        <div class="vg-legend"><span><i class="vg-key" data-draw="cle-controles"></i>Contrôles</span><span><i class="vg-key" data-draw="cle-partis"></i>« Partis »</span></div>
+        <div class="vg-chart" data-draw="chart-heures"></div>
+        <p class="vg-cap">Messages Telegram compris, par heure (heure de Lausanne). Heure la plus chargée : <span data-draw="pic-heure">—</span>, avec <b data-draw="pic-n">—</b> contrôles.</p>
+      </figure>
+      <figure class="vg-fig" id="fig-jours">
+        <h3>Les 14 derniers jours</h3>
+        <div class="vg-scroll">
+          <table class="vg-table vg-table-jours" aria-label="Signalements par jour, les 14 derniers jours">
+            <thead>
+              <tr><th>Jour</th><th class="vg-num">Contrôles</th><th class="vg-num">« Partis »</th><th class="vg-num">App</th></tr>
+            </thead>
+            <tbody data-draw="table-jours"></tbody>
+          </table>
+        </div>
+        <p class="vg-cap">Contrôles et « partis » signalés dans le groupe Telegram ; App : contrôles signalés depuis l'app.</p>
+      </figure>
+    </section>
+
+    <section class="vg-section" id="ou">
+      <h2>Où : arrêts et lignes</h2>
+      <figure class="vg-fig" id="fig-carte">
+        <h3>Arrêts où un contrôle a été signalé</h3>
+        <div class="vg-legend"><span><i class="vg-key vg-ring" data-draw="cle-carte"></i>Taille : nombre de contrôles signalés</span><span>Traits gris : M1, M2 et LEB</span></div>
+        <div class="vg-chart vg-map" data-draw="chart-carte"></div>
+      </figure>
+      <figure class="vg-fig" id="fig-arrets">
+        <h3>Les arrêts les plus signalés</h3>
+        <div class="vg-legend"><span><i class="vg-key" data-draw="cle-telegram"></i>Telegram</span><span><i class="vg-key" data-draw="cle-app"></i>App</span></div>
+        <div class="vg-chart" data-draw="chart-arrets"></div>
+      </figure>
+      <figure class="vg-fig" id="fig-lignes">
+        <h3>Contrôles par ligne citée</h3>
+        <div class="vg-legend"><span><i class="vg-key" data-draw="cle-telegram"></i>Telegram</span><span><i class="vg-key" data-draw="cle-app"></i>App</span></div>
+        <div class="vg-chart" data-draw="chart-lignes"></div>
+      </figure>
+    </section>
+
+    <section class="vg-section" id="messages">
+      <h2>Ce que disent les messages Telegram</h2>
+      <div class="vg-tiles">
+        <div class="vg-tile">
+          <div class="vg-tile-label">Contrôles avec une ligne</div>
+          <div class="vg-tile-value" data-draw="q-ligne">—</div>
+          <div class="vg-tile-sub">sans ligne, l'estimation ne peut pas suivre les contrôleurs</div>
+        </div>
+        <div class="vg-tile">
+          <div class="vg-tile-label">Contrôles avec un sens</div>
+          <div class="vg-tile-value" data-draw="q-sens">—</div>
+          <div class="vg-tile-sub">seuls ceux-là servent à apprendre la vitesse</div>
+        </div>
+        <div class="vg-tile">
+          <div class="vg-tile-label">Confirmés dans les 20 min</div>
+          <div class="vg-tile-value" data-draw="q-confirme">—</div>
+          <div class="vg-tile-sub">un autre contrôle déjà signalé au même arrêt</div>
+        </div>
+      </div>
+      <p class="vg-note">Durée d'un contrôle jusqu'au « partis » au même arrêt : <b data-draw="presence-n">—</b> cas via Telegram jusqu'ici<span data-draw="presence-avis"></span>.</p>
+    </section>
+
+    <details class="vg-details" id="limites">
+      <summary>Définitions et limites de ces chiffres</summary>
+      <ul>
+        <li>Signalement compris : message du groupe où le bot a reconnu un arrêt. Il ne garde pas les messages qu'il n'a pas compris, donc la part de messages compris n'est pas connue.</li>
+        <li>Les chiffres couvrent tout l'historique : l'archive anonyme (heure arrondie à la minute) et les signalements des dernières 48 heures.</li>
+        <li>Les signalements de l'app des 24 au 26 octobre, dont plusieurs la nuit, sont probablement des essais faits pendant la mise au point. Ils restent dans les chiffres.</li>
+        <li>Le LEB n'est reconnu que depuis le 11 novembre : ses contrôles n'apparaissent qu'à partir de cette date.</li>
+        <li>Le modèle n'apprend que la vitesse des contrôleurs. Les arrêts, lignes et heures montrés ici sont observés, mais l'estimation ne s'en sert pas encore.</li>
+        <li>La page se met à jour seule à chaque nouveau signalement, et au moins toutes les 5 minutes tant qu'elle est ouverte.</li>
+      </ul>
+    </details>
+
+    <footer class="pied">
+      <span>Page privée, non référencée. La clé reste sur cet appareil.</span>
+      <button type="button" class="lien" id="oublier">Oublier la clé sur cet appareil</button>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

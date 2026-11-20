@@ -1,0 +1,67 @@
+name: Tableau d'apprentissage
+
+# Page privée https://vigie-lausanne.ch/apprentissage/ (web/apprentissage/) : vérifiée en ligne avec la vraie clé
+# après chaque déploiement du site, sans rien écrire des statistiques dans le journal (public).
+# Lien personnel, chiffré pour le détenteur d'un certificat (le journal ne montre que le texte chiffré) :
+#   gh workflow run tableau.yml -f certificat="$(openssl x509 -in moi.pem -outform DER | base64 -w0)"
+#   puis : openssl cms -decrypt -inform PEM -inkey moi.key   (texte entre === DEBUT === et === FIN ===)
+# Clé d'accès : HMAC-SHA256(TELEGRAM_BOT_TOKEN, "vigie-stats")[:48], comme supabase/functions/stats et stats.yml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      certificat:
+        description: "Certificat X.509 du destinataire du lien (DER en base64, sur une ligne) ; vide = vérification seule"
+        required: false
+        default: ""
+  workflow_run:
+    workflows: [Déploiement]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tableau
+  cancel-in-progress: false
+
+env:
+  PAGE: https://vigie-lausanne.ch/apprentissage/
+
+jobs:
+  tableau:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Clé d'accès (masquée dans le journal)
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then echo "::error title=Tableau::secret TELEGRAM_BOT_TOKEN absent"; exit 1; fi
+          cle="$(python3 -c 'import hashlib, hmac, os; print(hmac.new(os.environ["TELEGRAM_BOT_TOKEN"].encode(), b"vigie-stats", hashlib.sha256).hexdigest()[:48])')"
+          echo "::add-mask::$cle"
+          echo "VIGIE_TABLEAU_CLE=$cle" >> "$GITHUB_ENV"
+      - name: Lien personnel chiffré
+        if: github.event_name == 'workflow_dispatch' && inputs.certificat != ''
+        env:
+          CERTIFICAT: ${{ inputs.certificat }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$CERTIFICAT" | base64 -d > dest.der
+          openssl x509 -inform DER -in dest.der -out dest.pem
+          printf '%s#cle=%s\n' "$PAGE" "$VIGIE_TABLEAU_CLE" | openssl cms -encrypt -aes256 -outform PEM -out lien.p7m dest.pem
+          echo "=== DEBUT ==="
+          cat lien.p7m
+          echo "=== FIN ==="
+          rm -f lien.p7m dest.der dest.pem
+      - name: Navigateur de test
+        run: |
+          pip install playwright==1.63.0
+          python -m playwright install --with-deps chromium || python -m playwright install chromium
+      - name: Page en ligne, avec la vraie clé
+        run: python3 tools/check_tableau.py "$PAGE"

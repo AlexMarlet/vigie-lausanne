@@ -6,7 +6,7 @@ Test du site en ligne, en lecture seule (aucun signalement envoyé).
 Vérifie d'abord le DNS d'un domaine personnalisé (adresses de GitHub Pages), puis ouvre l'app dans un
 Chrome mobile : chargement, connexion à Supabase (« en direct »), réseau complet, choix du sens dans le
 formulaire (sans rien envoyer), fond de carte, service worker, installabilité, page Confidentialité,
-absence d'erreur JavaScript.
+page Apprentissage fermée sans clé, absence d'erreur JavaScript.
 Lancé par GitHub Actions après chaque déploiement ; les résultats s'affichent en annotations.
 """
 import asyncio
@@ -224,6 +224,14 @@ async def main(url):
 
         resp = await page.goto(url + "confidentialite.html")
         check(resp is not None and resp.ok, "page Confidentialité servie")
+
+        # page privée du tableau d'apprentissage : sans clé, l'accès privé seulement (aucune statistique demandée)
+        resp = await page.goto(url + "apprentissage/")
+        check(resp is not None and resp.ok, "page Apprentissage servie")
+        await page.wait_for_selector("#porte:not([hidden])", timeout=15000)
+        check(await page.is_hidden("#tableau"), "Apprentissage sans clé : accès privé, statistiques masquées")
+        robots = await page.get_attribute('meta[name="robots"]', "content") or ""
+        check("noindex" in robots, "Apprentissage non référencée par les moteurs de recherche")
 
         real = [e for e in errors if "favicon" not in e]
         check(not real, "aucune erreur JavaScript" + (f" : {real[:3]}" if real else ""))

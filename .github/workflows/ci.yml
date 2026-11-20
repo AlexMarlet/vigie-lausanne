@@ -43,6 +43,11 @@ jobs:
         run: python3 tools/build_app.py
       - name: Liste d'arrêts du collecteur à jour
         run: git diff --exit-code collector/stops.json collector/lignes.json
+      - name: Page Apprentissage (navigateur, données fictives)
+        run: |
+          pip install playwright==1.63.0
+          python -m playwright install --with-deps chromium || python -m playwright install chromium
+          python3 tools/test_tableau.py
       - name: Parseur Python du collecteur
         run: python3 collector/test_parser.py
       - name: Schéma Supabase sur PostgreSQL 17
