@@ -259,7 +259,7 @@ La CI (`.github/workflows/ci.yml`) les lance à chaque push, avec une base Postg
 - Fond de carte épuré par défaut : [OpenFreeMap](https://openfreemap.org) (styles Positron et Dark, gratuits, sans clé ni limite), © OpenMapTiles, données © contributeurs OpenStreetMap. Quelques couches sont masquées et recolorées dans `web/index.template.html` (`FOND_HIDE`, `FOND_PAINT`).
 - Plan des lignes en option (légende de l'app) : [ÖPNVKarte](https://öpnvkarte.de) (memomaps.de, CC BY-SA). memomaps demande d'héberger soi-même la carte en cas de fort trafic.
 - Arrêts, lignes et sens : horaire officiel suisse, [opentransportdata.swiss](https://opentransportdata.swiss) ([conditions d'utilisation](https://opentransportdata.swiss/fr/terms-of-use/)), source citée dans la légende de l'app. Contours des communes et du lac (aperçu Claude) : swisstopo / OFS, via [swiss-maps](https://github.com/interactivethings/swiss-maps).
-- Polices sous licence SIL Open Font License (`web/fonts/`). Leaflet (BSD-2-Clause), MapLibre GL (BSD-3-Clause), maplibre-gl-leaflet (ISC) et supabase-js (MIT) sont installés par `npm ci`.
+- Polices sous licence SIL Open Font License (`web/fonts/`). Leaflet (BSD-2-Clause), MapLibre GL (BSD-3-Clause), maplibre-gl-leaflet (ISC), supabase-js (MIT) et d3 (ISC, page Apprentissage) sont installés par `npm ci`.
 
 ## Licence
 
