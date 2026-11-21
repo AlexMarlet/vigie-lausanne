@@ -1178,6 +1178,22 @@ button { font: inherit; color: inherit; cursor: pointer; }
     openSheet("feed", "Fil des signalements", build, null);
   }
 
+  // ---------- accès discret au tableau privé d'apprentissage (apprentissage/) ----------
+  // Sur l'appareil qui en garde la clé (enregistrée par la page elle-même), un lien « Apprentissage » en bas de la
+  // légende ; ailleurs, cinq appuis rapides sur le titre « Vitesse des contrôles, apprise » ouvrent la page, qui
+  // demande la clé. Rien de visible pour les autres utilisateurs.
+  const CLE_TABLEAU = "vigie.tableau.cle";
+  const cleTableau = () => { try { return /^[0-9a-f]{16,128}$/.test((store && store.getItem(CLE_TABLEAU)) || ""); } catch (e) { return false; } };
+  function accesApprentissage(node) {
+    let n = 0, debut = 0;
+    node.addEventListener("click", () => {
+      const t = Date.now();
+      if (t - debut > 3000) { n = 0; debut = t; }
+      if (++n >= 5) { n = 0; location.href = "apprentissage/"; }
+    });
+    return node;
+  }
+
   // ---------- légende ----------
   function openLegend() {
     openSheet("legend", "Comment lire la carte", () => {
@@ -1213,7 +1229,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
       for (const [line, x] of rows.slice(0, 12)) {
         trend.append(el("li", null, badge(line), el("span", { text: C.paceText(x.rate) }), el("span", { class: "n", text: x.pairs + " obs." })));
       }
-      box.append(el("div", null, el("p", { class: "label", text: "Vitesse des contrôles, apprise" + (demoTrends ? " (démo)" : "") }),
+      const titreVitesse = el("p", { class: "label", id: "titreVitesse", text: "Vitesse des contrôles, apprise" + (demoTrends ? " (démo)" : ""),
+        style: "touch-action:manipulation;-webkit-user-select:none;user-select:none" });
+      if (!IN_CLAUDE) accesApprentissage(titreVitesse);
+      box.append(el("div", null, titreVitesse,
         rows.length ? trend : el("p", { class: "facts", text: "Pas encore assez de signalements avec ligne et sens : l'app suppose " + C.paceText(1 / C.CFG.move.pace) + ", sur toutes les lignes." }),
         el("p", { class: "note", text: "Calculée sur tous les signalements depuis le lancement : deux contrôles signalés à la suite sur la même ligne, dans le même sens et à moins de 40 min d'écart donnent leur vitesse. Recalculée chaque heure ; tant qu'une ligne a peu de données, elle suit la moyenne du réseau." })));
       const reseau = STOPS.length + " arrêts et " + NET.byLine.size + " lignes tl, horaire officiel suisse (opentransportdata.swiss" + (D.meta && D.meta.period && D.meta.period[0] ? ", " + new Date(D.meta.period[0]).toLocaleDateString("fr-CH") : "") + ").";
@@ -1246,6 +1265,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
         if (canInstall()) links.append(el("button", { type: "button", class: "link", onclick: install }, "Installer l'app"));
         links.append(el("a", { href: "confidentialite.html" }, "Confidentialité"));
         if (D.meta && D.meta.repo) links.append(el("a", { href: D.meta.repo, target: "_blank", rel: "noopener" }, "Code source"));
+        if (cleTableau()) links.append(el("a", { href: "apprentissage/", id: "lienApprentissage" }, "Apprentissage"));
         box.append(links);
       }
       return box;

@@ -6,7 +6,7 @@ aucune donnée réelle, aucune requête vers Supabase (fonction « stats » et t
 Vérifie : accès refusé sans clé, lien personnel (#cle=… gardée puis effacée de l'adresse), clé envoyée à la
 fonction, chiffres et graphiques remplis, aucun texte qui en chevauche un autre (téléphone, tablette,
 ordinateur, clair et sombre), mise à jour après un signalement annoncé en temps réel (couple surligné),
-clé refusée (retour à l'accès privé), aucune erreur JavaScript.
+clé refusée (retour à l'accès privé), aucune erreur JavaScript ; depuis l'app : accès discret par la légende.
 """
 import asyncio
 import copy
@@ -15,6 +15,7 @@ import functools
 import http.server
 import json
 import pathlib
+import re
 import sys
 import threading
 
@@ -233,6 +234,32 @@ async def main():
         await page.wait_for_selector("#porte:not([hidden])", timeout=12000)
         check("refusée" in (await page.text_content("#porte-erreur") or ""), "clé refusée : message et accès privé")
         check(await page.evaluate("localStorage.getItem('vigie.tableau.cle')") is None, "clé refusée : clé oubliée sur l'appareil")
+        await ctx.close()
+
+        # 5. accès depuis l'app : rien de visible sans clé, cinq appuis sur le titre de la vitesse apprise ouvrent la
+        #    page ; avec une clé gardée sur l'appareil, un lien « Apprentissage » en bas de la légende
+        ctx = await browser.new_context(viewport={"width": 390, "height": 844}, service_workers="block")
+        await ctx.route(re.compile(r"^https?://(?!127\.0\.0\.1[:/])"), lambda r: r.abort())   # app hors ligne : rien ne sort
+        page = await ctx.new_page()
+        app = url.rsplit("apprentissage/", 1)[0]
+        await page.goto(app)
+        await page.click("#btnLegend")
+        await page.wait_for_selector("#titreVitesse", timeout=15000)
+        check(await page.locator("#lienApprentissage").count() == 0, "app sans clé : aucun lien vers l'apprentissage")
+        for _ in range(4):
+            await page.click("#titreVitesse")
+        await page.wait_for_timeout(300)
+        check("apprentissage" not in page.url, "app : quatre appuis ne suffisent pas")
+        await page.click("#titreVitesse")
+        await page.wait_for_url("**/apprentissage/", timeout=10000)
+        await page.wait_for_selector("#porte:not([hidden])", timeout=10000)
+        check(True, "app : cinq appuis ouvrent la page, qui demande la clé")
+        await page.evaluate(f"localStorage.setItem('vigie.tableau.cle', '{CLE}')")
+        await page.goto(app)
+        await page.click("#btnLegend")
+        await page.wait_for_selector("#titreVitesse", timeout=15000)
+        href = await page.get_attribute("#lienApprentissage", "href") if await page.locator("#lienApprentissage").count() else None
+        check(href == "apprentissage/", "app avec clé : lien « Apprentissage » dans la légende")
         await ctx.close()
         await browser.close()
 

@@ -226,6 +226,9 @@ site) et se recalcule à chaque nouveau signalement (temps réel de la table `si
   (localStorage) et l'efface aussitôt de la barre d'adresse ; le fragment `#…` n'est jamais envoyé au serveur.
   Sans clé, la page n'affiche qu'un champ d'accès. Elle n'est ni liée depuis l'app, ni référencée (`noindex`), ni
   mise en cache par le service worker de l'app.
+- **Depuis l'app** : sur l'appareil qui garde la clé, un lien « Apprentissage » apparaît en bas de la légende.
+  Ailleurs (première fois, ou dans l'app installée sur iPhone, qui a son propre stockage), cinq appuis rapides sur
+  le titre « Vitesse des contrôles, apprise » de la légende ouvrent la page, qui demande la clé.
 - **Obtenir le lien** : workflow **Tableau d'apprentissage** avec un certificat (mode d'emploi en tête de
   `.github/workflows/tableau.yml`) ; le lien sort chiffré, comme les statistiques.
 - **Changer la clé** (lien diffusé par erreur) : remplacer `"vigie-stats"` par une nouvelle étiquette dans
