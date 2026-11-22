@@ -253,7 +253,9 @@ export function createBot({ C, stops, lignes, chatId, testIds, salt, site }) {
         const w = resolveAt(p.stopId, [fresh.line], a.cible, date);       // plusieurs lignes possibles : celle d'avant
         if (w.line) { way = w; lines = [fresh.line]; suite = "herite"; }
       }
-      return { p, way, suite, ctx: ctxOf(p, way, lines, cible, date) };
+      // autres arrêts du message (« vieux moulin et grande borde ») : même ligne et même sens visé, chacun à son arrêt
+      const more = (p.moreStopIds || []).map((id) => ({ id, way: resolveAt(id, lines, cible, date) }));
+      return { p, way, suite, more, ctx: ctxOf(p, way, lines, cible, date) };
     }
 
     // 2. réponse à un signalement : « partis », « toujours là », ou ligne et sens (« montés dans le 18 dir Clochatte »)
@@ -308,7 +310,8 @@ export function createBot({ C, stops, lignes, chatId, testIds, salt, site }) {
     return { p, why: "arret" };
   }
 
-  async function toRow(msg, p, w) {
+  // part : autre arrêt du même message (empreinte propre à cet arrêt)
+  async function toRow(msg, p, w, part) {
     const direction = (w && w.dir) || null;
     const who = msg.from && !msg.from.is_bot ? msg.from.id : null;
     const day = DAY.format(new Date(msg.date * 1000));
@@ -316,7 +319,7 @@ export function createBot({ C, stops, lignes, chatId, testIds, salt, site }) {
       kind: p.kind, sub: p.sub || null, of_kind: p.of || null, stop_id: p.stopId,
       line: (w && w.line) || null, direction, seq: direction ? w.seq : null,
       src: "telegram",
-      ext_id: (await sha256(`${salt}:${msg.chat.id}:${msg.message_id}`)).slice(0, 24),
+      ext_id: (await sha256(`${salt}:${msg.chat.id}:${msg.message_id}` + (part ? ":" + part : ""))).slice(0, 24),
       voter: who != null ? (await sha256(`${salt}:tg:${who}:${p.stopId}:${day}`)).slice(0, 32) : null,
       at: new Date(msg.date * 1000).toISOString(),
     };
@@ -330,13 +333,16 @@ export function createBot({ C, stops, lignes, chatId, testIds, salt, site }) {
   // empreinte de l'auteur pour la mémoire des suites (par groupe : jamais reliée d'un groupe à l'autre)
   const author = async (msg) => (msg.from && !msg.from.is_bot ? (await sha256(`${salt}:suite:${msg.chat.id}:${msg.from.id}`)).slice(0, 32) : null);
 
-  function describe(p, w) {
+  function describe(p, w, more) {
     const what = p.kind === "controle" ? "contrôle"
       : p.kind === "perturbation" ? "perturbation" + (SUB[p.sub] ? " (" + SUB[p.sub] + ")" : "")
       : p.of === "perturbation" ? "fin de perturbation" : "fin de contrôle (ils sont partis)";
-    const via = w && w.dir && w.via ? (w.via === "centre" ? " (vers le centre)" : " (par " + name(w.via) + ")") :
-      w && w.dir && w.vers ? " (vers " + name(w.vers) + ")" : "";
-    return what + " à " + name(p.stopId) + (w && w.line ? ", ligne " + w.line : "") + (w && w.dir ? ", direction " + name(w.dir) + via : "");
+    const where = (id, w) => {
+      const via = w && w.dir && w.via ? (w.via === "centre" ? " (vers le centre)" : " (par " + name(w.via) + ")") :
+        w && w.dir && w.vers ? " (vers " + name(w.vers) + ")" : "";
+      return name(id) + (w && w.line ? ", ligne " + w.line : "") + (w && w.dir ? ", direction " + name(w.dir) + via : "");
+    };
+    return what + " à " + where(p.stopId, w) + (more || []).map((m) => " ; aussi à " + where(m.id, m.way)).join("");
   }
   const SUITE = {
     complete: " (complète le signalement d'avant)",
@@ -345,7 +351,7 @@ export function createBot({ C, stops, lignes, chatId, testIds, salt, site }) {
     fin: " (à la suite du signalement d'avant)",
   };
   function understood(r) {
-    return "Compris : " + describe(r.p, r.way) + (r.suite ? SUITE[r.suite] : r.reply ? " (en réponse à un message qui citait cet arrêt)" : "") + ".";
+    return "Compris : " + describe(r.p, r.way, r.suite === "complete" ? null : r.more) + (r.suite ? SUITE[r.suite] : r.reply ? " (en réponse à un message qui citait cet arrêt)" : "") + ".";
   }
   function pendingText(r) {
     const c = r.ctx || {};
@@ -490,11 +496,14 @@ export function createBot({ C, stops, lignes, chatId, testIds, salt, site }) {
     } else {
       row = await toRow(msg, r.p, r.way);
       out.merge = edited;
+      // autres arrêts du même message : un signalement chacun
+      for (const m of r.more || []) out.rows.push(await toRow(msg, Object.assign({}, r.p, { stopId: m.id }), m.way, m.id));
     }
-    out.rows.push(row);
+    out.rows.unshift(row);
     save(row);
     out.log.push(`${row.kind}${row.of_kind ? "/" + row.of_kind : ""} · ${row.stop_id} · ligne ${row.line || "-"}` +
-      (row.direction ? " → " + row.direction : "") + (r.suite ? " (suite : " + r.suite + ")" : r.reply ? " (réponse)" : "") + (edited ? " (modifié)" : ""));
+      (row.direction ? " → " + row.direction : "") + (out.rows.length > 1 ? " + " + (out.rows.length - 1) + " autre(s) arrêt(s)" : "") +
+      (r.suite ? " (suite : " + r.suite + ")" : r.reply ? " (réponse)" : "") + (edited ? " (modifié)" : ""));
     return out;
   }
 

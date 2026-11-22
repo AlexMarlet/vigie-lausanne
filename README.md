@@ -170,6 +170,8 @@ Avec l'accord de ses admins, le bot lit le groupe Telegram de signalement et met
   de l'auteur avec l'arrêt, la ligne et le sens de son dernier message, jamais le texte ni l'identifiant Telegram
   (effacement par le bot et par la tâche `vigie-purge-suites`, toutes les 5 minutes). Sans base joignable, chaque
   message est placé seul ;
+- plusieurs arrêts reliés par « et » (« 2 équipes à Vieux-Moulin et Grande-Borde direction Le Mont ») : un
+  signalement à chacun, avec la même ligne et le même sens visé ;
 - ignorés : les questions (« il y en a encore à Ours ? ») et les messages hors sujet (un fait d'hier, une longue
   discussion sans arrêt ni ligne) ;
 - les messages du bot de signalement anonyme du groupe (🚏 arrêt, ➡️ direction, 🚌 lignes) sont compris aussi. Telegram ne
@@ -256,8 +258,8 @@ site) et se recalcule à chaque nouveau signalement (temps réel de la table `si
 
 | Commande | Vérifie |
 |---|---|
-| `node core/test-core.js` | parseur de messages (67 cas, sur les 463 arrêts), confiance, sens, position estimée, vitesse apprise |
-| `node core/test-bot.mjs` | bot Telegram : signalements tirés des messages, réponses « partis », suites (« ils montent dans le 8 »), questions et hors-sujet, sens approché, empreintes, autres groupes, groupe de test, messages privés |
+| `node core/test-core.js` | parseur de messages (72 cas, sur les 463 arrêts), confiance, sens, position estimée, vitesse apprise |
+| `node core/test-bot.mjs` | bot Telegram : signalements tirés des messages, réponses « partis », suites (« ils montent dans le 8 »), questions et hors-sujet, sens approché, deux arrêts dans un message, empreintes, autres groupes, groupe de test, messages privés |
 | `npx deno@2.9.6 run --allow-env --allow-net --allow-read --node-modules-dir=none tools/test_suites.ts` | mémoire des suites du bot sur un vrai PostgreSQL : table, lecture, mise à jour, rien au-delà de 30 min (`SUPABASE_DB_URL`, après `node tools/bot_bundle.mjs`) |
 | `python3 collector/test_parser.py` | la version Python du parseur donne les mêmes résultats |
 | `python3 tools/test_network.py` | extraction du réseau sur un petit GTFS fabriqué (sens, branches, courses partielles, fusion d'arrêts) |

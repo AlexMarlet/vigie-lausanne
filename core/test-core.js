@@ -8,7 +8,7 @@ const cases = require("./parser-cases.json").map((c) => [c.msg, c.exp]);
 let ok = 0, bad = 0;
 for (const [msg, exp] of cases) {
   const r = core.parseMessage(msg, gaz);
-  const diffs = Object.entries(exp).filter(([k, v]) => r[k] !== v);
+  const diffs = Object.entries(exp).filter(([k, v]) => JSON.stringify(r[k]) !== JSON.stringify(v));
   if (diffs.length) {
     bad++;
     console.log("✗", JSON.stringify(msg), "→", JSON.stringify(r), "attendu", JSON.stringify(exp));

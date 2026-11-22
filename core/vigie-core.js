@@ -235,6 +235,22 @@
     let locHit = hits.find((h) => !h.isDirection) || null, dirHit = hits.find((h) => h.isDirection) || null;
     if (!locHit && dirHit && !line && RE_HEADING.test(norm)) { locHit = dirHit; dirHit = null; }
     const loc = onLine(locHit), dir = onLine(dirHit);
+    // autres arrêts reliés au premier par « et » (« 2 équipes à Vieux-Moulin et Grande-Borde », « panne entre Malley et
+    // Bourdonnette ») : rien d'autre entre eux que « et », « à », « l'arrêt »…
+    const moreStopIds = [];
+    if (loc) {
+      const all = tokens(prepared, true), pos = [];
+      all.forEach((w, k) => { if (!FILLER.has(w)) pos.push(k); });
+      let last = locHit;
+      for (const h of hits) {
+        if (h.i <= last.i || h.isDirection) continue;
+        const between = all.slice(pos[last.i + last.n - 1] + 1, pos[h.i]);
+        if (!between.includes("et") || !between.every((w) => FILLER.has(w) || w === "arret" || w === "arrets")) break;
+        const x = onLine(h);
+        if (x.id !== loc.id && !moreStopIds.includes(x.id)) moreStopIds.push(x.id);
+        last = h;
+      }
+    }
 
     let kind = "controle", sub = null, of = null;
     const endsWithQ = /\?[\s\W]*$/u.test(raw.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, ""));
@@ -252,6 +268,7 @@
     return {
       kind, sub, of,
       stopId,
+      moreStopIds,
       dirStopId: dir ? dir.id : null,
       line,
       fuzzy: !!(loc && loc.fuzzy),

@@ -162,6 +162,16 @@ r = await L("Ils sont à l'arrêt grande borde direction riponne");
 assert(r.stop_id === "grande-borde" && r.line === null, "trois lignes vont de Grande-Borde à Riponne : ligne inconnue");
 r = await L("contrôle à Chauderon direction Croisettes");
 assert(r.line === null && r.direction === null, "en journée, pas de ligne de nuit pour deviner le sens");
+const dm = msg("2 équipes arrêt vieux moulin et grande borde direction le mont sur Lausanne");
+const deux = await bot.handle(up(dm));
+const [d1, d2] = deux.rows;
+assert(deux.rows.length === 2 && d1.stop_id === "vieux-moulin" && d2.stop_id === "grande-borde" && d1.line === "8" && d2.line === "8" &&
+  d1.direction === "lemont" && d2.direction === "lemont", "deux arrêts reliés par « et » : un signalement à chacun, ligne 8 vers Le Mont");
+assert(d1.ext_id !== d2.ext_id && d1.voter !== d2.voter && d1.at === d2.at, "… chacun son empreinte et sa voix, même heure");
+const deuxBis = await bot.handle(up(dm));
+assert(deuxBis.rows.map((x) => x.ext_id).join() === deux.rows.map((x) => x.ext_id).join(), "même message reçu deux fois : mêmes empreintes");
+const deuxPriv = await bot.handle(priv0("2 équipes arrêt vieux moulin et grande borde direction le mont sur Lausanne"));
+assert(/Vieux-Moulin, ligne 8, direction Le Mont, Grand-Mont ; aussi à Grande-Borde, ligne 8/.test(deuxPriv.reply.text), "réponse : les deux arrêts");
 const vers = await bot.handle(priv0("Bel air montés dans le 7 direction saint François"));
 assert(/ligne 7, direction Pully, Val-Vert \(vers St-François\)/.test(vers.reply.text), "réponse : sens approché, avec l'arrêt visé");
 const sens = await bot.handle(priv0("2 à ours ligne 6 et 7 et m2, côté direction chailly"));

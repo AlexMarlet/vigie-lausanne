@@ -8,7 +8,7 @@ from vigie_parser import Gazetteer, parse_message
 HERE = pathlib.Path(__file__).parent
 CASES = json.loads((HERE.parent / "core" / "parser-cases.json").read_text(encoding="utf-8"))
 gaz = Gazetteer(json.loads((HERE / "stops.json").read_text(encoding="utf-8")))
-KEYS = {"stopId": "stop_id", "dirStopId": "dir_stop_id"}
+KEYS = {"stopId": "stop_id", "dirStopId": "dir_stop_id", "moreStopIds": "more_stop_ids"}
 
 bad = 0
 for c in CASES:

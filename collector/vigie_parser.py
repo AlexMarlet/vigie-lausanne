@@ -235,6 +235,23 @@ def parse_message(text: str, gaz: Gazetteer) -> dict:
     if not loc_hit and dir_hit and not line and RE_HEADING.search(norm):
         loc_hit, dir_hit = dir_hit, None
     loc, dirh = on_line(loc_hit), on_line(dir_hit)
+    # autres arrêts reliés au premier par « et » (« 2 équipes à Vieux-Moulin et Grande-Borde », « panne entre Malley
+    # et Bourdonnette ») : rien d'autre entre eux que « et », « à », « l'arrêt »…
+    more = []
+    if loc:
+        words_all = tokens(prepared, keep_filler=True)
+        pos = [k for k, w in enumerate(words_all) if w not in FILLER]
+        last = loc_hit
+        for h in hits:
+            if h["i"] <= last["i"] or h["is_direction"]:
+                continue
+            between = words_all[pos[last["i"] + last["n"] - 1] + 1:pos[h["i"]]]
+            if "et" not in between or not all(w in FILLER or w in ("arret", "arrets") for w in between):
+                break
+            x = on_line(h)
+            if x["id"] != loc["id"] and x["id"] not in more:
+                more.append(x["id"])
+            last = h
 
     kind, sub, of = "controle", None, None
     ends_with_q = re.search(r"\?[\s\W]*$", RE_EMOJI.sub("", raw)) is not None
@@ -257,6 +274,7 @@ def parse_message(text: str, gaz: Gazetteer) -> dict:
     return {
         "kind": kind, "sub": sub, "of": of,
         "stop_id": stop_id,
+        "more_stop_ids": more,
         "dir_stop_id": dirh["id"] if dirh else None,
         "line": line,
         "fuzzy": bool(loc and loc["fuzzy"]),

@@ -1147,6 +1147,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
         p.kind === "fin" ? (p.of === "perturbation" ? "rétabli" : "plus là") : (KIND_LABEL[p.kind] + (p.sub ? " · " + SUB_LABEL[p.sub] : ""))));
       if (p.stopId) tags.push(el("span", { class: "tag", text: stopName(p.stopId) + (p.fuzzy ? " (approché)" : "") }));
       else tags.push(el("span", { class: "tag miss", text: "non localisé" }));
+      for (const id of p.moreStopIds || []) tags.push(el("span", { class: "tag", text: "+ " + stopName(id) }));
       if (p.line) tags.push(badge(p.line));
       if (p.dir && dirLabel(p.line, p.dir)) tags.push(el("span", { class: "tag", text: "→ " + dirLabel(p.line, p.dir) }));
       else if (p.dirStopId) tags.push(el("span", { class: "tag", text: "→ " + stopName(p.dirStopId) }));

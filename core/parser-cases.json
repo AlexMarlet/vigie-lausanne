@@ -45,7 +45,10 @@
    "kind": "perturbation",
    "sub": "panne",
    "stopId": "malley",
-   "line": "M1"
+   "line": "M1",
+   "moreStopIds": [
+    "bourdonnette"
+   ]
   }
  },
  {
@@ -561,6 +564,54 @@
    "stopId": "croisettes",
    "dirStopId": null,
    "line": null
+  }
+ },
+ {
+  "msg": "2 équipes arrêt vieux moulin et grande borde direction le mont sur Lausanne",
+  "exp": {
+   "kind": "controle",
+   "stopId": "vieux-moulin",
+   "moreStopIds": [
+    "grande-borde"
+   ],
+   "dirStopId": "lemont"
+  }
+ },
+ {
+  "msg": "contrôleurs à l'arrêt Flon et à l'arrêt Riponne",
+  "exp": {
+   "kind": "controle",
+   "stopId": "flon",
+   "moreStopIds": [
+    "riponne"
+   ]
+  }
+ },
+ {
+  "msg": "contrôle à Flon et dans le m2 vers Riponne",
+  "exp": {
+   "kind": "controle",
+   "stopId": "flon",
+   "moreStopIds": [],
+   "dirStopId": "riponne",
+   "line": "M2"
+  }
+ },
+ {
+  "msg": "Flon direction Ouchy et Riponne",
+  "exp": {
+   "kind": "controle",
+   "stopId": "flon",
+   "moreStopIds": [],
+   "dirStopId": "ouchy"
+  }
+ },
+ {
+  "msg": "2 à Ours 6 et 7",
+  "exp": {
+   "kind": "controle",
+   "stopId": "ours",
+   "moreStopIds": []
   }
  }
 ]
