@@ -18,7 +18,7 @@ import urllib.parse
 import urllib.request
 
 DOMAINE = (sys.argv[1] if len(sys.argv) > 1 else "vigie-lausanne.ch").strip().lower().rstrip(".")
-COPIE = "https://vigie-lausanne.pages.dev/"
+COPIE = os.environ.get("VIGIE_COPIE") or "https://vigie-lausanne.pages.dev/"   # adresse pages.dev du projet
 PROPRIO = (os.environ.get("GITHUB_REPOSITORY_OWNER") or "alexmarlet").lower()
 UA = "vigie-hebergement (+https://github.com/AlexMarlet/vigie-lausanne)"
 TYPES = {"A": 1, "NS": 2, "CNAME": 5, "MX": 15, "TXT": 16, "AAAA": 28, "DS": 43, "CAA": 257}

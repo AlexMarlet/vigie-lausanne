@@ -90,6 +90,8 @@ jobs:
     needs: build
     if: needs.build.outputs.cloudflare == 'oui'
     runs-on: ubuntu-latest
+    outputs:
+      copie: ${{ steps.deploiement.outputs.copie }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -114,14 +116,37 @@ jobs:
             echo "::notice title=Cloudflare Pages::projet « $CF_PROJET » créé"
           fi
       - name: Déploiement sur Cloudflare Pages
+        id: deploiement
         env:
           MESSAGE: ${{ github.event.head_commit.message }}
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler.ndjson
         run: |
           set -euo pipefail
           message="${MESSAGE%%$'\n'*}"
           npx --yes "$WRANGLER" pages deploy dist --project-name="$CF_PROJET" --branch=main \
             --commit-hash="$GITHUB_SHA" --commit-message="${message:-Déploiement manuel}"
-          echo "::notice title=Cloudflare Pages::copie à jour : https://$CF_PROJET.pages.dev/"
+          # adresse de production (https://<projet>.pages.dev/), tirée de l'adresse unique du déploiement
+          # (https://<code>.<projet>.pages.dev) ; Cloudflare peut ajouter un suffixe si le nom est déjà pris
+          copie="$(python3 - "$WRANGLER_OUTPUT_FILE_PATH" <<'PY'
+          import json, sys
+          url = ""
+          try:
+              for ligne in open(sys.argv[1], encoding="utf-8"):
+                  d = json.loads(ligne)
+                  if d.get("type") == "pages-deploy-detailed":
+                      url = d.get("url") or ""
+          except (OSError, ValueError):
+              pass
+          hote = url.split("://", 1)[-1].strip("/")
+          parties = hote.split(".")
+          if len(parties) > 3:
+              hote = ".".join(parties[1:])
+          print(f"https://{hote}/" if hote.endswith(".pages.dev") else "")
+          PY
+          )"
+          copie="${copie:-https://$CF_PROJET.pages.dev/}"
+          echo "copie=$copie" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Cloudflare Pages::copie à jour : $copie"
 
   verify:
     needs: deploy
@@ -152,4 +177,4 @@ jobs:
           pip install playwright==1.63.0
           python -m playwright install --with-deps chromium || python -m playwright install chromium
       - name: Test de la copie Cloudflare (lecture seule)
-        run: python3 tools/smoke_test.py "https://$CF_PROJET.pages.dev/"
+        run: python3 tools/smoke_test.py "${{ needs.cloudflare.outputs.copie }}"
