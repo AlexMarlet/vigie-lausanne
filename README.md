@@ -88,10 +88,10 @@ Une ligne peu observée suit donc la moyenne du réseau. La légende de l'app af
 
 | Dossier | Contenu |
 |---|---|
-| `web/` | L'app : gabarit HTML, service worker, manifest, icônes, page Confidentialité ; page privée du tableau d'apprentissage (`apprentissage/`) |
+| `web/` | L'app : gabarit HTML, service worker, manifest, icônes, page Confidentialité, en-têtes Cloudflare (`_headers`) ; page privée du tableau d'apprentissage (`apprentissage/`) |
 | `core/` | Moteur partagé : parseur de messages, confiance, sens, position estimée, vitesse apprise ; tests |
 | `supabase/` | Schéma de la base (`schema.sql`), tâches horaires : archive anonyme et apprentissage (`purge.sql`), tests ; bot Telegram (`functions/telegram/`), statistiques d'apprentissage (`functions/stats/`) |
-| `tools/` | Réseau tl depuis l'horaire officiel (`fetch_gtfs.py`, `build_network.py` → `reseau.json`), arrêts historiques et alias (`arrets.json`), construction du site (`build_app.py`), installation du bot (`bot_telegram.py`, `bot_bundle.mjs`), vérifications |
+| `tools/` | Réseau tl depuis l'horaire officiel (`fetch_gtfs.py`, `build_network.py` → `reseau.json`), arrêts historiques et alias (`arrets.json`), construction du site (`build_app.py`), installation du bot (`bot_telegram.py`, `bot_bundle.mjs`), vérifications, état de l'hébergement (`hebergement.py`) |
 | `collector/` | Liste d'arrêts et de lignes partagée ; variante du bot avec un compte Telegram ordinaire (`collector.py`) |
 
 ## Réseau (horaire officiel)
@@ -138,11 +138,27 @@ Des variables GitHub `SUPABASE_URL` / `SUPABASE_KEY` (Settings → Secrets and v
 
 Le build refuse de publier une clé secrète par erreur. `VIGIE_OFFLINE=1 npm run build` construit une version locale, sans base.
 
-### 3. Hébergement (GitHub Pages)
-1. Settings → Pages → Source : **GitHub Actions**.
-2. Pousser sur `main` (ou Actions → Déploiement → Run workflow).
+### 3. Hébergement (Cloudflare Pages)
+Le workflow **Déploiement** envoie `dist/` à Cloudflare Pages (*Direct Upload* : Cloudflare ne lit pas le dépôt). Offre gratuite : usage commercial autorisé, trafic illimité.
 
-À chaque déploiement, `tools/check_supabase.py` vérifie en lecture seule que la table et la fonction `signaler()` existent. Une fois le site publié, `tools/smoke_test.py` l'ouvre dans un Chrome mobile et contrôle la connexion à la base, le fonctionnement hors ligne, l'installabilité et l'absence d'erreur, sans rien écrire.
+1. Cloudflare : créer un compte, puis un jeton d'API ([API Tokens](https://dash.cloudflare.com/profile/api-tokens) → *Create Token* → *Create Custom Token*) avec la seule permission **Account · Cloudflare Pages · Edit**.
+2. GitHub, dépôt → Settings → Secrets and variables → Actions → *New repository secret* : `CLOUDFLARE_API_TOKEN` (le jeton) et `CLOUDFLARE_ACCOUNT_ID` (l'identifiant du compte : les 32 caractères qui suivent `dash.cloudflare.com/` dans l'adresse du tableau de bord).
+3. Pousser sur `main` (ou Actions → Déploiement → Run workflow). Le premier passage crée le projet `vigie-lausanne`. Le site répond alors sur https://vigie-lausanne.pages.dev, une adresse technique non référencée par les moteurs de recherche (`web/_headers`).
+4. Domaine : pour un domaine racine comme vigie-lausanne.ch, la zone DNS doit être chez Cloudflare (le domaine reste enregistré chez Infomaniak). Projet → *Custom domains* → `vigie-lausanne.ch`. www y est renvoyé par une règle de redirection de Cloudflare.
+
+Sans ces secrets, le workflow saute Cloudflare (annotation « copie non déployée »).
+
+À chaque déploiement, `tools/check_supabase.py` vérifie en lecture seule que la table et la fonction `signaler()` existent. Une fois le site publié, `tools/smoke_test.py` ouvre chaque copie en ligne (le domaine et vigie-lausanne.pages.dev) dans un Chrome mobile. Il dit quel hébergeur sert le domaine et si www y renvoie, puis contrôle la connexion à la base, le fonctionnement hors ligne, l'installabilité et l'absence d'erreur, sans rien écrire.
+
+**Changement d'hébergeur (en cours, novembre 2026).** GitHub Pages publie encore le même site en parallèle, et le domaine bascule sans coupure, dans cet ordre :
+
+| Quand | Étapes |
+|---|---|
+| Avant | 1. Désactiver DNSSEC chez Infomaniak (tableau de bord du domaine), puis attendre au moins 24 h. 2. Noter la zone DNS (Zone DNS → Vue avancée). 3. Compte, jeton et secrets Cloudflare (ci-dessus). 4. Déploiement en parallèle (`pages.yml`), la copie pages.dev est testée à chaque fois. |
+| Jour J, heure creuse | 5. Ajouter le domaine dans Cloudflare (offre Free) et laisser les entrées importées en « DNS only ». 6. Mettre les serveurs DNS de Cloudflare chez Infomaniak. 7. Attendre le domaine « Active » et le certificat Universal SSL. 8. Supprimer les entrées A/AAAA de GitHub, ajouter aussitôt le domaine au projet Pages, rediriger www, activer *Always Use HTTPS*. |
+| 3 jours après | 9. Retirer GitHub Pages de `pages.yml` (`configure-pages`, `upload-pages-artifact`, jobs `deploy` et `verify` : le test du domaine passe après `cloudflare`), puis dépublier GitHub Pages. 10. Réactiver DNSSEC dans Cloudflare, puis recopier l'enregistrement DS chez Infomaniak. |
+
+Le workflow **Hébergement** (à la demande, `tools/hebergement.py`) affiche où en est la migration : serveurs DNS, DNSSEC, hébergeur qui répond, redirections, copie Cloudflare et étape suivante. Retour en arrière possible jusqu'à l'étape 9 : remettre les entrées A/AAAA de GitHub dans le DNS de Cloudflare.
 
 ## Bot Telegram
 

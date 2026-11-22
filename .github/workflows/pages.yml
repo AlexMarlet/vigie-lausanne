@@ -1,5 +1,10 @@
 name: Déploiement
 
+# Hébergement : Cloudflare Pages (projet « vigie-lausanne », copie technique https://vigie-lausanne.pages.dev/),
+# avec GitHub Pages en parallèle jusqu'à la bascule du domaine vigie-lausanne.ch (README, « Hébergement »).
+# La copie Cloudflare n'est déployée que si les secrets CLOUDFLARE_API_TOKEN et CLOUDFLARE_ACCOUNT_ID existent ;
+# le premier passage crée le projet. Chaque copie est ensuite testée en ligne (tools/smoke_test.py).
+
 on:
   push:
     branches: [main]
@@ -14,9 +19,15 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+env:
+  CF_PROJET: vigie-lausanne
+  WRANGLER: wrangler@4.166.0
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      cloudflare: ${{ steps.cf.outputs.pret }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -28,15 +39,14 @@ jobs:
           python-version: "3.12"
       - run: npm ci
       - run: node core/test-core.js
-      - id: pages
-        uses: actions/configure-pages@v6
+      - uses: actions/configure-pages@v6
       - name: Construction du site
         run: python3 tools/build_app.py
         env:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           SUPABASE_KEY: ${{ vars.SUPABASE_KEY }}
           VIGIE_CONTACT: ${{ vars.VIGIE_CONTACT }}
-          SITE_URL: ${{ steps.pages.outputs.base_url }}
+          SITE_URL: https://vigie-lausanne.ch
       - name: Vérification de la base Supabase (lecture seule)
         continue-on-error: true
         run: python3 tools/check_supabase.py
@@ -46,6 +56,23 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: site
+          path: dist
+          retention-days: 7
+      - name: Cloudflare configuré ?
+        id: cf
+        env:
+          JETON: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          COMPTE: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$JETON" ] && [ -n "$COMPTE" ]; then
+            echo "pret=oui" >> "$GITHUB_OUTPUT"
+          else
+            echo "pret=non" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Cloudflare Pages::copie non déployée : il manque le secret CLOUDFLARE_API_TOKEN ou CLOUDFLARE_ACCOUNT_ID (Settings → Secrets and variables → Actions)."
+          fi
 
   deploy:
     needs: build
@@ -58,6 +85,43 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+
+  cloudflare:
+    needs: build
+    if: needs.build.outputs.cloudflare == 'oui'
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: site
+          path: dist
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Projet Cloudflare Pages (créé au premier passage)
+        run: |
+          set -euo pipefail
+          projets="$(npx --yes "$WRANGLER" pages project list --json)"
+          existe="$(printf '%s' "$projets" | python3 -c 'import json, os, sys; print("oui" if any(p.get("Project Name") == os.environ["CF_PROJET"] for p in json.load(sys.stdin)) else "non")')"
+          if [ "$existe" = oui ]; then
+            echo "Projet $CF_PROJET : déjà créé"
+          else
+            npx --yes "$WRANGLER" pages project create "$CF_PROJET" --production-branch=main
+            echo "::notice title=Cloudflare Pages::projet « $CF_PROJET » créé"
+          fi
+      - name: Déploiement sur Cloudflare Pages
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          message="${MESSAGE%%$'\n'*}"
+          npx --yes "$WRANGLER" pages deploy dist --project-name="$CF_PROJET" --branch=main \
+            --commit-hash="$GITHUB_SHA" --commit-message="${message:-Déploiement manuel}"
+          echo "::notice title=Cloudflare Pages::copie à jour : https://$CF_PROJET.pages.dev/"
 
   verify:
     needs: deploy
@@ -74,3 +138,18 @@ jobs:
           python -m playwright install --with-deps chromium || python -m playwright install chromium
       - name: Test du site en ligne (lecture seule)
         run: python3 tools/smoke_test.py "${{ needs.deploy.outputs.page_url }}"
+
+  verify-cloudflare:
+    needs: cloudflare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Navigateur de test
+        run: |
+          pip install playwright==1.63.0
+          python -m playwright install --with-deps chromium || python -m playwright install chromium
+      - name: Test de la copie Cloudflare (lecture seule)
+        run: python3 tools/smoke_test.py "https://$CF_PROJET.pages.dev/"
