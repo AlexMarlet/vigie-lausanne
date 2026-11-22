@@ -103,6 +103,15 @@ def main():
     if caa:
         dire(f"| CAA | {liste(caa)} |")
     dire(f"| Vérification GitHub (TXT `_github-pages-challenge-{PROPRIO}`) | {'✓ présente' if defi else '✗ absente'} |")
+    autres = []                                # sous-domaines courants (e-mail…) à recopier aussi dans Cloudflare
+    for sous in ("autoconfig", "autodiscover", "_dmarc", "mail", "webmail", "ftp"):
+        for type_ in ("CNAME", "A", "TXT"):
+            _, _, vals = dns(f"{sous}.{DOMAINE}", type_)
+            if vals:
+                autres.append(f"`{sous}` {type_} {liste(vals)}")
+                break
+    if autres:
+        dire(f"| Autres entrées | {' · '.join(autres)} |")
 
     statut, servi, _, _ = http(f"https://{DOMAINE}/")
     _, _, www_fin, _ = http(f"https://www.{DOMAINE}/")
@@ -115,9 +124,9 @@ def main():
     dire(f"| www → {DOMAINE} | {'✓' if www_ok else '✗ ' + (www_fin or 'pas de réponse')} |")
     dire(f"| http → https | {'✓' if https_ok else '✗ ' + (http_fin or 'pas de réponse')} |")
     dire(f"| Copie Cloudflare {COPIE} | {'✓ en ligne' if statut_copie == 200 else '✗ ' + (f'HTTP {statut_copie}' if statut_copie else 'pas encore déployée')} |")
-    if v_site or v_copie:
+    if v_site and v_copie:
         meme = "✓ même version" if v_site == v_copie else "≠ versions différentes (relance Déploiement)"
-        dire(f"| Version de l'app (site / copie) | `{v_site or '—'}` / `{v_copie or '—'}` · {meme} |")
+        dire(f"| Version de l'app (site / copie) | `{v_site}` / `{v_copie}` · {meme} |")
     dire()
 
     if casse:
