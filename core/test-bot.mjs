@@ -152,6 +152,18 @@ r = await L("contrôle M1 Malley direction Lausanne");
 assert(r.line === "M1" && r.direction === "flon", "« direction Lausanne » : vers le centre");
 r = await L("2 contrôleurs à Bel-Air direction ville");
 assert(r.direction === null, "déjà au centre : « direction ville » ne donne pas de sens");
+r = await L("Bel air montés dans le 7 direction saint François");
+assert(r.line === "7" && r.direction === "val-vert", "« direction St-François » sur la 7 (qui n'y passe pas) : le sens qui s'en approche (Val-Vert, par Riponne)");
+r = await L("Le 4 à bel air direction ouchy");
+assert(r.line === "4" && r.direction === null, "ligne citée qui passe à l'arrêt : gardée, même si une autre ligne va vers Ouchy");
+r = await L("A Belmont direction pully val vert");
+assert(r.stop_id === "belmont-centre" && r.line === "47" && r.direction === "port", "« A Belmont » : Belmont, Centre ; la 47 vers Pully (Val-Vert)");
+r = await L("Ils sont à l'arrêt grande borde direction riponne");
+assert(r.stop_id === "grande-borde" && r.line === null, "trois lignes vont de Grande-Borde à Riponne : ligne inconnue");
+r = await L("contrôle à Chauderon direction Croisettes");
+assert(r.line === null && r.direction === null, "en journée, pas de ligne de nuit pour deviner le sens");
+const vers = await bot.handle(priv0("Bel air montés dans le 7 direction saint François"));
+assert(/ligne 7, direction Pully, Val-Vert \(vers St-François\)/.test(vers.reply.text), "réponse : sens approché, avec l'arrêt visé");
 const sens = await bot.handle(priv0("2 à ours ligne 6 et 7 et m2, côté direction chailly"));
 assert(/ligne 7, direction Pully, Val-Vert \(par Chailly-Village\)/.test(sens.reply.text), "réponse : terminus et arrêt cité");
 
@@ -163,6 +175,110 @@ const test = await bot.handle(priv("Contrôleurs à Flon M2 direction Croisettes
 assert(test.rows.length === 0 && /Compris : contrôle à Lausanne-Flon, ligne M2, direction Croisettes/.test(test.reply.text), "test en privé : interprétation, rien d'enregistré");
 assert(/ne trouve pas d'arrêt/.test((await bot.handle(priv("bonjour"))).reply.text), "test en privé : message sans arrêt");
 assert(/question/.test((await bot.handle(priv("des contrôleurs à Flon ?"))).reply.text), "test en privé : question");
+
+// ---- suites : le message suivant de la même personne complète son signalement (mémoire des suites)
+const mem = new Map();
+const memoire = { lire: async (k) => (mem.has(k) ? JSON.parse(mem.get(k)) : null), noter: async (k, c) => { mem.set(k, JSON.stringify(c)); } };
+const P = { id: 77, is_bot: false, first_name: "P" }, Q = { id: 78, is_bot: false, first_name: "Q" };
+let tS = t0;
+const say = async (text, o = {}, commit = true) => {
+  const out = await bot.handle(up(msg(text, Object.assign({ from: P, date: tS }, o)), o.edited), { memoire });
+  if (commit && out.commit) await out.commit();
+  return out;
+};
+const later = (min) => { tS += min * 60; };
+const next = () => later(20);                    // nouvelle situation : le contexte d'avant n'est plus frais
+
+const g1 = await say("3 a l'arret Georgette, direction saint François");
+const base1 = g1.rows[0];
+assert(base1.stop_id === "georgette" && base1.line === null, "suite : à Georgette vers St-François, plusieurs lignes possibles (ligne inconnue)");
+later(2);
+const g2 = await say("Ils montent dans le 8");
+const c2 = g2.rows[0];
+assert(g2.merge && g2.rows.length === 1 && c2.ext_id === base1.ext_id && c2.at === base1.at && c2.voter === base1.voter,
+  "« Ils montent dans le 8 » : met à jour le signalement d'avant (même empreinte, même heure, même voix)");
+assert(c2.stop_id === "georgette" && c2.line === "8" && c2.direction === "lemont", "… qui passe à la ligne 8, direction Le Mont");
+later(1);
+assert((await say("Ils montent dans le 8")).rows.length === 0, "même précision une 2e fois : rien de neuf");
+const keys = [...mem.keys()];
+const ctx = JSON.parse(mem.get(keys[0]));
+assert(keys.length === 1 && /^[0-9a-f]{32}$/.test(keys[0]), "mémoire : une empreinte par auteur, pas son identifiant");
+assert(Object.keys(ctx).every((k) => ["stop", "kind", "sub", "of", "lines", "cible", "line", "dir", "seq", "at", "ext", "voter"].includes(k)) &&
+  !JSON.stringify(ctx).includes("montent") && !Object.values(ctx).some((x) => x === 77 || x === "77"), "mémoire : ni le texte ni l'auteur");
+
+next();
+await say("3 à Chauderon");
+later(1);
+let s2 = await say("Sont monté dans le bus 7 direction prilly Marley");
+assert(s2.merge && s2.rows[0].stop_id === "chauderon" && s2.rows[0].line === "7" && s2.rows[0].direction === "gare-arena",
+  "« montés dans le bus 7 direction prilly Marley » après « 3 à Chauderon » : 7 vers Prilly-Malley");
+
+later(1);
+const o3 = await say("3 m2 dir croisettes");
+assert(o3.rows.length === 0 && mem.size === 1, "juste après « 3 à Chauderon », « m2 dir croisettes » (le M2 n'y passe pas) : " +
+  "pas une précision de Chauderon, rien d'enregistré, gardé pour la suite");
+later(2);
+s2 = await say("A la riponne");
+assert(!s2.merge && s2.rows[0].stop_id === "riponne" && s2.rows[0].line === "M2" && s2.rows[0].direction === "croisettes",
+  "« A la riponne » ensuite : nouveau signalement avec la ligne et le sens d'avant");
+
+next();
+await say("M2 grancy direction ouchy");
+later(4);
+s2 = await say("Descendu à délices");
+assert(s2.rows[0].stop_id === "delices" && s2.rows[0].line === "M2" && s2.rows[0].direction === "ouchy" && !s2.merge,
+  "« Descendu à délices » : nouvel arrêt, ligne et sens du message d'avant");
+
+next();
+const rec = msg("du monde à recordon direction centre ville (7,8,19)", { from: P, date: tS });
+const recRow = (await bot.handle(up(rec), { memoire })).rows[0];
+later(1);
+const byQ = await say("sont montés dans le 18 direction clochatte", { from: Q, reply_to_message: rec });
+assert(byQ.merge && byQ.rows[0].ext_id === recRow.ext_id && byQ.rows[0].voter === recRow.voter && byQ.rows[0].line === "18" &&
+  byQ.rows[0].direction === "clochatte", "réponse d'une autre personne avec ligne et sens : complète le signalement auquel elle répond");
+
+next();
+await say("3 à Georgette");
+later(1);
+assert((await say("Ils montent dans le 8", { from: Q })).rows.length === 0, "message d'une autre personne (sans réponse) : ne complète rien");
+later(16);
+assert((await say("Ils montent dans le 8")).rows.length === 0, "plus de 15 minutes après : ne complète plus");
+
+next();
+await say("3 à Georgette");
+later(1);
+const qq = await say("il y en a encore dans le 8 ?");
+assert(qq.rows.length === 0, "question : rien d'enregistré");
+later(1);
+s2 = await say("Ils montent dans le 8");
+assert(s2.merge && s2.rows[0].stop_id === "georgette" && s2.rows[0].line === "8", "une question entre les deux ne fait pas perdre le fil");
+later(1);
+s2 = await say("partis");
+assert(s2.rows.length === 1 && s2.rows[0].kind === "fin" && s2.rows[0].of_kind === "controle" && s2.rows[0].stop_id === "georgette",
+  "« partis » à la suite de son signalement : fin du contrôle à Georgette");
+later(1);
+assert((await say("Ils montent dans le 8")).rows.length === 0, "après « partis » : plus rien à compléter");
+
+next();
+await say("3 à Georgette");
+later(1);
+const ed = await say("Ils montent dans le 8", { edited: true });
+assert(ed.rows.length === 0, "message modifié : sans la mémoire des suites");
+later(1);
+const nc = await say("4 à Bellevaux", {}, false);
+assert(nc.rows[0].stop_id === "bellevaux" && typeof nc.commit === "function", "contexte noté seulement une fois le signalement enregistré (commit)");
+later(1);
+s2 = await say("Ils montent dans le 8");
+assert(s2.merge && s2.rows[0].stop_id === "georgette", "… sans commit (enregistrement raté, Telegram renverra), le contexte reste celui d'avant");
+
+const broken = { lire: async () => { throw new Error("base injoignable"); }, noter: async () => { throw new Error("base injoignable"); } };
+const slow = { lire: () => new Promise(() => {}), noter: () => new Promise(() => {}) };
+for (const [label, mm] of [["en panne", broken], ["trop lente", slow]]) {
+  const out = await bot.handle(up(msg("3 à Georgette", { from: P, date: tS })), { memoire: mm, delai: 50 });
+  if (out.commit) await out.commit();
+  assert(out.rows.length === 1 && out.rows[0].stop_id === "georgette" && out.log.some((l) => l.includes("mémoire des suites")),
+    `mémoire des suites ${label} : le signalement passe quand même, et c'est journalisé`);
+}
 
 // ---- secrets dérivés : même calcul en JavaScript (fonction) et en Python (installation)
 const sec = await deriveSecrets("123456:ABC-test");

@@ -35,7 +35,7 @@ jobs:
         run: |
           node core/test-bot.mjs
           node tools/bot_bundle.mjs
-          npx --yes deno@2.9.6 check supabase/functions/telegram/index.ts
+          npx --yes deno@2.9.6 check --node-modules-dir=none supabase/functions/telegram/index.ts tools/test_suites.ts
           npx --yes deno@2.9.6 check --node-modules-dir=none supabase/functions/stats/index.ts
       - name: Extraction du réseau (GTFS de test)
         run: python3 tools/test_network.py
@@ -50,9 +50,11 @@ jobs:
           python3 tools/test_tableau.py
       - name: Parseur Python du collecteur
         run: python3 collector/test_parser.py
-      - name: Schéma Supabase sur PostgreSQL 17
+      - name: Schéma Supabase et mémoire des suites du bot sur PostgreSQL 17
         run: |
           pip install "psycopg[binary]"
           python3 supabase/test_schema.py
+          npx --yes deno@2.9.6 run --allow-env --allow-net --allow-read --node-modules-dir=none tools/test_suites.ts
         env:
           PG_DSN: host=localhost port=5432 user=postgres password=postgres dbname=postgres
+          SUPABASE_DB_URL: postgres://postgres:postgres@localhost:5432/postgres

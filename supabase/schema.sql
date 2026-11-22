@@ -47,6 +47,17 @@ create table if not exists vigie_private.appareils (
 create index if not exists appareils_device_at on vigie_private.appareils (device, at desc);
 
 -- Archive anonyme : ni empreinte, ni identifiant de message, heure arrondie à la minute.
+-- Mémoire des suites du bot Telegram (« ils montent dans le 8 » après « 3 à Georgette ») : une ligne par auteur,
+-- empreinte salée (jamais l'identifiant Telegram), avec l'arrêt, la ligne et le sens de son dernier message ; effacée
+-- après 30 minutes (par le bot et par la tâche « vigie-purge-suites » de purge.sql). La fonction telegram la crée
+-- aussi si elle manque. Illisible pour l'app (schéma vigie_private).
+create table if not exists vigie_private.suites (
+  auteur text primary key,
+  at timestamptz not null default now(),
+  ctx jsonb not null
+);
+create index if not exists suites_at on vigie_private.suites (at);
+
 create table if not exists vigie_private.archive (
   id        bigint generated always as identity primary key,
   kind      text not null,

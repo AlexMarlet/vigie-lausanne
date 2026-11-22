@@ -14,7 +14,7 @@
 {"id": "sallaz", "name": "Sallaz", "major": true, "alias": ["place sallaz"], "lat": 46.53278, "lon": 6.64611},
 {"id": "fourmi", "name": "Fourmi", "lat": 46.538778, "lon": 6.651028},
 {"id": "vennes", "name": "Vennes", "lat": 46.541222, "lon": 6.657583},
-{"id": "croisettes", "name": "Croisettes", "major": true, "alias": ["epalinges croisettes"], "lat": 46.54289, "lon": 6.66146},
+{"id": "croisettes", "name": "Croisettes", "major": true, "alias": ["epalinges croisettes", "epalinges"], "lat": 46.54289, "lon": 6.66146},
 {"id": "vigie", "name": "Vigie", "lat": 46.521534, "lon": 6.623925},
 {"id": "montelly", "name": "Montelly", "lat": 46.521825, "lon": 6.613559},
 {"id": "provence", "name": "Provence", "lat": 46.523265, "lon": 6.608654},
@@ -38,7 +38,7 @@
 {"id": "prelaz", "name": "Prélaz", "lat": 46.526331, "lon": 6.61249},
 {"id": "pully", "name": "Pully-Gare", "short": "Pully", "major": true, "alias": ["pully", "pully gare", "gare pully"], "lat": 46.51032, "lon": 6.658834},
 {"id": "lutry", "name": "Lutry-Corniche", "short": "Lutry", "major": true, "alias": ["lutry", "lutry corniche"], "lat": 46.5007, "lon": 6.694084},
-{"id": "bellevaux", "name": "Bellevaux", "lat": 46.538993, "lon": 6.633726},
+{"id": "bellevaux", "name": "Bellevaux", "alias": ["blvx"], "lat": 46.538993, "lon": 6.633726},
 {"id": "blecherette", "name": "Blécherette", "alias": ["blech"], "lat": 46.542243, "lon": 6.621132},
 {"id": "beaulieu", "name": "Beaulieu", "lat": 46.528123, "lon": 6.623602},
 {"id": "chailly", "name": "Chailly-Village", "short": "Chailly", "alias": ["chailly", "chailly village"], "lat": 46.523172, "lon": 6.655223},
@@ -49,7 +49,7 @@
 {"id": "14avril", "name": "Renens-14 Avril", "short": "14 Avril", "alias": ["14 avril", "renens 14 avril", "quatorze avril"], "lat": 46.53929, "lon": 6.580007},
 {"id": "crissier", "name": "Crissier, Place Centrale", "short": "Crissier", "alias": ["crissier", "crissier place centrale"], "lat": 46.549898, "lon": 6.579549},
 {"id": "croset", "name": "Ecublens, Croset", "short": "Croset", "alias": ["croset", "ecublens croset", "ecublens"], "lat": 46.534692, "lon": 6.56637},
-{"id": "lemont", "name": "Le Mont, Grand-Mont", "short": "Grand-Mont", "alias": ["le mont", "mont sur lausanne", "grand mont"], "lat": 46.563031, "lon": 6.633205},
+{"id": "lemont", "name": "Le Mont, Grand-Mont", "short": "Grand-Mont", "alias": ["le mont", "mont sur lausanne", "grand mont", "grandmont"], "lat": 46.563031, "lon": 6.633205},
 {"id": "union-prilly", "alias": ["union", "prilly union", "union prilly leb"]},
 {"id": "cery-fleur-de-lys", "alias": ["cery", "fleur de lys", "fleur de lis", "cery fleur de lis"]},
 {"id": "jouxtens-mezery", "alias": ["jouxtens", "mezery"]},
@@ -57,6 +57,10 @@
 {"id": "vernand-camares", "alias": ["vernand", "camares"]},
 {"id": "bel-air-leb", "alias": ["bel air", "bel air cheseaux"]},
 {"id": "les-ripes", "alias": ["ripes"]},
-{"id": "echallens", "alias": ["gare echallens", "echallens gare"]}
+{"id": "echallens", "alias": ["gare echallens", "echallens gare"]},
+{"id": "belmont-centre", "alias": ["belmont", "belmont centre"]},
+{"id": "prilly-centre", "alias": ["prilly centre", "centre prilly"]},
+{"id": "st-sulpice-centre", "alias": ["st sulpice", "st sulpice centre"]},
+{"id": "bussigny-gare", "alias": ["bussigny", "bussigny gare", "gare bussigny"]}
 ]
 }

@@ -154,9 +154,24 @@ Avec l'accord de ses admins, le bot lit le groupe Telegram de signalement et met
 - le message est lu avec le même parseur que l'app : type (contrôle, perturbation, fin), arrêt, ligne, sens. Une réponse
   « partis », « toujours là » ou « rétabli » à un signalement prend l'arrêt du message auquel elle répond (règles plus
   strictes que le parseur : « merci », « ok » ou « c'est bon » en réponse ne comptent pas) ;
-- ligne et sens : toutes les lignes citées sont prises en compte (« ligne 6 et 7 et M2 »), seulement si elles passent à
-  l'arrêt ; le sens écrit (« direction Chailly ») choisit la ligne et corrige une ligne impossible (« M2 … EPFL » → M1) ;
-  « direction centre / Lausanne / ville » donne le sens qui rejoint le plus vite le centre ;
+- ligne et sens : toutes les lignes citées sont prises en compte (« ligne 6 et 7 et M2 », « 6/7 », « (7,8,19) »),
+  seulement si elles passent à l'arrêt ; le sens écrit (« direction Chailly ») choisit parmi elles, et sans ligne citée
+  qui passe à l'arrêt, parmi les lignes de l'arrêt (« M2 … EPFL » → M1). « direction centre / Lausanne / ville » donne
+  le sens qui rejoint le plus vite le centre ; « direction X » quand la ligne ne passe pas à X : un arrêt de la même
+  commune (« direction Pully », « St-Sulpice ») ou dont le nom contient X (« Malley »), sinon le seul sens qui s'approche
+  de X (« Bel-Air, 7 direction St-François » → Val-Vert, par Riponne). Plusieurs possibilités : ligne ou sens inconnus,
+  rien n'est deviné ;
+- **suites** : le message suivant de la même personne, dans les 15 minutes, complète son signalement. « 3 à Georgette »
+  puis « ils montent dans le 8 » : la ligne 8 s'ajoute au même signalement (pas de deuxième point). « M2 dir
+  Croisettes » sans arrêt attend l'arrêt du message suivant (« à la Riponne ») ; « descendus à Délices » garde la ligne
+  et le sens d'avant ; « partis » seul termine son signalement. Une réponse qui donne la ligne ou le sens d'un
+  signalement (« montés dans le 18 direction Clochatte ») le complète aussi, quel que soit son auteur. Pour relier ces
+  messages, la fonction garde 30 minutes au plus, dans le schéma privé (`vigie_private.suites`), une empreinte salée
+  de l'auteur avec l'arrêt, la ligne et le sens de son dernier message, jamais le texte ni l'identifiant Telegram
+  (effacement par le bot et par la tâche `vigie-purge-suites`, toutes les 5 minutes). Sans base joignable, chaque
+  message est placé seul ;
+- ignorés : les questions (« il y en a encore à Ours ? ») et les messages hors sujet (un fait d'hier, une longue
+  discussion sans arrêt ni ligne) ;
 - les messages du bot de signalement anonyme du groupe (🚏 arrêt, ➡️ direction, 🚌 lignes) sont compris aussi. Telegram ne
   transmet les messages d'un autre bot que si notre bot est **admin** du groupe (sans aucun droit) et a le mode
   **bot-to-bot** activé dans @BotFather (en plus du mode confidentialité désactivé) ;
@@ -166,8 +181,9 @@ Avec l'accord de ses admins, le bot lit le groupe Telegram de signalement et met
 - le bot ne poste rien dans le groupe. En privé, il explique ce qu'il fait et répond ce qu'il comprend d'un message, sans
   rien enregistrer (pratique pour tester). Ajouté à un autre groupe, il en sort aussitôt.
 
-Si la fonction ne répond pas, Telegram garde les messages jusqu'à 24 h et les renvoie. Coût : une invocation par message
-(offre gratuite Supabase : 500 000 par mois). Le bot ne voit pas les messages envoyés avant son arrivée.
+Si la fonction ne répond pas, Telegram garde les messages jusqu'à 24 h et les renvoie. Il les envoie un par un, dans
+l'ordre (une suite doit voir le message d'avant). Coût : une invocation par message (offre gratuite Supabase : 500 000
+par mois). Le bot ne voit pas les messages envoyés avant son arrivée.
 
 **Installation** (une fois) :
 
@@ -240,8 +256,9 @@ site) et se recalcule à chaque nouveau signalement (temps réel de la table `si
 
 | Commande | Vérifie |
 |---|---|
-| `node core/test-core.js` | parseur de messages (31 cas, sur les 457 arrêts), confiance, sens, position estimée, vitesse apprise |
-| `node core/test-bot.mjs` | bot Telegram : signalements tirés des messages, réponses « partis », empreintes, autres groupes, groupe de test, messages privés |
+| `node core/test-core.js` | parseur de messages (67 cas, sur les 463 arrêts), confiance, sens, position estimée, vitesse apprise |
+| `node core/test-bot.mjs` | bot Telegram : signalements tirés des messages, réponses « partis », suites (« ils montent dans le 8 »), questions et hors-sujet, sens approché, empreintes, autres groupes, groupe de test, messages privés |
+| `npx deno@2.9.6 run --allow-env --allow-net --allow-read --node-modules-dir=none tools/test_suites.ts` | mémoire des suites du bot sur un vrai PostgreSQL : table, lecture, mise à jour, rien au-delà de 30 min (`SUPABASE_DB_URL`, après `node tools/bot_bundle.mjs`) |
 | `python3 collector/test_parser.py` | la version Python du parseur donne les mêmes résultats |
 | `python3 tools/test_network.py` | extraction du réseau sur un petit GTFS fabriqué (sens, branches, courses partielles, fusion d'arrêts) |
 | `python3 supabase/test_schema.py` | mise à jour depuis l'ancien schéma, règles d'accès, anti-spam, sens, archive anonyme, apprentissage, sur un vrai PostgreSQL |
@@ -257,7 +274,7 @@ La CI (`.github/workflows/ci.yml`) les lance à chaque push, avec une base Postg
 
 ## Données et cadre légal
 
-- Seuls le type, l'arrêt, la ligne, le sens et l'heure sont publics, pour l'app comme pour le groupe Telegram (dont le bot n'enregistre ni le texte ni l'auteur des messages). L'identifiant d'appareil sert uniquement à l'anti-spam, reste dans un schéma privé et disparaît après 1 heure. Après 48 h, un signalement est anonymisé (sans empreinte, heure à la minute) et gardé pour apprendre la vitesse des contrôles ; seules les moyennes par ligne sont publiques. Détails : `web/confidentialite.html`.
+- Seuls le type, l'arrêt, la ligne, le sens et l'heure sont publics, pour l'app comme pour le groupe Telegram (dont le bot n'enregistre ni le texte ni l'auteur des messages ; pour relier deux messages qui se suivent, il garde 30 minutes au plus une empreinte salée de l'auteur, dans un schéma privé). L'identifiant d'appareil sert uniquement à l'anti-spam, reste dans un schéma privé et disparaît après 1 heure. Après 48 h, un signalement est anonymisé (sans empreinte, heure à la minute) et gardé pour apprendre la vitesse des contrôles ; seules les moyennes par ligne sont publiques. Détails : `web/confidentialite.html`.
 - En Suisse, signaler des contrôleurs n'est pas interdit en soi, contrairement à la France. L'app refuse volontairement photos, descriptions et texte libre pour protéger les agents.
 - Fond de carte épuré par défaut : [OpenFreeMap](https://openfreemap.org) (styles Positron et Dark, gratuits, sans clé ni limite), © OpenMapTiles, données © contributeurs OpenStreetMap. Quelques couches sont masquées et recolorées dans `web/index.template.html` (`FOND_HIDE`, `FOND_PAINT`).
 - Plan des lignes en option (légende de l'app) : [ÖPNVKarte](https://öpnvkarte.de) (memomaps.de, CC BY-SA). memomaps demande d'héberger soi-même la carte en cas de fort trafic.

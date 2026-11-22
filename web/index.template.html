@@ -1141,6 +1141,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   function parseTags(p) {
     const tags = [];
     if (p.kind === "question") tags.push(el("span", { class: "tag miss", text: "question : ignorée" }));
+    else if (p.kind === "autre") tags.push(el("span", { class: "tag miss", text: "hors sujet : ignoré" }));
     else {
       tags.push(el("span", { class: "tag" }, el("i", { class: "shape " + (p.kind === "perturbation" ? "diamond" : "circle"), style: "color:var(--c-mid)" }),
         p.kind === "fin" ? (p.of === "perturbation" ? "rétabli" : "plus là") : (KIND_LABEL[p.kind] + (p.sub ? " · " + SUB_LABEL[p.sub] : ""))));

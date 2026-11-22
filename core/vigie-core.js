@@ -55,7 +55,8 @@
       .trim();
   }
   function tokens(s, keepFiller) {
-    const t = normalize(s).split(" ").filter(Boolean);
+    // « saint » et « st » : un même mot (« Saint-François », « direction saint François », « St-Sulpice »)
+    const t = normalize(s).split(" ").filter(Boolean).map((w) => (w === "saint" ? "st" : w === "sainte" ? "ste" : w));
     return keepFiller ? t : t.filter((w) => !FILLER.has(w));
   }
 
@@ -64,6 +65,7 @@
     const exact = new Map();   // "tok tok" -> stopId
     const same = new Map();    // "tok tok" -> [stopId…] : tous les arrêts de ce nom (homonymes), dans l'ordre
     const single = [];          // alias à un seul mot, pour le flou
+    const multi = new Map();    // mot → noms de plusieurs mots qui le contiennent [clé, arrêt, nombre de mots], pour le flou
     const byId = new Map();
     let maxLen = 1;
     for (const s of stops) {
@@ -79,9 +81,15 @@
         if (!same.get(key).includes(s.id)) same.get(key).push(s.id);
         maxLen = Math.max(maxLen, t.length);
         if (t.length === 1 && t[0].length >= 5) single.push([t[0], s.id]);
+        if (t.length >= 2) {
+          for (const w of new Set(t)) {
+            if (!multi.has(w)) multi.set(w, []);
+            if (!multi.get(w).some((x) => x[0] === key)) multi.get(w).push([key, s.id, t.length]);
+          }
+        }
       }
     }
-    return { exact, same, single, byId, maxLen: Math.min(maxLen, 5) };
+    return { exact, same, single, multi, byId, maxLen: Math.min(maxLen, 5) };
   }
 
   // mots courants qui ne doivent jamais être pris pour un arrêt mal orthographié
@@ -108,6 +116,8 @@
   }
 
   const DIR_WORDS = new Set(["direction", "dir", "direc", "vers", "destination", "sens"]);
+  // entre « direction » et le nom de l'arrêt visé, ces mots coupent : ce qui suit n'est plus le sens
+  const DIR_BREAK = new Set(["il", "ils", "elle", "elles", "iels", "ielxs", "on", "est", "ont", "arrivent", "arrive", "attendent"]);
 
   function findStops(tok, gaz) {
     const hits = [];
@@ -117,6 +127,29 @@
         if (used.slice(i, i + n).some(Boolean)) continue;
         const key = tok.slice(i, i + n).join(" "), id = gaz.exact.get(key);
         if (id) { hits.push({ id, i, n, fuzzy: false, key }); for (let k = i; k < i + n; k++) used[k] = true; }
+      }
+    }
+    // faute de frappe dans un nom de plusieurs mots (« st frnçois », « halle de sebeillons », « prilly marley ») :
+    // au moins un mot exact, et une lettre d'écart (deux pour un nom de 12 lettres ou plus) sur l'ensemble
+    if (gaz.multi) {
+      for (let n = Math.min(gaz.maxLen, 4); n >= 2; n--) {
+        for (let i = 0; i + n <= tok.length; i++) {
+          if (used.slice(i, i + n).some(Boolean)) continue;
+          const ws = tok.slice(i, i + n);
+          if (ws.some((w) => NOT_STOPS.has(w) || DIR_WORDS.has(w) || /\d/.test(w))) continue;
+          const key = ws.join(" ");
+          if (key.length < 7) continue;
+          const max = key.length >= 12 ? 2 : 1;
+          let best = null;
+          for (const w of new Set(ws)) {
+            for (const [cand, id, len] of gaz.multi.get(w) || []) {
+              if (len !== n) continue;
+              const d = lev(key, cand, max);
+              if (d > 0 && d <= max && (!best || d < best.d)) best = { id, d, cand };
+            }
+          }
+          if (best) { hits.push({ id: best.id, i, n, fuzzy: true, key: best.cand }); for (let k = i; k < i + n; k++) used[k] = true; }
+        }
       }
     }
     for (let i = 0; i < tok.length; i++) {
@@ -131,9 +164,16 @@
       if (best) { hits.push({ id: best.id, i, n: 1, fuzzy: true }); used[i] = true; }
     }
     hits.sort((a, b) => a.i - b.i);
+    // sens : « direction » juste avant, ou un peu avant si un nom de plusieurs mots commence par un mot inconnu
+    // (« direction prilly Marley », « direction pully val vert ») ; un autre arrêt, un chiffre ou un mot courant coupe
+    const cover = new Array(tok.length).fill(-1);
+    hits.forEach((h, k) => { for (let j = h.i; j < h.i + h.n; j++) cover[j] = k; });
     for (const h of hits) {
-      const prev = tok[h.i - 1];
-      h.isDirection = !!prev && DIR_WORDS.has(prev);
+      h.isDirection = false;
+      for (let j = h.i - 1; j >= Math.max(0, h.i - 3); j--) {
+        if (DIR_WORDS.has(tok[j])) { h.isDirection = true; break; }
+        if (cover[j] >= 0 || NOT_STOPS.has(tok[j]) || DIR_BREAK.has(tok[j]) || /\d/.test(tok[j])) break;
+      }
     }
     return hits;
   }
@@ -153,8 +193,16 @@
   }
 
   // ---------- type de message ----------
-  const RE_QUESTION = /\b(qqn|quelqu un|quelquun|y a t il|y a t|ya t il|est ce qu|savez|sait on|des nouvelles|vous avez vu|dispo)\b/;
+  const RE_QUESTION = /\b(qqn|quelqu un|quelquun|y a t il|y a t|ya t il|est ce qu|savez|sait on|des nouvelles|vous avez vu|dispo|il y en a|y en a|y a des|ya des|il y a des|y a du|ya du|qui sait|des infos|des news|ou ca|ou sont|ou ils|ils sont ou|toujours la|encore la)\b/;
   const RE_CLEAR = /\b(partis?|parties|descendus?|descendues?|sortis?|disparus?|plus de contr\w*|plus personne|plus rien|plus la|ras|rien a signaler|fausse alerte|c est bon|cest bon|termine|fini|ils sont plus|y a plus|y en a plus|ya plus)\b/;
+  // « descendus à Délices », « sortis du M2 à la gare » : avec un arrêt, ils y sont (un contrôle là), pas partis ;
+  // la fin d'un contrôle demande un de ces mots-là
+  const RE_CLEAR_STRONG = /\b(partis?|parties|disparus?|plus de contr\w*|plus personne|plus rien|plus la|ras|rien a signaler|fausse alerte|c est bon|cest bon|termine|fini|ils sont plus|y a plus|y en a plus|ya plus)\b/;
+  // « se dirigent vers Renens-Gare » : sans ligne, l'arrêt visé est l'endroit où ils vont à pied
+  const RE_HEADING = /\b(se dirig\w*|vont vers|va vers|marchent vers|marche vers|en route vers|en chemin vers)\b/;
+  // hors sujet : un fait d'hier, ou un long message sans un mot de contrôle ni de transport (« … il vit à la Sallaz »)
+  const RE_PAST = /\b(hier|avant hier|la semaine derniere|l autre jour)\b/;
+  const RE_CUE = /\b(contr\w*|agents?|bleus?|equipes?|team|groupe de|arrets?|metro|bus|tram|train|lignes?|direction|dir|vers|quai|monte\w*|descend\w*|sort\w*|pose\w*|chill\w*|attend\w*|schtroumpf\w*|civils?|uniformes?|gilets?|panne\w*|retard\w*|accident\w*|devi\w*|perturb\w*|bloque\w*|partis?)\b/;
   const RE_RESTORED = /\b(retabli\w*|reprise|circule a nouveau|circulent a nouveau|resolu\w*|repart\w*)\b/;
   const RE_PERT = [
     ["panne", /\b(panne\w*|en rade|hs|hors service)\b/],
@@ -170,6 +218,8 @@
     const prepared = raw
       .replace(/\b\d{1,2}\s?[:h]\s?\d{2}\b/gi, " ")   // heures 10h30 / 10:30
       .replace(/->|→|=>|>|[\u27A1\u2B95\u2794\u279C\u279D\u279E\u21D2\u27F6]\uFE0F?/g, " direction ")   // flèches, dont l'émoji ➡️
+      // tiret entre deux mots, avec une espace (« M2 fourmis- ouchy ») : un sens ; « Ouchy-Olympique » reste un nom
+      .replace(/(\p{L})\s*[-\u2013\u2014]\s+(?=\p{L})|(\p{L})\s+[-\u2013\u2014]\s*(?=\p{L})/gu, (m, a, b) => (a || b) + " direction ")
       .replace(/[\u{1F68C}\u{1F68D}\u{1F68E}\u{1F687}\u{1F688}\u{1F68A}\u{1F683}\u{1F68B}]\uFE0F?/gu, " ligne ");   // 🚌 🚇 🚊 : lignes concernées
     const norm = normalize(prepared);
     const tok = tokens(prepared);
@@ -182,26 +232,30 @@
       const alt = (gaz.same && gaz.same.get(h.key) || []).find(serves);
       return alt ? Object.assign({}, h, { id: alt }) : h;
     };
-    const loc = onLine(hits.find((h) => !h.isDirection) || null);
-    const dir = onLine(hits.find((h) => h.isDirection) || null);
+    let locHit = hits.find((h) => !h.isDirection) || null, dirHit = hits.find((h) => h.isDirection) || null;
+    if (!locHit && dirHit && !line && RE_HEADING.test(norm)) { locHit = dirHit; dirHit = null; }
+    const loc = onLine(locHit), dir = onLine(dirHit);
 
     let kind = "controle", sub = null, of = null;
     const endsWithQ = /\?[\s\W]*$/u.test(raw.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, ""));
     const isQuestion = endsWithQ || (/\?/.test(raw) && RE_QUESTION.test(norm));
+    const words = norm ? norm.split(" ").length : 0;
+    const offTopic = RE_PAST.test(norm) || (words >= 12 && !line && !dir && !RE_CUE.test(norm));
+    const stopId = loc ? loc.id : null;
     if (isQuestion) kind = "question";
+    else if (offTopic) kind = "autre";
     else if (RE_RESTORED.test(norm)) { kind = "fin"; of = "perturbation"; }
-    else if (RE_CLEAR.test(norm)) { kind = "fin"; of = "controle"; }
+    else if (RE_CLEAR.test(norm) && (RE_CLEAR_STRONG.test(norm) || !stopId)) { kind = "fin"; of = "controle"; }
     else {
       for (const [k, re] of RE_PERT) if (re.test(norm)) { kind = "perturbation"; sub = k; break; }
     }
-    const stopId = loc ? loc.id : null;
     return {
       kind, sub, of,
       stopId,
       dirStopId: dir ? dir.id : null,
       line,
       fuzzy: !!(loc && loc.fuzzy),
-      usable: kind !== "question" && !!stopId,
+      usable: kind !== "question" && kind !== "autre" && !!stopId,
     };
   }
 

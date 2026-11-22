@@ -347,5 +347,220 @@
    "stopId": "echallens",
    "line": "LEB"
   }
+ },
+ {
+  "msg": "Descendus à délices",
+  "exp": {
+   "kind": "controle",
+   "stopId": "delices",
+   "dirStopId": null,
+   "line": null
+  }
+ },
+ {
+  "msg": "Descendus à la gare",
+  "exp": {
+   "kind": "controle",
+   "stopId": "gare",
+   "dirStopId": null,
+   "line": null
+  }
+ },
+ {
+  "msg": "Une équipe a descendu à bethusy de le 7",
+  "exp": {
+   "kind": "controle",
+   "stopId": "bethusy",
+   "dirStopId": null,
+   "line": "7"
+  }
+ },
+ {
+  "msg": "Il y en a m2 direction ouchy ? je suis à ours",
+  "exp": {
+   "kind": "question",
+   "stopId": "ours",
+   "dirStopId": "ouchy",
+   "line": "M2"
+  }
+ },
+ {
+  "msg": "Quelqu'un sait si les abonnements augmentent l'année prochaine, j'ai entendu dire que oui mais pas sûr",
+  "exp": {
+   "kind": "autre",
+   "stopId": null,
+   "dirStopId": null,
+   "line": null
+  }
+ },
+ {
+  "msg": "Hier soir devant la Migros de Renens j'ai perdu mon téléphone",
+  "exp": {
+   "kind": "autre",
+   "stopId": "renens",
+   "dirStopId": null,
+   "line": null
+  }
+ },
+ {
+  "msg": "2 dans le 1 depuis st frnçois vers georgette",
+  "exp": {
+   "kind": "controle",
+   "stopId": "stfrancois",
+   "dirStopId": "georgette",
+   "line": "1"
+  }
+ },
+ {
+  "msg": "M2 fourmis- ouchy",
+  "exp": {
+   "kind": "controle",
+   "stopId": "fourmi",
+   "dirStopId": "ouchy",
+   "line": "M2"
+  }
+ },
+ {
+  "msg": "4 contrôleurs à l'arrêt halle de sebeillons",
+  "exp": {
+   "kind": "controle",
+   "stopId": "halle-de-sebeillon",
+   "dirStopId": null,
+   "line": null
+  }
+ },
+ {
+  "msg": "5 contrôleurs se dirigent vers Renens gare sud",
+  "exp": {
+   "kind": "controle",
+   "stopId": "renens",
+   "dirStopId": null,
+   "line": null
+  }
+ },
+ {
+  "msg": "3 à ours 6/7 direction prilly malley",
+  "exp": {
+   "kind": "controle",
+   "stopId": "ours",
+   "dirStopId": "malley"
+  }
+ },
+ {
+  "msg": "3 a l'arret Georgette, direction saint François",
+  "exp": {
+   "kind": "controle",
+   "stopId": "georgette",
+   "dirStopId": "stfrancois",
+   "line": null
+  }
+ },
+ {
+  "msg": "A Belmont direction pully val vert",
+  "exp": {
+   "kind": "controle",
+   "stopId": "belmont-centre",
+   "dirStopId": "val-vert",
+   "line": null
+  }
+ },
+ {
+  "msg": "un groupe à l'arrêt casernes direction blvx",
+  "exp": {
+   "kind": "controle",
+   "stopId": "casernes",
+   "dirStopId": "bellevaux",
+   "line": null
+  }
+ },
+ {
+  "msg": "Une équipe à l'arrêt tunnel pour le 8 direction grandmont",
+  "exp": {
+   "kind": "controle",
+   "stopId": "tunnel",
+   "dirStopId": "lemont",
+   "line": "8"
+  }
+ },
+ {
+  "msg": "Montés dans le bus 7 direction prilly Marley",
+  "exp": {
+   "kind": "controle",
+   "stopId": null,
+   "dirStopId": "malley",
+   "line": "7"
+  }
+ },
+ {
+  "msg": "Il y en a encore à la riponne ?",
+  "exp": {
+   "kind": "question",
+   "stopId": "riponne",
+   "dirStopId": null,
+   "line": null
+  }
+ },
+ {
+  "msg": "Ils sont à l'arrêt grande borde direction riponne",
+  "exp": {
+   "kind": "controle",
+   "stopId": "grande-borde",
+   "dirStopId": "riponne",
+   "line": null
+  }
+ },
+ {
+  "msg": "Ils montent dans le 8",
+  "exp": {
+   "kind": "controle",
+   "stopId": null,
+   "dirStopId": null,
+   "line": "8"
+  }
+ },
+ {
+  "msg": "Mb a bourdonnette mtn",
+  "exp": {
+   "kind": "controle",
+   "stopId": "bourdonnette",
+   "dirStopId": null,
+   "line": null
+  }
+ },
+ {
+  "msg": "team sortie du m2 à la gare",
+  "exp": {
+   "kind": "controle",
+   "stopId": "gare",
+   "dirStopId": null,
+   "line": "M2"
+  }
+ },
+ {
+  "msg": "Dans le 4 direction faverge arrivent a eugene rambert",
+  "exp": {
+   "kind": "controle",
+   "stopId": "eugene-rambert",
+   "dirStopId": "faverges",
+   "line": "4"
+  }
+ },
+ {
+  "msg": "4 à l'arrêt Ouchy Olympique du M2",
+  "exp": {
+   "kind": "controle",
+   "stopId": "ouchy",
+   "dirStopId": null,
+   "line": "M2"
+  }
+ },
+ {
+  "msg": "à Epalinges",
+  "exp": {
+   "kind": "controle",
+   "stopId": "croisettes",
+   "dirStopId": null,
+   "line": null
+  }
  }
 ]

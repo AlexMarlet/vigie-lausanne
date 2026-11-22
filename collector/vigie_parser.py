@@ -2,7 +2,7 @@
 Vigie — parseur de messages (portage Python de core/vigie-core.js).
 
 Transforme un message libre du groupe Telegram en signalement structuré :
-    {"kind": "controle"|"perturbation"|"fin"|"question",
+    {"kind": "controle"|"perturbation"|"fin"|"question"|"autre",
      "sub": ..., "of": ..., "stop_id": ..., "dir_stop_id": ..., "line": ..., "fuzzy": bool, "usable": bool}
 
 Les deux implémentations partagent les cas de test de core/parser-cases.json.
@@ -23,6 +23,8 @@ NOT_STOPS = set((
 ).split())
 
 DIR_WORDS = {"direction", "dir", "direc", "vers", "destination", "sens"}
+# entre « direction » et le nom de l'arrêt visé, ces mots coupent : ce qui suit n'est plus le sens
+DIR_BREAK = {"il", "ils", "elle", "elles", "iels", "ielxs", "on", "est", "ont", "arrivent", "arrive", "attendent"}
 
 COUNT_WORDS = ("controleurs?|controleuses?|agents?|mecs?|gars|types?|personnes?|bleus?|schtroumpfs?|"
                "minutes?|min|mn|fois|chf|francs?|ans|avril")
@@ -33,9 +35,23 @@ RE_LINE = re.compile(r"\b(?:ligne|lignes|bus|trolley|trolleybus|l|n|no|num|numer
 RE_LINE_DIR = re.compile(r"(?:^|\s)(\d{1,2})\s(?:direction|dir|vers)\b")
 RE_LEB = re.compile(r"\b(?:leb|r ?20)\b")   # train Lausanne-Echallens-Bercher (R20 dans l'horaire)
 
-RE_QUESTION = re.compile(r"\b(qqn|quelqu un|quelquun|y a t il|y a t|ya t il|est ce qu|savez|sait on|des nouvelles|vous avez vu|dispo)\b")
+RE_QUESTION = re.compile(r"\b(qqn|quelqu un|quelquun|y a t il|y a t|ya t il|est ce qu|savez|sait on|des nouvelles|vous avez vu|dispo|"
+                         r"il y en a|y en a|y a des|ya des|il y a des|y a du|ya du|qui sait|des infos|des news|ou ca|ou sont|ou ils|"
+                         r"ils sont ou|toujours la|encore la)\b")
 RE_CLEAR = re.compile(r"\b(partis?|parties|descendus?|descendues?|sortis?|disparus?|plus de contr\w*|plus personne|plus rien|plus la|"
                       r"ras|rien a signaler|fausse alerte|c est bon|cest bon|termine|fini|ils sont plus|y a plus|y en a plus|ya plus)\b")
+# « descendus à Délices » : avec un arrêt, ils y sont (un contrôle là) ; la fin d'un contrôle demande un de ces mots-là
+RE_CLEAR_STRONG = re.compile(r"\b(partis?|parties|disparus?|plus de contr\w*|plus personne|plus rien|plus la|ras|rien a signaler|"
+                             r"fausse alerte|c est bon|cest bon|termine|fini|ils sont plus|y a plus|y en a plus|ya plus)\b")
+# « se dirigent vers Renens-Gare » : sans ligne, l'arrêt visé est l'endroit où ils vont à pied
+RE_HEADING = re.compile(r"\b(se dirig\w*|vont vers|va vers|marchent vers|marche vers|en route vers|en chemin vers)\b")
+# hors sujet : un fait d'hier, ou un long message sans un mot de contrôle ni de transport
+RE_PAST = re.compile(r"\b(hier|avant hier|la semaine derniere|l autre jour)\b")
+RE_CUE = re.compile(r"\b(contr\w*|agents?|bleus?|equipes?|team|groupe de|arrets?|metro|bus|tram|train|lignes?|direction|dir|vers|"
+                    r"quai|monte\w*|descend\w*|sort\w*|pose\w*|chill\w*|attend\w*|schtroumpf\w*|civils?|uniformes?|gilets?|"
+                    r"panne\w*|retard\w*|accident\w*|devi\w*|perturb\w*|bloque\w*|partis?)\b")
+# tiret entre deux mots, avec une espace (« M2 fourmis- ouchy ») : un sens ; « Ouchy-Olympique » reste un nom
+RE_DASH = re.compile(r"([^\W\d_])\s*[-\u2013\u2014]\s+(?=[^\W\d_])|([^\W\d_])\s+[-\u2013\u2014]\s*(?=[^\W\d_])")
 RE_RESTORED = re.compile(r"\b(retabli\w*|reprise|circule a nouveau|circulent a nouveau|resolu\w*|repart\w*)\b")
 RE_PERT = [
     ("panne", re.compile(r"\b(panne\w*|en rade|hs|hors service)\b")),
@@ -58,7 +74,8 @@ def normalize(s: str) -> str:
 
 
 def tokens(s: str, keep_filler: bool = False) -> list[str]:
-    t = [w for w in normalize(s).split(" ") if w]
+    # « saint » et « st » : un même mot (« Saint-François », « direction saint François », « St-Sulpice »)
+    t = [{"saint": "st", "sainte": "ste"}.get(w, w) for w in normalize(s).split(" ") if w]
     return t if keep_filler else [w for w in t if w not in FILLER]
 
 
@@ -67,6 +84,7 @@ class Gazetteer:
         self.exact: dict[str, str] = {}
         self.same: dict[str, list[str]] = {}   # tous les arrêts d'un même nom (homonymes), dans l'ordre
         self.single: list[tuple[str, str]] = []
+        self.multi: dict[str, list[tuple[str, str, int]]] = {}   # mot → noms de plusieurs mots qui le contiennent
         self.by_id: dict[str, dict] = {}
         self.max_len = 1
         for s in stops:
@@ -84,6 +102,11 @@ class Gazetteer:
                 self.max_len = max(self.max_len, len(t))
                 if len(t) == 1 and len(t[0]) >= 5:
                     self.single.append((t[0], s["id"]))
+                if len(t) >= 2:
+                    for w in dict.fromkeys(t):
+                        lst = self.multi.setdefault(w, [])
+                        if not any(x[0] == key for x in lst):
+                            lst.append((key, s["id"], len(t)))
         self.max_len = min(self.max_len, 5)
 
 
@@ -115,6 +138,31 @@ def _find_stops(tok: list[str], gaz: Gazetteer) -> list[dict]:
                 hits.append({"id": sid, "i": i, "n": n, "fuzzy": False, "key": key})
                 for k in range(i, i + n):
                     used[k] = True
+    # faute de frappe dans un nom de plusieurs mots (« st frnçois », « halle de sebeillons ») : au moins un mot exact,
+    # et une lettre d'écart (deux pour un nom de 12 lettres ou plus) sur l'ensemble
+    for n in range(min(gaz.max_len, 4), 1, -1):
+        for i in range(0, len(tok) - n + 1):
+            if any(used[i:i + n]):
+                continue
+            ws = tok[i:i + n]
+            if any(w in NOT_STOPS or w in DIR_WORDS or re.search(r"\d", w) for w in ws):
+                continue
+            key = " ".join(ws)
+            if len(key) < 7:
+                continue
+            mx = 2 if len(key) >= 12 else 1
+            best = None
+            for w in dict.fromkeys(ws):
+                for cand, sid, ln in gaz.multi.get(w, []):
+                    if ln != n:
+                        continue
+                    d = _lev(key, cand, mx)
+                    if 0 < d <= mx and (best is None or d < best[0]):
+                        best = (d, sid, cand)
+            if best:
+                hits.append({"id": best[1], "i": i, "n": n, "fuzzy": True, "key": best[2]})
+                for k in range(i, i + n):
+                    used[k] = True
     for i, w in enumerate(tok):
         if used[i] or len(w) < 5 or w in NOT_STOPS or re.search(r"\d", w):
             continue
@@ -128,8 +176,20 @@ def _find_stops(tok: list[str], gaz: Gazetteer) -> list[dict]:
             hits.append({"id": best[1], "i": i, "n": 1, "fuzzy": True})
             used[i] = True
     hits.sort(key=lambda h: h["i"])
+    # sens : « direction » juste avant, ou un peu avant si un nom de plusieurs mots commence par un mot inconnu
+    # (« direction prilly Marley ») ; un autre arrêt, un chiffre ou un mot courant coupe
+    cover = [-1] * len(tok)
+    for k, h in enumerate(hits):
+        for j in range(h["i"], h["i"] + h["n"]):
+            cover[j] = k
     for h in hits:
-        h["is_direction"] = h["i"] > 0 and tok[h["i"] - 1] in DIR_WORDS
+        h["is_direction"] = False
+        for j in range(h["i"] - 1, max(0, h["i"] - 3) - 1, -1):
+            if tok[j] in DIR_WORDS:
+                h["is_direction"] = True
+                break
+            if cover[j] >= 0 or tok[j] in NOT_STOPS or tok[j] in DIR_BREAK or re.search(r"\d", tok[j]):
+                break
     return hits
 
 
@@ -153,6 +213,7 @@ def parse_message(text: str, gaz: Gazetteer) -> dict:
     prepared = RE_TIME.sub(" ", raw)
     # flèches, dont l'émoji ➡️ des messages du bot de signalement anonyme ; 🚌 🚇 🚊 : lignes concernées
     prepared = re.sub("->|→|=>|>|[\u27A1\u2B95\u2794\u279C\u279D\u279E\u21D2\u27F6]\uFE0F?", " direction ", prepared)
+    prepared = RE_DASH.sub(lambda m: (m.group(1) or m.group(2)) + " direction ", prepared)
     prepared = re.sub("[\U0001F68C\U0001F68D\U0001F68E\U0001F687\U0001F688\U0001F68A\U0001F683\U0001F68B]\uFE0F?", " ligne ", prepared)
     norm = normalize(prepared)
     tok = tokens(prepared)
@@ -169,30 +230,37 @@ def parse_message(text: str, gaz: Gazetteer) -> dict:
         alt = next((sid for sid in gaz.same.get(h["key"], []) if serves(sid)), None)
         return {**h, "id": alt} if alt else h
 
-    loc = on_line(next((h for h in hits if not h["is_direction"]), None))
-    dirh = on_line(next((h for h in hits if h["is_direction"]), None))
+    loc_hit = next((h for h in hits if not h["is_direction"]), None)
+    dir_hit = next((h for h in hits if h["is_direction"]), None)
+    if not loc_hit and dir_hit and not line and RE_HEADING.search(norm):
+        loc_hit, dir_hit = dir_hit, None
+    loc, dirh = on_line(loc_hit), on_line(dir_hit)
 
     kind, sub, of = "controle", None, None
     ends_with_q = re.search(r"\?[\s\W]*$", RE_EMOJI.sub("", raw)) is not None
+    words = len(norm.split(" ")) if norm else 0
+    off_topic = bool(RE_PAST.search(norm)) or (words >= 12 and not line and not dirh and not RE_CUE.search(norm))
+    stop_id = loc["id"] if loc else None
     if ends_with_q or ("?" in raw and RE_QUESTION.search(norm)):
         kind = "question"
+    elif off_topic:
+        kind = "autre"
     elif RE_RESTORED.search(norm):
         kind, of = "fin", "perturbation"
-    elif RE_CLEAR.search(norm):
+    elif RE_CLEAR.search(norm) and (RE_CLEAR_STRONG.search(norm) or not stop_id):
         kind, of = "fin", "controle"
     else:
         for k, rx in RE_PERT:
             if rx.search(norm):
                 kind, sub = "perturbation", k
                 break
-    stop_id = loc["id"] if loc else None
     return {
         "kind": kind, "sub": sub, "of": of,
         "stop_id": stop_id,
         "dir_stop_id": dirh["id"] if dirh else None,
         "line": line,
         "fuzzy": bool(loc and loc["fuzzy"]),
-        "usable": kind != "question" and stop_id is not None,
+        "usable": kind not in ("question", "autre") and stop_id is not None,
     }
 
 

@@ -103,6 +103,7 @@ with psycopg.connect(DSN, autocommit=True) as c:
     voter = next(r[2] for r in rows if r[0] == "chauderon")
     check(voter and DEV1 not in voter and len(voter) == 32, "app : seule une empreinte anonyme est visible")
     check(fails(c, "select * from vigie_private.appareils"), "app : journal des appareils illisible")
+    check(fails(c, "select * from vigie_private.suites"), "app : mémoire des suites du bot illisible")
     check(fails(c, "insert into public.signalements (kind, stop_id, src) values ('controle', 'gare', 'app')"),
           "app : écriture directe dans la table refusée")
     check(fails(c, "insert into public.signalements (kind, stop_id, src) values ('controle', 'gare', 'telegram')"),

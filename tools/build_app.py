@@ -191,9 +191,10 @@ def load_data(repo_url: str | None) -> tuple[dict, list]:
 
 
 def write_collector_stops(stops: list, lines: list) -> None:
-    """Données du collecteur Telegram, identiques à celles de l'app (vérifiées par la CI) : arrêts (stops.json)
-    et ordre des arrêts de chaque sens (lignes.json, pour « … direction X »)."""
-    keep = ("id", "name", "short", "amb", "alias", "lines")
+    """Données du collecteur Telegram, identiques à celles de l'app (vérifiées par la CI) : arrêts (stops.json,
+    avec leur position pour « direction X » quand X n'est pas sur la ligne) et ordre des arrêts de chaque sens
+    (lignes.json, pour « … direction X »)."""
+    keep = ("id", "name", "short", "amb", "alias", "lines", "lat", "lon")
     rows = [{k: s[k] for k in keep if k in s} for s in stops]
     (ROOT / "collector/stops.json").write_text(
         "[\n" + ",\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n]\n", encoding="utf-8")

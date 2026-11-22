@@ -309,8 +309,20 @@ def webhook(token: str) -> None:
     else:
         note("error", "Fonction", f"message de test : HTTP {status} {body[:200]}")
         return
+    # mémoire des suites (base de données) : le message suivant de la même personne complète le premier
+    test["update_id"], test["message"]["message_id"], test["message"]["text"] = 3, 2, "Finalement direction Ouchy"
+    status, body = call_function(url, test, secret)
+    try:
+        answer = json.loads(body).get("text", "")
+    except ValueError:
+        answer = ""
+    if status == 200 and "complète le signalement d'avant" in answer:
+        note("notice", "Fonction", "suite comprise : " + answer.split("\n")[0])
+    else:
+        note("warning", "Mémoire des suites", "indisponible : chaque message est placé seul (« ils montent dans le 8 » "
+             f"ne complète pas le message d'avant). Réponse : HTTP {status} {answer[:160] or body[:160]}")
     # 2) Telegram envoie désormais chaque message du groupe à la fonction
-    tg(token, "setWebhook", url=url, secret_token=secret, allowed_updates=UPDATES, max_connections=10, drop_pending_updates=False)
+    tg(token, "setWebhook", url=url, secret_token=secret, allowed_updates=UPDATES, max_connections=1, drop_pending_updates=False)
     info = tg(token, "getWebhookInfo")
     msg = f"Telegram → {info.get('url')} · {info.get('pending_update_count', 0)} message(s) en attente"
     err = info.get("last_error_date")
