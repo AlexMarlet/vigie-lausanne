@@ -1,0 +1,8 @@
+# En-têtes de Cloudflare Pages (GitHub Pages ne s'en sert pas ; le service worker ne le met pas en cache).
+# Les adresses techniques *.pages.dev ne doivent pas apparaître dans les moteurs de recherche :
+# seule https://vigie-lausanne.ch est l'adresse publique de l'app.
+https://:project.pages.dev/*
+  X-Robots-Tag: noindex
+
+https://:version.:project.pages.dev/*
+  X-Robots-Tag: noindex

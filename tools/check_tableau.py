@@ -36,7 +36,9 @@ async def main(url: str, key: str):
         page = await ctx.new_page()
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)[:200]))
-        page.on("console", lambda m: errors.append(m.text[:200]) if m.type == "error" else None)
+        # statistiques de visite de Cloudflare (si activées) : bloquées par la politique de sécurité de la page, voulu
+        page.on("console", lambda m: errors.append(m.text[:200]) if m.type == "error"
+                and "cloudflareinsights.com" not in m.text and "/cdn-cgi/rum" not in m.text else None)
         status = {}
         page.on("response", lambda r: status.__setitem__("stats", r.status) if "/functions/v1/stats" in r.url and r.request.method == "GET" else None)
 

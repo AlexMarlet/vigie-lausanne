@@ -1,0 +1,19 @@
+name: Hébergement
+
+# Où en est le passage de GitHub Pages à Cloudflare Pages, en lecture seule (tools/hebergement.py) :
+# serveurs DNS, DNSSEC, enregistrements, hébergeur qui répond, redirections, copie Cloudflare, étape suivante.
+# Actions → Hébergement → Run workflow, puis ouvrir le run : le résumé s'affiche en bas de la page.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  etat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: État de l'hébergement
+        run: python3 tools/hebergement.py vigie-lausanne.ch

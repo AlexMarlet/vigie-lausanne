@@ -3,16 +3,14 @@ Test du site en ligne, en lecture seule (aucun signalement envoyé).
     pip install playwright==1.63.0 && python -m playwright install --with-deps chromium
     python3 tools/smoke_test.py https://vigie-lausanne.ch/
 
-Vérifie d'abord le DNS d'un domaine personnalisé (adresses de GitHub Pages), puis ouvre l'app dans un
-Chrome mobile : chargement, connexion à Supabase (« en direct »), réseau complet, choix du sens dans le
-formulaire (sans rien envoyer), fond de carte, service worker, installabilité, page Confidentialité,
-page Apprentissage fermée sans clé, absence d'erreur JavaScript.
-Lancé par GitHub Actions après chaque déploiement ; les résultats s'affichent en annotations.
+Pour un domaine personnalisé, dit d'abord qui le sert (GitHub Pages ou Cloudflare Pages) et si www y renvoie,
+puis ouvre l'app dans un Chrome mobile : chargement, connexion à Supabase (« en direct »), réseau complet, choix
+du sens dans le formulaire (sans rien envoyer), fond de carte, service worker, installabilité, page
+Confidentialité, page Apprentissage fermée sans clé, absence d'erreur JavaScript.
+Lancé par GitHub Actions après chaque déploiement, pour chaque hébergeur ; les résultats s'affichent en annotations.
 """
 import asyncio
 import ipaddress
-import json
-import os
 import pathlib
 import socket
 import sys
@@ -25,9 +23,10 @@ from playwright.async_api import async_playwright
 
 ANDROID_UA = ("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) "
               "Chrome/141.0.0.0 Mobile Safari/537.36")
-# adresses de GitHub Pages pour un domaine racine (docs.github.com, « Managing a custom domain »)
-GITHUB_A = {f"185.199.{n}.153" for n in (108, 109, 110, 111)}
-GITHUB_AAAA = {f"2606:50c0:{n}::153" for n in (8000, 8001, 8002, 8003)}
+HEBERGEURS = {"github.com": "GitHub Pages", "cloudflare": "Cloudflare Pages"}   # en-tête « Server » de la réponse
+# statistiques de visite de Cloudflare (Web Analytics), si elles sont activées : bloquées par la politique de
+# sécurité de la page privée Apprentissage, ce qui est voulu ; ce n'est pas une erreur de l'app
+CLOUDFLARE_STATS = ("cloudflareinsights.com", "/cdn-cgi/rum")
 results = []
 LABELS = []
 
@@ -47,44 +46,39 @@ def addresses(host, family):
         return set()
 
 
-def dns_report(host):
-    """Domaine personnalisé : compare son DNS aux adresses de GitHub Pages et l'annonce dans GitHub.
-    Renvoie False si le domaine ne répond pas du tout."""
+def http_get(url):
+    """(hébergeur d'après l'en-tête Server, adresse finale après redirections), ou (None, None) sans réponse."""
+    req = urllib.request.Request(url, headers={"User-Agent": ANDROID_UA})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as res:
+            server = (res.headers.get("Server") or "").lower()
+            return HEBERGEURS.get(server, server or "hébergeur inconnu"), res.geturl()
+    except (urllib.error.URLError, OSError, ValueError):
+        return None, None
+
+
+def host_report(host):
+    """Domaine personnalisé : quel hébergeur le sert, et www renvoie-t-il vers le domaine ?
+    Renvoie False si le domaine ne répond pas du tout (DNS pas encore configuré)."""
     try:
         ipaddress.ip_address(host)
         return True
     except ValueError:
         pass
-    if host == "localhost" or host.endswith(".github.io"):
+    if host == "localhost" or host.endswith((".github.io", ".pages.dev")):
         return True
     apex = host.removeprefix("www.")
-    target = (os.environ.get("GITHUB_REPOSITORY_OWNER") or "alexmarlet").lower() + ".github.io"
-    good, problems, found_any = [], [], False
-    for kind, family, expected in (("A", socket.AF_INET, GITHUB_A), ("AAAA", socket.AF_INET6, GITHUB_AAAA)):
-        found = addresses(apex, family)
-        found_any |= bool(found)
-        extra, missing = sorted(found - expected), sorted(expected - found)
-        if extra:
-            problems.append(f"{kind} en trop sur {apex} : {', '.join(extra)} (à supprimer)")
-        if missing:
-            problems.append(f"{kind} manquant sur {apex} : {', '.join(missing)}")
-        if not extra and not missing:
-            good.append(f"{len(found)} {kind}")
-    try:
-        name, aliases, ips = socket.gethostbyname_ex("www." + apex)
-        names = {n.rstrip(".").lower() for n in (name, *aliases)}
-    except OSError:
-        names, ips = set(), []
-    if target in names:
-        good.append(f"www → {target}")
+    if not (addresses(apex, socket.AF_INET) or addresses(apex, socket.AF_INET6)):
+        return False
+    hebergeur, _ = http_get(f"https://{apex}/")
+    _, www_final = http_get(f"https://www.{apex}/")
+    if www_final and urlsplit(www_final).hostname == apex:
+        print(f"::notice title=Hébergement::{apex} servi par {hebergeur or 'personne (HTTPS)'} · www renvoie vers {apex}",
+              flush=True)
     else:
-        seen = ", ".join(sorted(names - {"www." + apex}) or ips) or "aucune entrée"
-        problems.append(f"www.{apex} : {seen}, attendu un CNAME vers {target}")
-    if problems:
-        print(f"::warning title=DNS::{' · '.join(problems)}", flush=True)
-    else:
-        print(f"::notice title=DNS::{apex} pointe vers GitHub Pages ({', '.join(good)})", flush=True)
-    return found_any
+        print(f"::warning title=Hébergement::{apex} servi par {hebergeur or 'personne (HTTPS)'}, mais www.{apex} ne "
+              f"renvoie pas vers {apex} ({www_final or 'pas de réponse en HTTPS'})", flush=True)
+    return True
 
 
 def schema_is_current() -> bool | None:
@@ -108,7 +102,7 @@ def schema_is_current() -> bool | None:
 
 async def main(url):
     host = urlsplit(url).hostname or ""
-    if not dns_report(host):
+    if not host_report(host):
         # nouveau domaine pas encore actif : avertir sans faire échouer le déploiement
         print(f"::warning title=Domaine::{host} ne répond pas encore (DNS pas configuré ou en cours de propagation). "
               "Test reporté au prochain déploiement.", flush=True)
@@ -134,6 +128,8 @@ async def main(url):
             src = (m.location or {}).get("url", "")
             if old_schema and "supabase.co/rest/v1/" in src:
                 return
+            if any(s in m.text or s in src for s in CLOUDFLARE_STATS):
+                return
             errors.append(m.text + (f" ({src})" if src else ""))
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.on("console", on_console)
@@ -149,7 +145,7 @@ async def main(url):
         await page.route("**/*", no_write)
 
         if not secure:
-            # GitHub publie en http tant que « Enforce HTTPS » n'est pas coché : essayer la version https
+            # adresse en http (certificat pas encore prêt, ou redirection vers https pas activée) : essayer https
             https_url = "https://" + url.split("://", 1)[1]
             try:                                   # simple requête, certificat vérifié
                 secure = (await ctx.request.get(https_url, timeout=20000)).ok
@@ -157,14 +153,14 @@ async def main(url):
                 secure = False
             if secure:
                 url = https_url
-                print("::warning title=HTTPS::Le certificat est prêt : coche « Enforce HTTPS » dans Settings → Pages "
-                      "pour que le http redirige vers le https.", flush=True)
+                print("::warning title=HTTPS::Le certificat est prêt : fais rediriger le http vers le https (GitHub : "
+                      "« Enforce HTTPS » dans Settings → Pages ; Cloudflare : « Always Use HTTPS »).", flush=True)
             else:
-                print("::warning title=HTTPS::GitHub n'a pas encore délivré le certificat HTTPS (jusqu'à 24 h après le DNS). "
+                print("::warning title=HTTPS::Le certificat HTTPS n'est pas encore délivré (jusqu'à 24 h après le DNS). "
                       "Service worker et installation non testés.", flush=True)
 
         resp = None
-        for _ in range(6):                         # le CDN de GitHub Pages peut mettre quelques secondes
+        for _ in range(6):                         # le réseau de l'hébergeur peut mettre quelques secondes
             try:
                 resp = await page.goto(url, wait_until="load")
             except Exception as exc:

@@ -7,6 +7,12 @@ const VERSION = "__VERSION__";
 const CACHE = "vigie-" + VERSION;
 const SHELL = __SHELL__;
 
+// Cloudflare Pages redirige « page.html » vers « page » : une copie gardée après une redirection peut être
+// refusée pour une navigation (Safari), on la recopie sans la marque de redirection.
+const sansRedirection = (res) => (res && res.redirected
+  ? res.blob().then((body) => new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers }))
+  : res);
+
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));
 });
@@ -32,7 +38,7 @@ self.addEventListener("fetch", (event) => {
           if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
           return res;
         })
-        .catch(() => caches.match(req).then((hit) => hit || caches.match("./")))
+        .catch(() => caches.match(req).then((hit) => hit || caches.match("./")).then(sansRedirection))
     );
     return;
   }

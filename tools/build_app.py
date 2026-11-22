@@ -292,6 +292,7 @@ def main() -> None:
     (dist / "vendor").mkdir()
     shutil.copytree(WEB / "icons", dist / "icons")
     shutil.copy(WEB / "manifest.webmanifest", dist / "manifest.webmanifest")
+    shutil.copy(WEB / "_headers", dist / "_headers")      # en-têtes Cloudflare Pages (hors cache de l'app)
     for src, name in VENDOR.items():
         shutil.copy(NM / src, dist / "vendor" / name)
     for src, name in FONTS.items():
@@ -340,9 +341,10 @@ def main() -> None:
     (dist / "confidentialite.html").write_text(privacy, encoding="utf-8")
     write_dashboard(dist, bundle["data"], config, common_head)
 
-    # service worker : cache versionné par le contenu de l'app (la page privée du tableau n'y entre pas)
+    # service worker : cache versionné par le contenu de l'app (la page privée du tableau n'y entre pas, ni les
+    # fichiers de réglage de l'hébergeur comme _headers, que Cloudflare ne sert pas)
     files = sorted(p for p in dist.rglob("*") if p.is_file() and not p.name.endswith(".txt")
-                   and p.relative_to(dist).parts[0] != DASHBOARD)
+                   and not p.name.startswith("_") and p.relative_to(dist).parts[0] != DASHBOARD)
     digest = hashlib.sha256()
     for p in files:
         digest.update(p.relative_to(dist).as_posix().encode())
