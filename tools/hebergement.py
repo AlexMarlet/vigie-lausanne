@@ -6,12 +6,18 @@ Lancé à la demande par le workflow « Hébergement » (Actions → Hébergemen
 montre les serveurs DNS, DNSSEC, les enregistrements du domaine, l'hébergeur qui répond, les redirections de www
 et du http, la copie Cloudflare (vigie-lausanne.pages.dev), puis l'étape suivante du plan de migration.
 Le DNS est lu en DNS-over-HTTPS (dns.google), comme le verrait n'importe quel visiteur.
+
+Tant que le DNS est chez Infomaniak, il écrit aussi zone-cloudflare.txt : la zone recopiée telle quelle depuis le
+serveur DNS d'Infomaniak (dig), au format à importer dans Cloudflare (DNS → Records → Import and Export), toutes
+les entrées en « DNS only ». Le workflow la joint au run (artefact « zone-cloudflare »).
 """
 from __future__ import annotations
 
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 import urllib.error
 import urllib.parse
@@ -23,6 +29,13 @@ PROPRIO = (os.environ.get("GITHUB_REPOSITORY_OWNER") or "alexmarlet").lower()
 UA = "vigie-hebergement (+https://github.com/AlexMarlet/vigie-lausanne)"
 TYPES = {"A": 1, "NS": 2, "CNAME": 5, "MX": 15, "TXT": 16, "AAAA": 28, "DS": 43, "CAA": 257}
 HEBERGEURS = {"github.com": "GitHub Pages", "cloudflare": "Cloudflare"}
+# Entrées de la zone chez Infomaniak (capture du 23.11.2026), hors NS du domaine que Cloudflare remplace par les
+# siens : site (GitHub), e-mail Infomaniak (MX, SPF, DKIM, DMARC, SRV, configuration auto), vérification GitHub.
+ZONE = [("@", ("A", "AAAA", "MX", "TXT")), ("www", ("CNAME",)), ("autoconfig", ("CNAME",)),
+        ("autodiscover", ("CNAME",)), ("_dmarc", ("TXT",)), ("20261024._domainkey", ("TXT",)),
+        (f"_github-pages-challenge-{PROPRIO}", ("TXT",))] + [
+        (f"_{s}._tcp", ("SRV",)) for s in ("imap", "imaps", "pop3", "pop3s", "submission", "submissions")]
+FICHIER_ZONE = "zone-cloudflare.txt"
 sortie: list[str] = []
 
 
@@ -72,6 +85,26 @@ def fournisseur(serveurs):
 
 def liste(valeurs):
     return ", ".join(f"`{v}`" for v in valeurs) if valeurs else "—"
+
+
+def zone_cloudflare(serveur):
+    """Lignes de la zone au format BIND, lues sur le serveur qui fait autorité (valeurs exactes, TXT longs compris).
+    A, AAAA et CNAME sont marqués « DNS only » : ils pointent encore vers GitHub jusqu'à la bascule."""
+    lignes = []
+    for nom, types in ZONE:
+        fqdn = f"{DOMAINE}." if nom == "@" else f"{nom}.{DOMAINE}."
+        for type_ in types:
+            try:
+                rep = subprocess.run(["dig", "+noall", "+answer", "+norecurse", f"@{serveur}", fqdn, type_],
+                                     capture_output=True, text=True, timeout=30).stdout
+            except (OSError, subprocess.SubprocessError):
+                rep = ""
+            for ligne in rep.splitlines():
+                champs = ligne.split()
+                if len(champs) > 4 and champs[0].lower() == fqdn.lower() and champs[3] == type_:
+                    suffixe = " ; cf_tags=cf-proxied:false" if type_ in ("A", "AAAA", "CNAME") else ""
+                    lignes.append(ligne.rstrip() + suffixe)
+    return lignes
 
 
 def main():
@@ -162,6 +195,19 @@ def main():
     if mx and prov != "Infomaniak":
         dire()
         dire("Le domaine reçoit des e-mails (MX) : vérifie que les entrées MX et TXT ci-dessus existent aussi dans Cloudflare.")
+    if prov == "Infomaniak" and ns and shutil.which("dig"):
+        lignes = zone_cloudflare(ns[0])
+        entete = [f"; Zone {DOMAINE} lue sur {ns[0]} : {len(lignes)} entrées, à importer dans Cloudflare",
+                  "; (DNS → Records → Import and Export). A, AAAA et CNAME restent en « DNS only »."]
+        with open(FICHIER_ZONE, "w", encoding="utf-8") as f:
+            f.write("\n".join(entete + lignes) + "\n")
+        dire()
+        dire(f"### Zone à importer dans Cloudflare ({len(lignes)} entrées, fichier joint « zone-cloudflare »)")
+        dire()
+        dire("```text")
+        for ligne in entete + lignes:
+            dire(ligne)
+        dire("```")
     print(f"::notice title=Étape suivante::{suite}", flush=True)
 
     if os.environ.get("GITHUB_STEP_SUMMARY"):

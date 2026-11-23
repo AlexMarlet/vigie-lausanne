@@ -3,6 +3,7 @@ name: Hébergement
 # Où en est le passage de GitHub Pages à Cloudflare Pages, en lecture seule (tools/hebergement.py) :
 # serveurs DNS, DNSSEC, enregistrements, hébergeur qui répond, redirections, copie Cloudflare, étape suivante.
 # Actions → Hébergement → Run workflow, puis ouvrir le run : le résumé s'affiche en bas de la page.
+# Tant que le DNS est chez Infomaniak, la zone à importer dans Cloudflare est jointe au run (« zone-cloudflare »).
 
 on:
   workflow_dispatch:
@@ -15,5 +16,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Outil dig
+        run: command -v dig >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq dnsutils)
       - name: État de l'hébergement
         run: python3 tools/hebergement.py vigie-lausanne.ch
+      - uses: actions/upload-artifact@v7
+        with:
+          name: zone-cloudflare
+          path: zone-cloudflare.txt
+          if-no-files-found: ignore
+          retention-days: 30
