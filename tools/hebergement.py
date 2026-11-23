@@ -197,8 +197,9 @@ def main():
         dire("Le domaine reçoit des e-mails (MX) : vérifie que les entrées MX et TXT ci-dessus existent aussi dans Cloudflare.")
     if prov == "Infomaniak" and ns and shutil.which("dig"):
         lignes = zone_cloudflare(ns[0])
-        entete = [f"; Zone {DOMAINE} lue sur {ns[0]} : {len(lignes)} entrées, à importer dans Cloudflare",
-                  "; (DNS → Records → Import and Export). A, AAAA et CNAME restent en « DNS only »."]
+        # en-tête en ASCII : l'importeur de Cloudflare n'a besoin que des lignes, autant ne lui donner rien d'exotique
+        entete = [f"; Zone {DOMAINE} lue sur {ns[0]} : {len(lignes)} entrees a importer dans Cloudflare",
+                  "; (DNS > Records > Import and Export). A, AAAA et CNAME en DNS only (cf_tags)."]
         with open(FICHIER_ZONE, "w", encoding="utf-8") as f:
             f.write("\n".join(entete + lignes) + "\n")
         dire()
