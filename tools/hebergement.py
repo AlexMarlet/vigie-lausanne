@@ -87,15 +87,18 @@ def liste(valeurs):
     return ", ".join(f"`{v}`" for v in valeurs) if valeurs else "—"
 
 
-def dig_lignes(serveur, fqdn, type_):
-    """Réponses d'un serveur précis, sans récursion : lignes « nom TTL IN TYPE données » ([] si rien ou sans dig)."""
+def dig_lignes(serveur, fqdn, type_, garder=None):
+    """Réponses d'un serveur précis, sans récursion : lignes « nom TTL IN TYPE données » ([] si rien ou sans dig).
+    garder="RRSIG" demande aussi les signatures DNSSEC et ne garde qu'elles."""
+    options = ["+dnssec"] if garder else []
     try:
-        rep = subprocess.run(["dig", "+noall", "+answer", "+norecurse", f"@{serveur}", fqdn, type_],
+        rep = subprocess.run(["dig", "+noall", "+answer", "+norecurse", *options, f"@{serveur}", fqdn, type_],
                              capture_output=True, text=True, timeout=30).stdout
     except (OSError, subprocess.SubprocessError):
         return []
     return [ligne.rstrip() for ligne in rep.splitlines()
-            if len(ligne.split()) > 4 and ligne.split()[0].lower() == fqdn.lower() and ligne.split()[3] == type_]
+            if len(ligne.split()) > 4 and ligne.split()[0].lower() == fqdn.lower()
+            and ligne.split()[3] == (garder or type_)]
 
 
 def zone_cloudflare(serveur):
@@ -121,7 +124,13 @@ def dnssec_detail(serveurs):
     cds = dig_lignes(serveurs[0], fqdn, "CDS") if serveurs else []
     suppression = bool(cds) and all(ligne.split()[4] == "0" for ligne in cds)   # CDS « 0 0 0 00 » : retirer le DS
     ttl = ds[0].split()[1] if ds else None
-    return ds, ttl, cles, cds, suppression
+    # début de validité de la signature du DS par le registre : le DS existe au moins depuis ce moment
+    sig = dig_lignes(parents[0], fqdn, "DS", garder="RRSIG") if ds and parents else []
+    debut = None
+    if sig and len(sig[0].split()) > 9 and re.fullmatch(r"\d{14}", sig[0].split()[9]):
+        d = sig[0].split()[9]
+        debut = f"{d[6:8]}.{d[4:6]}.{d[0:4]} {d[8:10]}:{d[10:12]} UTC"
+    return ds, ttl, cles, cds, suppression, debut
 
 
 def main():
@@ -149,10 +158,11 @@ def main():
     dire(f"| DNSSEC | {etat_dnssec} |")
     cds_actif = False
     if shutil.which("dig") and ns:
-        ds_reg, ttl, cles, cds, suppression = dnssec_detail(ns)
+        ds_reg, ttl, cles, cds, suppression, debut = dnssec_detail(ns)
         cds_actif = bool(cds) and not suppression
+        signe = f", signé depuis le {debut}" if debut else ""
         dire(f"| DNSSEC en détail | registre .{DOMAINE.rsplit('.', 1)[-1]} : "
-             f"{f'DS ×{len(ds_reg)} (durée en cache {ttl} s)' if ds_reg else 'aucun DS'} · {ns[0]} : "
+             f"{f'DS ×{len(ds_reg)} (durée en cache {ttl} s{signe})' if ds_reg else 'aucun DS'} · {ns[0]} : "
              f"{f'zone signée (DNSKEY ×{len(cles)})' if cles else 'zone non signée'}, "
              f"{'CDS de suppression' if suppression else f'CDS ×{len(cds)} publié' if cds else 'aucun CDS'} |")
     dire(f"| A / AAAA | {liste(a)} / {liste(aaaa)} |")
