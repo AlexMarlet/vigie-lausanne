@@ -87,6 +87,17 @@ def liste(valeurs):
     return ", ".join(f"`{v}`" for v in valeurs) if valeurs else "—"
 
 
+def dig_lignes(serveur, fqdn, type_):
+    """Réponses d'un serveur précis, sans récursion : lignes « nom TTL IN TYPE données » ([] si rien ou sans dig)."""
+    try:
+        rep = subprocess.run(["dig", "+noall", "+answer", "+norecurse", f"@{serveur}", fqdn, type_],
+                             capture_output=True, text=True, timeout=30).stdout
+    except (OSError, subprocess.SubprocessError):
+        return []
+    return [ligne.rstrip() for ligne in rep.splitlines()
+            if len(ligne.split()) > 4 and ligne.split()[0].lower() == fqdn.lower() and ligne.split()[3] == type_]
+
+
 def zone_cloudflare(serveur):
     """Lignes de la zone au format BIND, lues sur le serveur qui fait autorité (valeurs exactes, TXT longs compris).
     A, AAAA et CNAME sont marqués « DNS only » : ils pointent encore vers GitHub jusqu'à la bascule."""
@@ -94,17 +105,23 @@ def zone_cloudflare(serveur):
     for nom, types in ZONE:
         fqdn = f"{DOMAINE}." if nom == "@" else f"{nom}.{DOMAINE}."
         for type_ in types:
-            try:
-                rep = subprocess.run(["dig", "+noall", "+answer", "+norecurse", f"@{serveur}", fqdn, type_],
-                                     capture_output=True, text=True, timeout=30).stdout
-            except (OSError, subprocess.SubprocessError):
-                rep = ""
-            for ligne in rep.splitlines():
-                champs = ligne.split()
-                if len(champs) > 4 and champs[0].lower() == fqdn.lower() and champs[3] == type_:
-                    suffixe = " ; cf_tags=cf-proxied:false" if type_ in ("A", "AAAA", "CNAME") else ""
-                    lignes.append(ligne.rstrip() + suffixe)
+            suffixe = " ; cf_tags=cf-proxied:false" if type_ in ("A", "AAAA", "CNAME") else ""
+            lignes += [ligne + suffixe for ligne in dig_lignes(serveur, fqdn, type_)]
     return lignes
+
+
+def dnssec_detail(serveurs):
+    """DNSSEC vu de près : DS au registre (serveur de .ch) et, chez les serveurs du domaine, clés et CDS publiés.
+    Le registre .ch (Switch) relit chaque jour les CDS et active tout seul un DS publié de façon stable plus de trois
+    jours : tant que les serveurs du domaine publient un CDS, désactiver DNSSEC chez le registraire ne tient pas."""
+    fqdn = DOMAINE + "."
+    parents = dns(DOMAINE.rsplit(".", 1)[-1], "NS")[2]
+    ds = dig_lignes(parents[0], fqdn, "DS") if parents else []
+    cles = dig_lignes(serveurs[0], fqdn, "DNSKEY") if serveurs else []
+    cds = dig_lignes(serveurs[0], fqdn, "CDS") if serveurs else []
+    suppression = bool(cds) and all(ligne.split()[4] == "0" for ligne in cds)   # CDS « 0 0 0 00 » : retirer le DS
+    ttl = ds[0].split()[1] if ds else None
+    return ds, ttl, cles, cds, suppression
 
 
 def main():
@@ -113,7 +130,7 @@ def main():
     _, _, ns = dns(DOMAINE, "NS")
     statut_a, valide, a = dns(DOMAINE, "A")
     _, _, aaaa = dns(DOMAINE, "AAAA")
-    _, _, ds = dns(DOMAINE, "DS")
+    statut_ds, _, ds = dns(DOMAINE, "DS")
     _, _, www_cname = dns("www." + DOMAINE, "CNAME")
     _, _, www_a = dns("www." + DOMAINE, "A")
     _, _, mx = dns(DOMAINE, "MX")
@@ -127,8 +144,17 @@ def main():
     dire("|---|---|")
     dire(f"| Serveurs DNS | **{prov}** ({liste(ns)}) |")
     etat_dnssec = ("✗ **cassé** : le domaine ne se résout plus (SERVFAIL)" if casse else
-                   f"activé{' et validé' if valide else ''} (enregistrement DS au registre)" if ds else "désactivé")
+                   f"activé{' et validé' if valide else ''} (enregistrement DS au registre)" if ds else
+                   "inconnu (lecture impossible)" if statut_ds is None else "désactivé")
     dire(f"| DNSSEC | {etat_dnssec} |")
+    cds_actif = False
+    if shutil.which("dig") and ns:
+        ds_reg, ttl, cles, cds, suppression = dnssec_detail(ns)
+        cds_actif = bool(cds) and not suppression
+        dire(f"| DNSSEC en détail | registre .{DOMAINE.rsplit('.', 1)[-1]} : "
+             f"{f'DS ×{len(ds_reg)} (durée en cache {ttl} s)' if ds_reg else 'aucun DS'} · {ns[0]} : "
+             f"{f'zone signée (DNSKEY ×{len(cles)})' if cles else 'zone non signée'}, "
+             f"{'CDS de suppression' if suppression else f'CDS ×{len(cds)} publié' if cds else 'aucun CDS'} |")
     dire(f"| A / AAAA | {liste(a)} / {liste(aaaa)} |")
     dire(f"| www | {'CNAME ' + liste(www_cname) if www_cname else liste(www_a)} |")
     dire(f"| MX (e-mail) | {liste(mx)} |")
@@ -184,11 +210,15 @@ def main():
         else:
             restes = []
             if ds:
-                restes.append("étape 1 : désactive DNSSEC chez Infomaniak, puis attends au moins 24 h")
+                restes.append("étape 1 : désactive DNSSEC chez Infomaniak, puis attends au moins 24 h"
+                              + (" (Infomaniak publie un CDS : le registre .ch remet DNSSEC tout seul après 3 jours, "
+                                 "le jour J doit donc venir avant)" if cds_actif else ""))
             if statut_copie != 200:
                 restes.append("étape 3 : prépare Cloudflare (compte, jeton, 2 secrets GitHub), puis relance Déploiement")
             suite = ("À faire avant le jour J — " + " ; ".join(restes) + "." if restes else
-                     "Prêt pour le jour J (étapes 5 à 8), à condition que DNSSEC soit désactivé depuis au moins 24 h.")
+                     "Prêt pour le jour J (étapes 5 à 8), à condition que DNSSEC soit désactivé depuis au moins 24 h"
+                     + (" et au plus 2 jours : Infomaniak publie un CDS, le registre .ch remet DNSSEC tout seul après "
+                        "3 jours" if cds_actif else "") + ".")
     else:
         suite = "Le site ne répond pas en HTTPS : vérifie les derniers changements DNS (ou attends le certificat)."
     dire(f"**Étape suivante :** {suite}")
